@@ -1,0 +1,2 @@
+# server
+ShareTube server
