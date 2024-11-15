@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sharetube/server/internal"
+	"github.com/sharetube/server/internal/controller"
 )
 
 func main() {
 	// The HTTP Server
-	handler := internal.NewHandler()
+	handler := controller.NewHandler()
 	server := &http.Server{Addr: "0.0.0.0:10000", Handler: handler.Mux()}
 
 	// Server run context
