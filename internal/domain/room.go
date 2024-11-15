@@ -3,7 +3,6 @@ package domain
 import (
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -26,54 +25,95 @@ type Message struct {
 }
 
 type Room struct {
-	Playlist *Playlist `json:"playlist"`
-	Members  *Members  `json:"members"`
+	playlist *Playlist
+	members  *Members
 	inputCh  chan Input
 	closeCh  chan struct{}
 }
 
 func NewRoom(creator *Member, initialVideoURL string) *Room {
 	return &Room{
-		Playlist: NewPlaylist(initialVideoURL, creator.ID, PlaylistLimit),
-		Members:  NewMembers(creator, MembersLimit),
+		playlist: NewPlaylist(initialVideoURL, creator.ID, PlaylistLimit),
+		members:  NewMembers(creator, MembersLimit),
 		inputCh:  make(chan Input),
 		closeCh:  make(chan struct{}),
 	}
 }
 
+func (r *Room) Start(conn *websocket.Conn) {
+	go r.ReadMessages(conn)
+	go r.SendStateToAllMembersPeriodically(4 * time.Second)
+}
+
 func (r Room) GetState() map[string]any {
 	return map[string]any{
-		"playlist": r.Playlist.AsList(),
-		"members":  r.Members.AsList(),
+		"playlist": r.playlist.AsList(),
+		"members":  r.members.AsList(),
 	}
 }
 
 func (r *Room) AddMember(member *Member) error {
-	return r.Members.Add(member)
+	return r.members.Add(member)
 }
 
-func (r *Room) RemoveMemberByID(id string) (Member, error) {
-	return r.Members.RemoveByID(id)
+func (r *Room) RemoveMemberByID(id string) {
+	member, err := r.members.RemoveByID(id)
+	if err != nil {
+		fmt.Printf("remove member by conn: %s\n", err)
+		return
+	}
+
+	if r.members.Length() == 0 {
+		r.closeCh <- struct{}{}
+		return
+	}
+
+	r.SendMessageToAllMembers(&Message{
+		Type: "member_left",
+		Data: map[string]any{
+			"member":        member,
+			"members":       r.members.AsList(),
+			"members_count": r.members.Length(),
+		},
+	})
 }
 
-func (r *Room) RemoveMemberByConn(conn *websocket.Conn) (Member, error) {
-	return r.Members.RemoveByConn(conn)
+func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
+	member, err := r.members.RemoveByConn(conn)
+	if err != nil {
+		fmt.Printf("remove member by conn: %s\n", err)
+		return
+	}
+
+	if r.members.Length() == 0 {
+		r.closeCh <- struct{}{}
+		return
+	}
+
+	r.SendMessageToAllMembers(&Message{
+		Type: "member_left",
+		Data: map[string]any{
+			"member":        member,
+			"members":       r.members.AsList(),
+			"members_count": r.members.Length(),
+		},
+	})
 }
 
 func (r *Room) AddVideo(addedBy *websocket.Conn, url string) (Video, error) {
-	member, err := r.Members.GetByConn(addedBy)
+	member, err := r.members.GetByConn(addedBy)
 	if err != nil {
 		return Video{}, ErrMemberNotFound
 	}
 
-	return r.Playlist.Add(member.ID, url)
+	return r.playlist.Add(member.ID, url)
 }
 
 func (r *Room) RemoveVideo(videoIndex int) (Video, error) {
-	return r.Playlist.Remove(videoIndex)
+	return r.playlist.Remove(videoIndex)
 }
 
-func (r Room) SendError(conn *websocket.Conn, err error) {
+func (r *Room) SendError(conn *websocket.Conn, err error) {
 	r.SendMessageToConn(conn, &Message{
 		Type: "error",
 		Data: map[string]any{
@@ -82,29 +122,26 @@ func (r Room) SendError(conn *websocket.Conn, err error) {
 	})
 }
 
-func (r *Room) ReadMessages(conn *websocket.Conn, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (r *Room) ReadMessages(conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
 			fmt.Println("ReadJson error", err)
 			r.RemoveMemberByConn(conn)
+			conn.Close()
 			return
 		}
 		input.Sender = conn
 
 		fmt.Printf("Message recieved: %v\n", input)
-		r.ReadMessage(conn, input)
+		r.inputCh <- input
 	}
 }
 
-// todo: refactor
-func (r Room) HandleMessages() {
-	fmt.Println("room handle messages started")
+func (r *Room) HandleMessages(input Input) {
 	for {
 		select {
 		case <-r.closeCh:
-			fmt.Println("closing hub")
 			return
 		case input := <-r.inputCh:
 			fmt.Printf("message recieved: %#v\n", input)
@@ -126,20 +163,23 @@ func (r Room) HandleMessages() {
 
 				r.RemoveVideo(videoIndex)
 			}
+
 			fmt.Printf("message to send: %#v\n", outMsg)
 			r.SendMessageToAllMembers(&outMsg)
 		}
 	}
 }
 
-func (r Room) SendMessageToAllMembers(msg *Message) {
+func (r *Room) SendMessageToAllMembers(msg *Message) {
 	fmt.Println("sending message to all members")
-	for memberConn := range r.Members.conns {
-		r.SendMessageToConn(memberConn, msg)
-	}
+	go func() {
+		for memberConn := range r.members.conns {
+			r.SendMessageToConn(memberConn, msg)
+		}
+	}()
 }
 
-func (r Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
+func (r *Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
 	fmt.Println("sending message to member")
 	if err := conn.WriteJSON(msg); err != nil {
 		fmt.Println(err)
@@ -148,7 +188,7 @@ func (r Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
 	}
 }
 
-func (r Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
+func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 	for {
 		select {
 		case <-r.closeCh:
@@ -162,8 +202,4 @@ func (r Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 			})
 		}
 	}
-}
-
-func (r Room) ReadMessage(conn *websocket.Conn, input Input) {
-	r.inputCh <- input
 }

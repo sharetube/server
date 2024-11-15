@@ -38,5 +38,7 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 
 	room := domain.NewRoom(creator, initialVideoURL)
 	s.rooms[roomID] = room
+	room.Start(creator.Conn)
+
 	return roomID, room
 }
