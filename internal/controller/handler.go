@@ -3,8 +3,6 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
@@ -60,22 +58,10 @@ func (h Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roomID, room := h.roomService.CreateRoom(&member, videoURL)
-	go room.HandleMessages()
-	go room.SendStateToAllMembersPeriodically(5 * time.Second)
-	room.SendMessageToAllMembers(&domain.Message{
-		Type: "svo",
-		Data: "zxc",
-	})
 
 	fmt.Printf("/ws roomID: https://youtube.com/?room-id=%s\n", roomID)
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go room.ReadMessages(conn, &wg)
-	wg.Wait()
-
-	fmt.Println("closing connection")
-	conn.Close()
+	go room.ReadMessages(conn)
 }
 
 func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
@@ -123,11 +109,7 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go room.ReadMessages(conn, &wg)
-	wg.Wait()
+	fmt.Printf("/ws roomID: https://youtube.com/?room-id=%s\n", roomID)
 
-	fmt.Println("closing connection")
-	conn.Close()
+	go room.ReadMessages(conn)
 }
