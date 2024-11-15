@@ -16,7 +16,7 @@ import (
 func main() {
 	// The HTTP Server
 	handler := internal.NewHandler()
-	server := &http.Server{Addr: "0.0.0.0:8080", Handler: handler.Mux()}
+	server := &http.Server{Addr: "0.0.0.0:10000", Handler: handler.Mux()}
 
 	// Server run context
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
