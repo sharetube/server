@@ -91,10 +91,11 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 }
 
 func (r *Room) SendError(conn *websocket.Conn, err error) {
+	fmt.Printf("sending error: %s\n", err)
 	r.SendMessageToConn(conn, &Message{
 		Action: "error",
 		Data: map[string]any{
-			"message": err,
+			"message": err.Error(),
 		},
 	})
 }

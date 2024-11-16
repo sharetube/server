@@ -1,10 +1,15 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/gorilla/websocket"
+)
+
+var (
+	ErrNoVideoUrlProvided = errors.New("no video url provided")
 )
 
 const (
@@ -60,7 +65,7 @@ func (r *Room) AddMember(member *Member) {
 func (r *Room) RemoveMemberByID(id string) {
 	member, err := r.members.RemoveByID(id)
 	if err != nil {
-		fmt.Printf("remove member by id: %s\n", err)
+		r.SendError(member.Conn, err)
 		return
 	}
 
@@ -87,19 +92,6 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 	r.SendMemberLeft(&member)
 }
 
-func (r *Room) AddVideo(addedBy *websocket.Conn, url string) (Video, error) {
-	member, _, err := r.members.GetByConn(addedBy)
-	if err != nil {
-		return Video{}, ErrMemberNotFound
-	}
-
-	return r.playlist.Add(member.ID, url)
-}
-
-func (r *Room) RemoveVideo(videoIndex int) (Video, error) {
-	return r.playlist.RemoveByID(videoIndex)
-}
-
 func (r *Room) ReadMessages(conn *websocket.Conn) {
 	for {
 		var input Input
@@ -116,41 +108,69 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 	}
 }
 
-func (r *Room) HandleMessages(input Input) {
+func (r *Room) HandleMessages() {
 	for {
 		input, more := <-r.inputCh
 		if !more {
+			fmt.Println("message handling stopped")
 			return
 		}
 
-		fmt.Printf("message recieved: %#v\n", input)
+		fmt.Printf("message recieved: %+v\n", input)
 		switch input.Action {
 		case "get_state":
+			fmt.Println("get state")
 			r.SendMessageToAllMembers(&Message{
 				Action: "state",
 				Data:   r.GetState(),
 			})
 		case "add_video":
-			video, err := r.AddVideo(input.Sender, *input.Data)
-			if err != nil {
-				fmt.Printf("add video %s\n", err)
-				r.SendError(input.Sender, err)
-			}
+			video, err := func() (Video, error) {
+				member, _, err := r.members.GetByConn(input.Sender)
+				if err != nil {
+					return Video{}, err
+				}
 
-			r.SendVideoAdded(&video)
+				if input.Data == nil {
+					return Video{}, ErrNoVideoUrlProvided
+				}
+
+				video, err := r.playlist.Add(member.ID, *input.Data)
+				if err != nil {
+					return Video{}, err
+				}
+				return video, nil
+			}()
+
+			if err != nil {
+				r.SendError(input.Sender, err)
+			} else {
+				r.SendVideoAdded(&video)
+			}
 		case "remove_video":
-			videoIndex, err := strconv.Atoi(*input.Data)
-			if err != nil {
-				fmt.Printf("remove video error %s\n", err)
-				r.SendError(input.Sender, err)
-			}
+			video, err := func() (Video, error) {
+				if input.Data == nil {
+					return Video{}, ErrNoVideoUrlProvided
+				}
 
-			video, err := r.RemoveVideo(videoIndex)
+				videoID, err := strconv.Atoi(*input.Data)
+				if err != nil {
+					return Video{}, err
+				}
+
+				video, err := r.playlist.RemoveByID(videoID)
+				if err != nil {
+					return Video{}, err
+				}
+
+				return video, nil
+			}()
+
 			if err != nil {
 				r.SendError(input.Sender, err)
+			} else {
+				r.SendVideoRemoved(&video)
 			}
-
-			r.SendVideoRemoved(&video)
 		}
 	}
 }
