@@ -10,13 +10,13 @@ import (
 	"github.com/sharetube/server/internal/service"
 )
 
-type Handler struct {
+type Controller struct {
 	upgrader    websocket.Upgrader
 	roomService service.RoomService
 }
 
-func NewHandler() *Handler {
-	return &Handler{
+func NewController() *Controller {
+	return &Controller{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
@@ -26,22 +26,22 @@ func NewHandler() *Handler {
 	}
 }
 
-func (h Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
-	username, err := MustHeader(r, "Username")
+func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
+	username, err := c.MustHeader(r, "Username")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	color, err := MustHeader(r, "Color")
+	color, err := c.MustHeader(r, "Color")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	videoURL, err := MustHeader(r, "Video-Url")
+	videoURL, err := c.MustHeader(r, "Video-Url")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
@@ -54,7 +54,7 @@ func (h Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	headers := http.Header{}
 	// headers.Add("Set-Cookie", cookieString)
-	conn, err := h.upgrader.Upgrade(w, r, headers)
+	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -69,26 +69,26 @@ func (h Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 	}
 
-	roomID, room := h.roomService.CreateRoom(&member, videoURL)
+	roomID, room := c.roomService.CreateRoom(&member, videoURL)
 
 	fmt.Printf("/ws roomID: https://youtube.com/?room-id=%s\n", roomID)
 
 	go room.ReadMessages(conn)
 }
 
-func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
+func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	// for _, c := range r.Cookies() {
 	// 	fmt.Printf("Cookie: %#v\n", c)
 	// }
 
-	username, err := MustHeader(r, "Username")
+	username, err := c.MustHeader(r, "Username")
 	if err != nil {
 		fmt.Printf("/ws/join-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	color, err := MustHeader(r, "Color")
+	color, err := c.MustHeader(r, "Color")
 	if err != nil {
 		fmt.Printf("/ws/join-room: %s\n", err)
 		fmt.Fprint(w, err)
@@ -100,7 +100,7 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	userID := username
 
 	roomID := chi.URLParam(r, "room-id")
-	room, err := h.roomService.GetRoom(roomID)
+	room, err := c.roomService.GetRoom(roomID)
 	if err != nil {
 		fmt.Printf("/ws/join-room: %s\n", err)
 		fmt.Fprint(w, err)
@@ -109,7 +109,7 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	headers := http.Header{}
 	// headers.Add("Set-Cookie", cookieString)
-	conn, err := h.upgrader.Upgrade(w, r, headers)
+	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		fmt.Println(err)
 		return

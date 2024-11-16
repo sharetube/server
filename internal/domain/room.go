@@ -19,15 +19,14 @@ type Input struct {
 }
 
 type Message struct {
-	Type string `json:"type"`
-	Data any    `json:"data"`
+	Action string `json:"action"`
+	Data   any    `json:"data"`
 }
 
 type Room struct {
 	playlist *Playlist
 	members  *Members
 	inputCh  chan Input
-	closeCh  chan struct{}
 }
 
 func NewRoom(creator *Member, initialVideoURL string) *Room {
@@ -35,8 +34,11 @@ func NewRoom(creator *Member, initialVideoURL string) *Room {
 		playlist: NewPlaylist(initialVideoURL, creator.ID, PlaylistLimit),
 		members:  NewMembers(creator, MembersLimit),
 		inputCh:  make(chan Input),
-		closeCh:  make(chan struct{}),
 	}
+}
+
+func (r *Room) Close() {
+	close(r.inputCh)
 }
 
 func (r Room) GetState() map[string]any {
@@ -63,8 +65,7 @@ func (r *Room) RemoveMemberByID(id string) {
 	}
 
 	if r.members.Length() == 0 {
-		r.closeCh <- struct{}{}
-		r.closeCh <- struct{}{}
+		close(r.inputCh)
 		return
 	}
 
@@ -79,8 +80,7 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 	}
 
 	if r.members.Length() == 0 {
-		r.closeCh <- struct{}{}
-		r.closeCh <- struct{}{}
+		close(r.inputCh)
 		return
 	}
 
@@ -118,39 +118,39 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 
 func (r *Room) HandleMessages(input Input) {
 	for {
-		select {
-		case <-r.closeCh:
+		input, more := <-r.inputCh
+		if !more {
 			return
-		case input := <-r.inputCh:
-			fmt.Printf("message recieved: %#v\n", input)
-			switch input.Action {
-			case "get_state":
-				r.SendMessageToAllMembers(&Message{
-					Type: "state",
-					Data: r.GetState(),
-				})
-			case "add_video":
-				video, err := r.AddVideo(input.Sender, *input.Data)
-				if err != nil {
-					fmt.Printf("add video %s\n", err)
-					r.SendError(input.Sender, err)
-				}
+		}
 
-				r.SendVideoAdded(&video)
-			case "remove_video":
-				videoIndex, err := strconv.Atoi(*input.Data)
-				if err != nil {
-					fmt.Printf("remove video error %s\n", err)
-					r.SendError(input.Sender, err)
-				}
-
-				video, err := r.RemoveVideo(videoIndex)
-				if err != nil {
-					r.SendError(input.Sender, err)
-				}
-
-				r.SendVideoRemoved(&video)
+		fmt.Printf("message recieved: %#v\n", input)
+		switch input.Action {
+		case "get_state":
+			r.SendMessageToAllMembers(&Message{
+				Action: "state",
+				Data:   r.GetState(),
+			})
+		case "add_video":
+			video, err := r.AddVideo(input.Sender, *input.Data)
+			if err != nil {
+				fmt.Printf("add video %s\n", err)
+				r.SendError(input.Sender, err)
 			}
+
+			r.SendVideoAdded(&video)
+		case "remove_video":
+			videoIndex, err := strconv.Atoi(*input.Data)
+			if err != nil {
+				fmt.Printf("remove video error %s\n", err)
+				r.SendError(input.Sender, err)
+			}
+
+			video, err := r.RemoveVideo(videoIndex)
+			if err != nil {
+				r.SendError(input.Sender, err)
+			}
+
+			r.SendVideoRemoved(&video)
 		}
 	}
 }

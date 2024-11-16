@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// The HTTP Server
-	handler := controller.NewHandler()
+	handler := controller.NewController()
 	server := &http.Server{Addr: "0.0.0.0:10000", Handler: handler.Mux()}
 
 	// Server run context
