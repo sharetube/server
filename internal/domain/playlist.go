@@ -3,8 +3,6 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 )
 
 var (
@@ -21,33 +19,44 @@ type Video struct {
 
 // todo: implement pagination
 type Playlist struct {
-	videos        map[int]*Video
+	list          []Video
 	previousVideo *Video
-	lastIndex     int
+	lastID        int
 	limit         int
 }
 
 func NewPlaylist(initialVideoURL, addedBy string, limit int) *Playlist {
 	return &Playlist{
-		videos: map[int]*Video{
-			1: {
+		list: []Video{
+			{
 				ID:        1,
 				URL:       initialVideoURL,
 				AddedByID: addedBy,
 				WasPlayed: false,
 			},
 		},
-		lastIndex: 2,
-		limit:     limit,
+		lastID: 2,
+		limit:  limit,
 	}
 }
 
-func (p Playlist) AsList() []*Video {
-	return slices.Collect(maps.Values(p.videos))
+func (p Playlist) AsList() []Video {
+	return p.list
 }
 
 func (p Playlist) Length() int {
-	return len(p.videos)
+	return len(p.list)
+}
+
+func (p Playlist) GetByID(id int) (Video, int, error) {
+	fmt.Printf("get video by id: %#v\n", id)
+	for index, video := range p.list {
+		if video.ID == id {
+			return video, index, nil
+		}
+	}
+
+	return Video{}, 0, ErrVideoNotFound
 }
 
 func (p *Playlist) Add(addedBy, url string) (Video, error) {
@@ -56,24 +65,24 @@ func (p *Playlist) Add(addedBy, url string) (Video, error) {
 		return Video{}, ErrPlaylistLimitReached
 	}
 
-	p.lastIndex++
+	p.lastID++
 	video := Video{
-		ID:        p.lastIndex,
+		ID:        p.lastID,
 		URL:       url,
 		AddedByID: addedBy,
 	}
-	p.videos[p.lastIndex] = &video
+	p.list = append(p.list, video)
 
 	return video, nil
 }
 
-func (p *Playlist) Remove(videoIndex int) (Video, error) {
-	fmt.Printf("remove video: %d\n", videoIndex)
-	video := p.videos[videoIndex]
-	if video == nil {
-		return Video{}, ErrVideoNotFound
+func (p *Playlist) RemoveByID(id int) (Video, error) {
+	fmt.Printf("remove member by id: %#v\n", id)
+	member, index, err := p.GetByID(id)
+	if err != nil {
+		return Video{}, err
 	}
 
-	delete(p.videos, videoIndex)
-	return *video, nil
+	p.list = append(p.list[:index], p.list[index+1:]...)
+	return member, nil
 }

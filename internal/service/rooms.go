@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sharetube/server/internal/domain"
@@ -38,7 +40,11 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 
 	room := domain.NewRoom(creator, initialVideoURL)
 	s.rooms[roomID] = room
-	room.Start(creator.Conn)
+	go func() {
+		room.SendStateToAllMembersPeriodically(4 * time.Second)
+		delete(s.rooms, roomID)
+		fmt.Println("room deleted")
+	}()
 
 	return roomID, room
 }
