@@ -40,11 +40,6 @@ func NewRoom(creator *Member, initialVideoURL string) *Room {
 	}
 }
 
-func (r *Room) Start(conn *websocket.Conn) {
-	go r.ReadMessages(conn)
-	go r.SendStateToAllMembersPeriodically(4 * time.Second)
-}
-
 func (r Room) GetState() map[string]any {
 	return map[string]any{
 		"playlist": r.playlist.AsList(),
@@ -64,6 +59,7 @@ func (r *Room) RemoveMemberByID(id string) {
 	}
 
 	if r.members.Length() == 0 {
+		r.closeCh <- struct{}{}
 		r.closeCh <- struct{}{}
 		return
 	}
@@ -87,6 +83,7 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 
 	if r.members.Length() == 0 {
 		r.closeCh <- struct{}{}
+		r.closeCh <- struct{}{}
 		return
 	}
 
@@ -101,7 +98,7 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 }
 
 func (r *Room) AddVideo(addedBy *websocket.Conn, url string) (Video, error) {
-	member, err := r.members.GetByConn(addedBy)
+	member, _, err := r.members.GetByConn(addedBy)
 	if err != nil {
 		return Video{}, ErrMemberNotFound
 	}
@@ -110,7 +107,7 @@ func (r *Room) AddVideo(addedBy *websocket.Conn, url string) (Video, error) {
 }
 
 func (r *Room) RemoveVideo(videoIndex int) (Video, error) {
-	return r.playlist.Remove(videoIndex)
+	return r.playlist.RemoveByID(videoIndex)
 }
 
 func (r *Room) SendError(conn *websocket.Conn, err error) {
@@ -172,11 +169,9 @@ func (r *Room) HandleMessages(input Input) {
 
 func (r *Room) SendMessageToAllMembers(msg *Message) {
 	fmt.Println("sending message to all members")
-	go func() {
-		for memberConn := range r.members.conns {
-			r.SendMessageToConn(memberConn, msg)
-		}
-	}()
+	for _, member := range r.members.AsList() {
+		r.SendMessageToConn(member.Conn, msg)
+	}
 }
 
 func (r *Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
@@ -192,7 +187,7 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 	for {
 		select {
 		case <-r.closeCh:
-			fmt.Println("stoping spam closed")
+			fmt.Println("stop spam")
 			return
 		default:
 			time.Sleep(timeout)

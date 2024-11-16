@@ -3,8 +3,6 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/gorilla/websocket"
 )
@@ -26,34 +24,50 @@ type Member struct {
 }
 
 type Members struct {
-	list  map[string]*Member
-	conns map[*websocket.Conn]*Member
+	list  []Member
 	limit int
 }
 
 func NewMembers(creator *Member, limit int) *Members {
 	return &Members{
-		list: map[string]*Member{
-			creator.ID: creator,
-		},
-		conns: map[*websocket.Conn]*Member{
-			creator.Conn: creator,
-		},
+		list:  []Member{*creator},
 		limit: limit,
 	}
-}
-
-func (m Members) AsList() []*Member {
-	return slices.Collect(maps.Values(m.list))
 }
 
 func (m Members) Length() int {
 	return len(m.list)
 }
 
+func (m Members) AsList() []Member {
+	return m.list
+}
+
+func (m Members) GetByID(id string) (Member, int, error) {
+	fmt.Printf("get member by id: %#v\n", id)
+	for index, member := range m.list {
+		if member.ID == id {
+			return member, index, nil
+		}
+	}
+
+	return Member{}, 0, ErrMemberNotFound
+}
+
+func (m Members) GetByConn(conn *websocket.Conn) (Member, int, error) {
+	fmt.Println("get member by conn")
+	for index, member := range m.list {
+		if member.Conn == conn {
+			return member, index, nil
+		}
+	}
+
+	return Member{}, 0, ErrMemberNotFound
+}
+
 func (m *Members) Add(member *Member) error {
 	fmt.Printf("add member: %#v\n", member)
-	if m.list[member.ID] != nil {
+	if _, _, err := m.GetByID(member.ID); err == nil {
 		return ErrMemberAlreadyExists
 	}
 
@@ -61,49 +75,28 @@ func (m *Members) Add(member *Member) error {
 		return ErrMembersLimitReached
 	}
 
-	m.list[member.ID] = member
-	m.conns[member.Conn] = member
+	m.list = append(m.list, *member)
 	return nil
 }
 
 func (m *Members) RemoveByID(id string) (Member, error) {
 	fmt.Printf("remove member by id: %#v\n", id)
-	member := m.list[id]
-	if member == nil {
-		return Member{}, ErrMemberNotFound
+	member, index, err := m.GetByID(id)
+	if err != nil {
+		return Member{}, err
 	}
 
-	delete(m.conns, member.Conn)
-	delete(m.list, id)
-	return *member, nil
+	m.list = append(m.list[:index], m.list[index+1:]...)
+	return member, nil
 }
 
 func (m *Members) RemoveByConn(conn *websocket.Conn) (Member, error) {
 	fmt.Println("remove member by conn")
-	member := m.conns[conn]
-	if member == nil {
-		return Member{}, ErrMemberNotFound
+	member, index, err := m.GetByConn(conn)
+	if err != nil {
+		return Member{}, err
 	}
 
-	delete(m.list, member.ID)
-	delete(m.conns, conn)
-	return *member, nil
-}
-
-func (m Members) GetByID(id string) (Member, error) {
-	member := m.list[id]
-	if member == nil {
-		return Member{}, ErrMemberNotFound
-	}
-
-	return *member, nil
-}
-
-func (m Members) GetByConn(conn *websocket.Conn) (Member, error) {
-	member := m.conns[conn]
-	if member == nil {
-		return Member{}, ErrMemberNotFound
-	}
-
-	return *member, nil
+	m.list = append(m.list[:index], m.list[index+1:]...)
+	return member, nil
 }
