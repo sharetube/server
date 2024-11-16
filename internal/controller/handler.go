@@ -27,14 +27,26 @@ func NewHandler() *Handler {
 }
 
 func (h Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
-	username := GetUsername(w, r)
-	fmt.Printf("/ws username: %s\n", username)
+	username, err := MustHeader(r, "Username")
+	if err != nil {
+		fmt.Printf("/ws/create-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
-	color := GetColor(w, r)
-	fmt.Printf("/ws color: %s\n", color)
+	color, err := MustHeader(r, "Color")
+	if err != nil {
+		fmt.Printf("/ws/create-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
-	videoURL := GetVideoURL(w, r)
-	fmt.Printf("/ws videoURL: %s\n", color)
+	videoURL, err := MustHeader(r, "Video-Url")
+	if err != nil {
+		fmt.Printf("/ws/create-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
 	// userID := uuid.NewString()
 	// fmt.Printf("/ws userID: %s\n", userID)
@@ -69,11 +81,19 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	// 	fmt.Printf("Cookie: %#v\n", c)
 	// }
 
-	username := GetUsername(w, r)
-	fmt.Printf("/ws/join-room username: %s\n", username)
+	username, err := MustHeader(r, "Username")
+	if err != nil {
+		fmt.Printf("/ws/join-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
-	color := GetColor(w, r)
-	fmt.Printf("/ws/join-room color: %s\n", color)
+	color, err := MustHeader(r, "Color")
+	if err != nil {
+		fmt.Printf("/ws/join-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
 	// userID := uuid.NewString()
 	// fmt.Printf("/ws userID: %s\n", userID)
@@ -82,8 +102,8 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	room, err := h.roomService.GetRoom(roomID)
 	if err != nil {
-		fmt.Println("room id was not provided")
-		fmt.Fprint(w, "room-id was not provided")
+		fmt.Printf("/ws/join-room: %s\n", err)
+		fmt.Fprint(w, err)
 		return
 	}
 
@@ -104,12 +124,7 @@ func (h Handler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 	}
 
-	if err := room.AddMember(&member); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Printf("/ws roomID: https://youtube.com/?room-id=%s\n", roomID)
+	room.AddMember(&member)
 
 	go room.ReadMessages(conn)
 }
