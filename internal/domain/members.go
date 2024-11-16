@@ -51,7 +51,7 @@ func (m Members) GetByID(id string) (Member, int, error) {
 		}
 	}
 
-	return Member{}, 0, ErrMemberNotFound
+	return Member{}, 0, fmt.Errorf("get member by id: %w", ErrMemberNotFound)
 }
 
 func (m Members) GetByConn(conn *websocket.Conn) (Member, int, error) {
@@ -62,17 +62,17 @@ func (m Members) GetByConn(conn *websocket.Conn) (Member, int, error) {
 		}
 	}
 
-	return Member{}, 0, ErrMemberNotFound
+	return Member{}, 0, fmt.Errorf("get member by conn: %w", ErrMemberNotFound)
 }
 
 func (m *Members) Add(member *Member) error {
 	fmt.Printf("add member: %#v\n", member)
 	if _, _, err := m.GetByID(member.ID); err == nil {
-		return ErrMemberAlreadyExists
+		return fmt.Errorf("add member: %w", ErrMemberAlreadyExists)
 	}
 
 	if m.Length() >= m.limit {
-		return ErrMembersLimitReached
+		return fmt.Errorf("add member: %w", ErrMembersLimitReached)
 	}
 
 	m.list = append(m.list, *member)
@@ -83,7 +83,7 @@ func (m *Members) RemoveByID(id string) (Member, error) {
 	fmt.Printf("remove member by id: %#v\n", id)
 	member, index, err := m.GetByID(id)
 	if err != nil {
-		return Member{}, err
+		return Member{}, fmt.Errorf("remove member by id: %w", err)
 	}
 
 	m.list = append(m.list[:index], m.list[index+1:]...)
@@ -94,7 +94,7 @@ func (m *Members) RemoveByConn(conn *websocket.Conn) (Member, error) {
 	fmt.Println("remove member by conn")
 	member, index, err := m.GetByConn(conn)
 	if err != nil {
-		return Member{}, err
+		return Member{}, fmt.Errorf("remove member by conn: %w", err)
 	}
 
 	m.list = append(m.list[:index], m.list[index+1:]...)

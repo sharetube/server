@@ -35,7 +35,7 @@ func NewPlaylist(initialVideoURL, addedBy string, limit int) *Playlist {
 				WasPlayed: false,
 			},
 		},
-		lastID: 2,
+		lastID: 1,
 		limit:  limit,
 	}
 }
@@ -56,13 +56,13 @@ func (p Playlist) GetByID(id int) (Video, int, error) {
 		}
 	}
 
-	return Video{}, 0, ErrVideoNotFound
+	return Video{}, 0, fmt.Errorf("get video by id: %w", ErrVideoNotFound)
 }
 
 func (p *Playlist) Add(addedBy, url string) (Video, error) {
 	fmt.Printf("add video: %s, %s\n", addedBy, url)
 	if p.Length() >= p.limit {
-		return Video{}, ErrPlaylistLimitReached
+		return Video{}, fmt.Errorf("add video: %w", ErrPlaylistLimitReached)
 	}
 
 	p.lastID++
@@ -80,7 +80,7 @@ func (p *Playlist) RemoveByID(id int) (Video, error) {
 	fmt.Printf("remove member by id: %#v\n", id)
 	member, index, err := p.GetByID(id)
 	if err != nil {
-		return Video{}, err
+		return Video{}, fmt.Errorf("remove member by id: %w", err)
 	}
 
 	p.list = append(p.list[:index], p.list[index+1:]...)

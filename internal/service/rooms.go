@@ -40,8 +40,9 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 
 	room := domain.NewRoom(creator, initialVideoURL)
 	s.rooms[roomID] = room
+	go room.SendStateToAllMembersPeriodically(10 * time.Second)
 	go func() {
-		room.SendStateToAllMembersPeriodically(5 * time.Second)
+		room.HandleMessages()
 		delete(s.rooms, roomID)
 		// room.Close()
 		fmt.Println("room deleted")
