@@ -9,7 +9,7 @@ import (
 
 func (r *Room) SendMemberJoined(member *Member) {
 	r.SendMessageToAllMembers(&Message{
-		Type: "member_joined",
+		Action: "member_joined",
 		Data: map[string]any{
 			"member":        member,
 			"members":       r.members.AsList(),
@@ -20,7 +20,7 @@ func (r *Room) SendMemberJoined(member *Member) {
 
 func (r *Room) SendMemberLeft(member *Member) {
 	r.SendMessageToAllMembers(&Message{
-		Type: "member_left",
+		Action: "member_left",
 		Data: map[string]any{
 			"member":        member,
 			"members":       r.members.AsList(),
@@ -31,7 +31,7 @@ func (r *Room) SendMemberLeft(member *Member) {
 
 func (r *Room) SendVideoAdded(video *Video) {
 	r.SendMessageToAllMembers(&Message{
-		Type: "video_added",
+		Action: "video_added",
 		Data: map[string]any{
 			"video":           video,
 			"playlist":        r.playlist.AsList(),
@@ -42,7 +42,7 @@ func (r *Room) SendVideoAdded(video *Video) {
 
 func (r *Room) SendVideoRemoved(video *Video) {
 	r.SendMessageToAllMembers(&Message{
-		Type: "video_removed",
+		Action: "video_removed",
 		Data: map[string]any{
 			"video":           video,
 			"playlist":        r.playlist.AsList(),
@@ -68,16 +68,23 @@ func (r *Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
 }
 
 func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
+	ticker := time.NewTicker(timeout)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-r.closeCh:
-			fmt.Println("stop spam")
-			return
-		default:
-			time.Sleep(timeout)
+		case _, more := <-r.inputCh:
+			if !more {
+				fmt.Println("ticker stopped")
+				return
+			}
+
+			continue
+		case <-ticker.C:
+			// Send update on each tick
 			r.SendMessageToAllMembers(&Message{
-				Type: "update",
-				Data: r.GetState(),
+				Action: "update",
+				Data:   r.GetState(),
 			})
 		}
 	}
@@ -85,7 +92,7 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 
 func (r *Room) SendError(conn *websocket.Conn, err error) {
 	r.SendMessageToConn(conn, &Message{
-		Type: "error",
+		Action: "error",
 		Data: map[string]any{
 			"message": err,
 		},
