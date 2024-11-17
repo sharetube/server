@@ -40,6 +40,13 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 
 	room := domain.NewRoom(creator, initialVideoURL)
 	s.rooms[roomID] = room
+	room.SendMessageToAllMembers(&domain.Message{
+		Action: "room_created",
+		Data: map[string]any{
+			"room_id": roomID,
+		},
+	})
+
 	go room.SendStateToAllMembersPeriodically(10 * time.Second)
 	go func() {
 		room.HandleMessages()

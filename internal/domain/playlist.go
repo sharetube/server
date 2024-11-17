@@ -77,12 +77,14 @@ func (p *Playlist) Add(addedBy, url string) (Video, error) {
 }
 
 func (p *Playlist) RemoveByID(id int) (Video, error) {
-	fmt.Printf("remove member by id: %#v\n", id)
+	fmt.Printf("remove video by id: %#v\n", id)
 	member, index, err := p.GetByID(id)
 	if err != nil {
-		return Video{}, fmt.Errorf("remove member by id: %w", err)
+		return Video{}, fmt.Errorf("remove video by id: %w", err)
 	}
 
+	fmt.Printf("removed video index: %v\n", index)
 	p.list = append(p.list[:index], p.list[index+1:]...)
+	fmt.Printf("video list: %v\n", p.list)
 	return member, nil
 }

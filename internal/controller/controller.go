@@ -27,21 +27,28 @@ func NewController() *Controller {
 }
 
 func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
-	username, err := c.MustHeader(r, "Username")
+	username, err := c.GetHeader(r, "Username")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	color, err := c.MustHeader(r, "Color")
+	color, err := c.GetHeader(r, "Color")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	videoURL, err := c.MustHeader(r, "Video-Url")
+	avatarURL, err := c.GetHeader(r, "Avatar-Url")
+	if err != nil {
+		fmt.Printf("/ws/create-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	videoURL, err := c.GetHeader(r, "Video-Url")
 	if err != nil {
 		fmt.Printf("/ws/create-room: %s\n", err)
 		fmt.Fprint(w, err)
@@ -62,11 +69,12 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("conn upgraded")
 
 	member := domain.Member{
-		ID:       userID,
-		Username: username,
-		Color:    color,
-		IsAdmin:  true,
-		Conn:     conn,
+		ID:        userID,
+		Username:  username,
+		Color:     color,
+		AvatarURL: avatarURL,
+		IsAdmin:   true,
+		Conn:      conn,
 	}
 
 	roomID, room := c.roomService.CreateRoom(&member, videoURL)
@@ -81,14 +89,21 @@ func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	// 	fmt.Printf("Cookie: %#v\n", c)
 	// }
 
-	username, err := c.MustHeader(r, "Username")
+	username, err := c.GetHeader(r, "Username")
 	if err != nil {
 		fmt.Printf("/ws/join-room: %s\n", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	color, err := c.MustHeader(r, "Color")
+	color, err := c.GetHeader(r, "Color")
+	if err != nil {
+		fmt.Printf("/ws/join-room: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	avatarURL, err := c.GetHeader(r, "Avatar-Url")
 	if err != nil {
 		fmt.Printf("/ws/join-room: %s\n", err)
 		fmt.Fprint(w, err)
@@ -117,11 +132,12 @@ func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("conn upgraded")
 
 	member := domain.Member{
-		ID:       userID,
-		Username: username,
-		Color:    color,
-		IsAdmin:  false,
-		Conn:     conn,
+		ID:        userID,
+		Username:  username,
+		Color:     color,
+		AvatarURL: avatarURL,
+		IsAdmin:   false,
+		Conn:      conn,
 	}
 
 	room.AddMember(&member)
