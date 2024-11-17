@@ -62,8 +62,8 @@ func (r *Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
 	fmt.Println("sending message to member")
 	if err := conn.WriteJSON(msg); err != nil {
 		fmt.Println(err)
-		conn.Close()
 		r.RemoveMemberByConn(conn)
+		conn.Close()
 	}
 }
 

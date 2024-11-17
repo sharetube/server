@@ -51,7 +51,6 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 	go func() {
 		room.HandleMessages()
 		delete(s.rooms, roomID)
-		// room.Close()
 		fmt.Println("room deleted")
 	}()
 
