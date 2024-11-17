@@ -10,9 +10,11 @@ import (
 
 var (
 	ErrNoVideoUrlProvided = errors.New("no video url provided")
+	ErrNoMemberIDProvided = errors.New("no member id provided")
 	ErrPermissionDenied   = errors.New("permission denied")
 )
 
+// todo: add to config.
 const (
 	PlaylistLimit = 25
 	MembersLimit  = 9
@@ -66,21 +68,6 @@ func (r *Room) AddMember(member *Member) {
 	r.SendMemberJoined(member)
 }
 
-func (r *Room) RemoveMemberByID(id string) {
-	member, err := r.members.RemoveByID(id)
-	if err != nil {
-		r.SendError(member.Conn, err)
-		return
-	}
-
-	if r.members.Length() == 0 {
-		r.Close()
-		return
-	}
-
-	r.SendMemberLeft(&member)
-}
-
 func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 	member, err := r.members.RemoveByConn(conn)
 	if err != nil {
@@ -111,6 +98,19 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 	}
 }
 
+/*
+Runs in a goroutine and handle messages from inputCh.
+
+Available actions:
+
+- get_state
+
+- add_video
+
+- remove_video
+
+- remove_member
+*/
 func (r *Room) HandleMessages() {
 	for {
 		input, more := <-r.inputCh
@@ -127,69 +127,108 @@ func (r *Room) HandleMessages() {
 				Action: "state",
 				Data:   r.GetState(),
 			})
-		case "add_video":
-			// todo: refactor.
-			video, err := func() (Video, error) {
+		case "remove_member":
+			if input.Data == nil {
+				r.SendError(input.Sender, ErrNoVideoUrlProvided)
+				break
+			}
+
+			removedMember, err := func() (*Member, error) {
 				member, _, err := r.members.GetByConn(input.Sender)
 				if err != nil {
-					return Video{}, err
-				}
-
-				if input.Data == nil {
-					return Video{}, ErrNoVideoUrlProvided
+					return nil, err
 				}
 
 				if !member.IsAdmin {
-					return Video{}, ErrPermissionDenied
+					return nil, ErrPermissionDenied
+				}
+
+				removedMember, err := r.members.RemoveByID(*input.Data)
+				if err != nil {
+					return nil, err
+				}
+
+				if r.members.Length() == 0 {
+					r.Close()
+					return nil, nil
+				}
+
+				removedMember.Conn.Close()
+
+				return &removedMember, nil
+			}()
+
+			if err != nil {
+				r.SendError(input.Sender, err)
+			} else {
+				r.SendMemberLeft(removedMember)
+			}
+		case "add_video":
+			// todo: refactor.
+			video, err := func() (*Video, error) {
+				member, _, err := r.members.GetByConn(input.Sender)
+				if err != nil {
+					return nil, err
+				}
+
+				if input.Data == nil {
+					return nil, ErrNoVideoUrlProvided
+				}
+
+				if !member.IsAdmin {
+					return nil, ErrPermissionDenied
 				}
 
 				video, err := r.playlist.Add(member.ID, *input.Data)
 				if err != nil {
-					return Video{}, err
+					return nil, err
 				}
 
-				return video, nil
+				return &video, nil
 			}()
 
 			if err != nil {
 				r.SendError(input.Sender, err)
 			} else {
-				r.SendVideoAdded(&video)
+				r.SendVideoAdded(video)
 			}
 		case "remove_video":
 			// todo: refactor.
-			video, err := func() (Video, error) {
+			video, err := func() (*Video, error) {
 				member, _, err := r.members.GetByConn(input.Sender)
 				if err != nil {
-					return Video{}, err
+					return nil, err
 				}
 
 				if !member.IsAdmin {
-					return Video{}, ErrPermissionDenied
+					return nil, ErrPermissionDenied
 				}
 
 				if input.Data == nil {
-					return Video{}, ErrNoVideoUrlProvided
+					return nil, ErrNoVideoUrlProvided
 				}
 
 				videoID, err := strconv.Atoi(*input.Data)
 				if err != nil {
-					return Video{}, err
+					return nil, err
 				}
 
 				video, err := r.playlist.RemoveByID(videoID)
 				if err != nil {
-					return Video{}, err
+					return nil, err
 				}
 
-				return video, nil
+				return &video, nil
 			}()
 
 			if err != nil {
 				r.SendError(input.Sender, err)
 			} else {
-				r.SendVideoRemoved(&video)
+				r.SendVideoRemoved(video)
 			}
+		default:
+			fmt.Printf("unknown action: %s\n", input.Action)
+			r.SendError(input.Sender, fmt.Errorf("unknown action: %s", input.Action))
 		}
 	}
 }
