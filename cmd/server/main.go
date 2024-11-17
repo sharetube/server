@@ -2,56 +2,99 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	"github.com/sharetube/server/internal/controller"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
+	"github.com/sharetube/server/internal/app"
 )
 
-func main() {
-	// The HTTP Server
-	handler := controller.NewController()
-	server := &http.Server{Addr: "0.0.0.0:10000", Handler: handler.Mux()}
+type configVar[T any] struct {
+	envKey       string
+	flagKey      string
+	defaultValue T
+}
 
-	// Server run context
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
+var (
+	port = configVar[int]{
+		envKey:       "PORT",
+		flagKey:      "port",
+		defaultValue: 8080,
+	}
+	host = configVar[string]{
+		envKey:       "HOST",
+		flagKey:      "host",
+		defaultValue: "0.0.0.0",
+	}
+	logLevel = configVar[string]{
+		envKey:       "LOG_LEVEL",
+		flagKey:      "log-level",
+		defaultValue: "info",
+	}
+	membersLimit = configVar[int]{
+		envKey:       "MEMBERS_LIMIT",
+		flagKey:      "members-limit",
+		defaultValue: 9,
+	}
+	playlistLimit = configVar[int]{
+		envKey:       "PLAYLIST_LIMIT",
+		flagKey:      "playlist-limit",
+		defaultValue: 25,
+	}
+	updatesInterval = configVar[time.Duration]{
+		envKey:       "UPDATES_INTERVAL",
+		flagKey:      "updates-interval",
+		defaultValue: 5 * time.Second,
+	}
+)
 
-	// Listen for syscall signals for process to interrupt/quit
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		<-sig
+func loadAppConfig() *app.AppConfig {
+	// 1. Define flags
+	pflag.Int(port.flagKey, port.defaultValue, "Server port")
+	pflag.String(host.flagKey, host.defaultValue, "Server host")
+	pflag.String(logLevel.flagKey, logLevel.defaultValue, "Logging level")
+	pflag.Int(membersLimit.flagKey, membersLimit.defaultValue, "Maximum number of members in the room")
+	pflag.Int(playlistLimit.flagKey, playlistLimit.defaultValue, "Maximum number of videos in the playlist")
+	pflag.Duration(updatesInterval.flagKey, updatesInterval.defaultValue, "Interval between updates")
+	pflag.Parse()
 
-		// Shutdown signal with grace period of 30 seconds
-		shutdownCtx, c := context.WithTimeout(serverCtx, 30*time.Second)
-		defer c()
+	// 2. Bind flags to viper
+	viper.BindPFlags(pflag.CommandLine)
 
-		go func() {
-			<-shutdownCtx.Done()
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				log.Fatal("graceful shutdown timed out.. forcing exit.")
-			}
-		}()
+	// 3. Set up environment variables prefix and binding
+	viper.SetEnvPrefix("APP")
+	viper.AutomaticEnv()
 
-		// Trigger graceful shutdown
-		err := server.Shutdown(shutdownCtx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		serverStopCtx()
-	}()
+	// 4. Set defaults (lowest priority)
+	viper.SetDefault(port.envKey, port.defaultValue)
+	viper.SetDefault(host.envKey, host.defaultValue)
+	viper.SetDefault(logLevel.envKey, logLevel.defaultValue)
+	viper.SetDefault(membersLimit.envKey, membersLimit.defaultValue)
+	viper.SetDefault(playlistLimit.envKey, playlistLimit.defaultValue)
+	viper.SetDefault(updatesInterval.envKey, updatesInterval.defaultValue)
 
-	fmt.Println("Starting server...")
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+	// 5. Create config struct
+	config := &app.AppConfig{
+		Host:            viper.GetString(host.envKey),
+		Port:            viper.GetInt(port.envKey),
+		LogLevel:        viper.GetString(logLevel.envKey),
+		MembersLimit:    viper.GetInt(membersLimit.envKey),
+		PlaylistLimit:   viper.GetInt(playlistLimit.envKey),
+		UpdatesInterval: viper.GetDuration(updatesInterval.envKey),
 	}
 
-	// Wait for server context to be stopped
-	<-serverCtx.Done()
+	return config
+}
+
+func main() {
+	ctx := context.Background()
+	appConfig := loadAppConfig()
+
+	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
+	fmt.Println(string(jsonConfig))
+
+	app.Run(ctx, appConfig)
 }

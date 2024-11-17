@@ -14,12 +14,16 @@ var (
 )
 
 type RoomService struct {
-	rooms map[string]*domain.Room
+	rooms         map[string]*domain.Room
+	membersLimit  int
+	playlistLimit int
 }
 
-func NewRoomService() RoomService {
+func NewRoomService(membersLimit, playlistLimit int) RoomService {
 	return RoomService{
-		rooms: make(map[string]*domain.Room),
+		rooms:         make(map[string]*domain.Room),
+		membersLimit:  membersLimit,
+		playlistLimit: playlistLimit,
 	}
 }
 
@@ -38,7 +42,7 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 		roomID = uuid.NewString()
 	}
 
-	room := domain.NewRoom(creator, initialVideoURL)
+	room := domain.NewRoom(creator, initialVideoURL, s.membersLimit, s.playlistLimit)
 	s.rooms[roomID] = room
 	room.SendMessageToAllMembers(&domain.Message{
 		Action: "room_created",
