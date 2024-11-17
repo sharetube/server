@@ -65,7 +65,7 @@ func loadAppConfig() *app.AppConfig {
 	viper.BindPFlags(pflag.CommandLine)
 
 	// 3. Set up environment variables prefix and binding
-	viper.SetEnvPrefix("APP")
+	viper.SetEnvPrefix("SERVER")
 	viper.AutomaticEnv()
 
 	// 4. Set defaults (lowest priority)
