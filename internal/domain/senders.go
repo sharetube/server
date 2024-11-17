@@ -73,7 +73,7 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 
 	for {
 		select {
-		case _, more := <-r.inputCh:
+		case _, more := <-r.closeCh:
 			if !more {
 				fmt.Println("ticker stopped")
 				return

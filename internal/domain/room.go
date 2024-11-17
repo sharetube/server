@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrNoVideoUrlProvided = errors.New("no video url provided")
+	ErrPermissionDenied   = errors.New("permission denied")
 )
 
 const (
@@ -32,6 +33,7 @@ type Room struct {
 	playlist *Playlist
 	members  *Members
 	inputCh  chan Input
+	closeCh  chan struct{}
 }
 
 func NewRoom(creator *Member, initialVideoURL string) *Room {
@@ -39,11 +41,8 @@ func NewRoom(creator *Member, initialVideoURL string) *Room {
 		playlist: NewPlaylist(initialVideoURL, creator.ID, PlaylistLimit),
 		members:  NewMembers(creator, MembersLimit),
 		inputCh:  make(chan Input),
+		closeCh:  make(chan struct{}),
 	}
-}
-
-func (r *Room) Close() {
-	close(r.inputCh)
 }
 
 func (r Room) GetState() map[string]any {
@@ -51,6 +50,11 @@ func (r Room) GetState() map[string]any {
 		"playlist": r.playlist.AsList(),
 		"members":  r.members.AsList(),
 	}
+}
+
+func (r *Room) Close() {
+	close(r.inputCh)
+	close(r.closeCh)
 }
 
 func (r *Room) AddMember(member *Member) {
@@ -70,7 +74,7 @@ func (r *Room) RemoveMemberByID(id string) {
 	}
 
 	if r.members.Length() == 0 {
-		close(r.inputCh)
+		r.Close()
 		return
 	}
 
@@ -85,7 +89,7 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 	}
 
 	if r.members.Length() == 0 {
-		close(r.inputCh)
+		r.Close()
 		return
 	}
 
@@ -103,7 +107,6 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 		}
 		input.Sender = conn
 
-		fmt.Printf("Message recieved: %v\n", input)
 		r.inputCh <- input
 	}
 }
@@ -125,6 +128,7 @@ func (r *Room) HandleMessages() {
 				Data:   r.GetState(),
 			})
 		case "add_video":
+			// todo: refactor.
 			video, err := func() (Video, error) {
 				member, _, err := r.members.GetByConn(input.Sender)
 				if err != nil {
@@ -135,10 +139,15 @@ func (r *Room) HandleMessages() {
 					return Video{}, ErrNoVideoUrlProvided
 				}
 
+				if !member.IsAdmin {
+					return Video{}, ErrPermissionDenied
+				}
+
 				video, err := r.playlist.Add(member.ID, *input.Data)
 				if err != nil {
 					return Video{}, err
 				}
+
 				return video, nil
 			}()
 
@@ -148,7 +157,17 @@ func (r *Room) HandleMessages() {
 				r.SendVideoAdded(&video)
 			}
 		case "remove_video":
+			// todo: refactor.
 			video, err := func() (Video, error) {
+				member, _, err := r.members.GetByConn(input.Sender)
+				if err != nil {
+					return Video{}, err
+				}
+
+				if !member.IsAdmin {
+					return Video{}, ErrPermissionDenied
+				}
+
 				if input.Data == nil {
 					return Video{}, ErrNoVideoUrlProvided
 				}
