@@ -13,12 +13,6 @@ var (
 	ErrEmptyData        = errors.New("empty data")
 )
 
-// todo: add to config.
-const (
-	PlaylistLimit = 25
-	MembersLimit  = 9
-)
-
 type Input struct {
 	Action string          `json:"action"`
 	Sender *websocket.Conn `json:"-"`
@@ -37,10 +31,10 @@ type Room struct {
 	closeCh  chan struct{}
 }
 
-func NewRoom(creator *Member, initialVideoURL string) *Room {
+func NewRoom(creator *Member, initialVideoURL string, membersLimit, playlistLimit int) *Room {
 	return &Room{
-		playlist: NewPlaylist(initialVideoURL, creator.ID, PlaylistLimit),
-		members:  NewMembers(creator, MembersLimit),
+		playlist: NewPlaylist(initialVideoURL, creator.ID, playlistLimit),
+		members:  NewMembers(creator, membersLimit),
 		inputCh:  make(chan Input),
 		closeCh:  make(chan struct{}),
 	}
