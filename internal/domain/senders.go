@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (r *Room) SendMemberJoined(member *Member) {
+func (r *Room) sendMemberJoined(member *Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_joined",
 		Data: map[string]any{
@@ -18,7 +18,7 @@ func (r *Room) SendMemberJoined(member *Member) {
 	})
 }
 
-func (r *Room) SendMemberLeft(member *Member) {
+func (r *Room) sendMemberLeft(member *Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_left",
 		Data: map[string]any{
@@ -29,7 +29,29 @@ func (r *Room) SendMemberLeft(member *Member) {
 	})
 }
 
-func (r *Room) SendVideoAdded(video *Video) {
+func (r *Room) sendMemberPromoted(member *Member) {
+	r.SendMessageToAllMembers(&Message{
+		Action: "member_promoted",
+		Data: map[string]any{
+			"member":        member,
+			"members":       r.members.AsList(),
+			"members_count": r.members.Length(),
+		},
+	})
+}
+
+func (r *Room) sendMemberDemoted(member *Member) {
+	r.SendMessageToAllMembers(&Message{
+		Action: "member_demoted",
+		Data: map[string]any{
+			"member":        member,
+			"members":       r.members.AsList(),
+			"members_count": r.members.Length(),
+		},
+	})
+}
+
+func (r *Room) sendVideoAdded(video *Video) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "video_added",
 		Data: map[string]any{
@@ -40,7 +62,7 @@ func (r *Room) SendVideoAdded(video *Video) {
 	})
 }
 
-func (r *Room) SendVideoRemoved(video *Video) {
+func (r *Room) sendVideoRemoved(video *Video) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "video_removed",
 		Data: map[string]any{
@@ -54,11 +76,11 @@ func (r *Room) SendVideoRemoved(video *Video) {
 func (r *Room) SendMessageToAllMembers(msg *Message) {
 	fmt.Println("sending message to all members")
 	for _, member := range r.members.AsList() {
-		r.SendMessageToConn(member.Conn, msg)
+		r.sendMessageToConn(member.Conn, msg)
 	}
 }
 
-func (r *Room) SendMessageToConn(conn *websocket.Conn, msg *Message) {
+func (r *Room) sendMessageToConn(conn *websocket.Conn, msg *Message) {
 	fmt.Println("sending message to member")
 	if err := conn.WriteJSON(msg); err != nil {
 		fmt.Println(err)
@@ -90,9 +112,9 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 	}
 }
 
-func (r *Room) SendError(conn *websocket.Conn, err error) {
+func (r *Room) sendError(conn *websocket.Conn, err error) {
 	fmt.Printf("sending error: %s\n", err)
-	r.SendMessageToConn(conn, &Message{
+	r.sendMessageToConn(conn, &Message{
 		Action: "error",
 		Data: map[string]any{
 			"message": err.Error(),
