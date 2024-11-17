@@ -9,9 +9,8 @@ import (
 )
 
 var (
-	ErrNoVideoUrlProvided = errors.New("no video url provided")
-	ErrNoMemberIDProvided = errors.New("no member id provided")
-	ErrPermissionDenied   = errors.New("permission denied")
+	ErrPermissionDenied = errors.New("permission denied")
+	ErrEmptyData        = errors.New("empty data")
 )
 
 // todo: add to config.
@@ -49,8 +48,10 @@ func NewRoom(creator *Member, initialVideoURL string) *Room {
 
 func (r Room) GetState() map[string]any {
 	return map[string]any{
-		"playlist": r.playlist.AsList(),
-		"members":  r.members.AsList(),
+		"playlist":        r.playlist.AsList(),
+		"playlist_length": r.playlist.Length(),
+		"members":         r.members.AsList(),
+		"members_count":   r.members.Length(),
 	}
 }
 
@@ -61,11 +62,11 @@ func (r *Room) Close() {
 
 func (r *Room) AddMember(member *Member) {
 	if err := r.members.Add(member); err != nil {
-		r.SendError(member.Conn, err)
+		r.sendError(member.Conn, err)
 		return
 	}
 
-	r.SendMemberJoined(member)
+	r.sendMemberJoined(member)
 }
 
 func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
@@ -80,7 +81,7 @@ func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 		return
 	}
 
-	r.SendMemberLeft(&member)
+	r.sendMemberLeft(&member)
 }
 
 func (r *Room) ReadMessages(conn *websocket.Conn) {
@@ -110,6 +111,10 @@ Available actions:
 - remove_video
 
 - remove_member
+
+- promote_member
+
+- demote_member
 */
 func (r *Room) HandleMessages() {
 	for {
@@ -128,12 +133,11 @@ func (r *Room) HandleMessages() {
 				Data:   r.GetState(),
 			})
 		case "remove_member":
-			if input.Data == nil {
-				r.SendError(input.Sender, ErrNoVideoUrlProvided)
-				break
-			}
-
 			removedMember, err := func() (*Member, error) {
+				if input.Data == nil {
+					return nil, ErrEmptyData
+				}
+
 				member, _, err := r.members.GetByConn(input.Sender)
 				if err != nil {
 					return nil, err
@@ -159,9 +163,66 @@ func (r *Room) HandleMessages() {
 			}()
 
 			if err != nil {
-				r.SendError(input.Sender, err)
+				r.sendError(input.Sender, err)
 			} else {
-				r.SendMemberLeft(removedMember)
+				r.sendMemberLeft(removedMember)
+			}
+		case "promote_member":
+			promotedMember, err := func() (*Member, error) {
+				if input.Data == nil {
+					return nil, ErrEmptyData
+				}
+
+				member, _, err := r.members.GetByConn(input.Sender)
+				if err != nil {
+					return nil, err
+				}
+
+				if !member.IsAdmin {
+					return nil, ErrPermissionDenied
+				}
+
+				promotedMember, err := r.members.PromoteMemberByID(*input.Data)
+				if err != nil {
+					return nil, err
+				}
+
+				return &promotedMember, nil
+			}()
+
+			if err != nil {
+				r.sendError(input.Sender, err)
+			} else {
+				r.sendMemberPromoted(promotedMember)
+			}
+
+		case "demote_member":
+			demotedMember, err := func() (*Member, error) {
+				if input.Data == nil {
+					return nil, ErrEmptyData
+				}
+
+				member, _, err := r.members.GetByConn(input.Sender)
+				if err != nil {
+					return nil, err
+				}
+
+				if !member.IsAdmin {
+					return nil, ErrPermissionDenied
+				}
+
+				demotedMember, err := r.members.DemoteMemberByID(*input.Data)
+				if err != nil {
+					return nil, err
+				}
+
+				return &demotedMember, nil
+			}()
+
+			if err != nil {
+				r.sendError(input.Sender, err)
+			} else {
+				r.sendMemberDemoted(demotedMember)
 			}
 		case "add_video":
 			// todo: refactor.
@@ -172,7 +233,7 @@ func (r *Room) HandleMessages() {
 				}
 
 				if input.Data == nil {
-					return nil, ErrNoVideoUrlProvided
+					return nil, ErrEmptyData
 				}
 
 				if !member.IsAdmin {
@@ -188,9 +249,9 @@ func (r *Room) HandleMessages() {
 			}()
 
 			if err != nil {
-				r.SendError(input.Sender, err)
+				r.sendError(input.Sender, err)
 			} else {
-				r.SendVideoAdded(video)
+				r.sendVideoAdded(video)
 			}
 		case "remove_video":
 			// todo: refactor.
@@ -205,7 +266,7 @@ func (r *Room) HandleMessages() {
 				}
 
 				if input.Data == nil {
-					return nil, ErrNoVideoUrlProvided
+					return nil, ErrVideoNotFound
 				}
 
 				videoID, err := strconv.Atoi(*input.Data)
@@ -222,13 +283,13 @@ func (r *Room) HandleMessages() {
 			}()
 
 			if err != nil {
-				r.SendError(input.Sender, err)
+				r.sendError(input.Sender, err)
 			} else {
-				r.SendVideoRemoved(video)
+				r.sendVideoRemoved(video)
 			}
 		default:
 			fmt.Printf("unknown action: %s\n", input.Action)
-			r.SendError(input.Sender, fmt.Errorf("unknown action: %s", input.Action))
+			r.sendError(input.Sender, fmt.Errorf("unknown action: %s", input.Action))
 		}
 	}
 }
