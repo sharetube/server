@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -74,16 +74,15 @@ func (r *Room) sendVideoRemoved(video *Video) {
 }
 
 func (r *Room) SendMessageToAllMembers(msg *Message) {
-	fmt.Println("sending message to all members")
+	// slog.Debug("sending message to all members", "message", msg)
 	for _, member := range r.members.AsList() {
 		r.sendMessageToConn(member.Conn, msg)
 	}
 }
 
 func (r *Room) sendMessageToConn(conn *websocket.Conn, msg *Message) {
-	fmt.Println("sending message to member")
+	// slog.Debug("sending message to conn", "message", msg)
 	if err := conn.WriteJSON(msg); err != nil {
-		fmt.Println(err)
 		r.RemoveMemberByConn(conn)
 		conn.Close()
 	}
@@ -97,7 +96,7 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 		select {
 		case _, more := <-r.closeCh:
 			if !more {
-				fmt.Println("ticker stopped")
+				slog.Debug("ticker stopped")
 				return
 			}
 
@@ -113,7 +112,7 @@ func (r *Room) SendStateToAllMembersPeriodically(timeout time.Duration) {
 }
 
 func (r *Room) sendError(conn *websocket.Conn, err error) {
-	fmt.Printf("sending error: %s\n", err)
+	slog.Info("sending error", "error", err)
 	r.sendMessageToConn(conn, &Message{
 		Action: "error",
 		Data: map[string]any{

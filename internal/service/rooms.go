@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,16 +14,18 @@ var (
 )
 
 type RoomService struct {
-	rooms         map[string]*domain.Room
-	membersLimit  int
-	playlistLimit int
+	rooms           map[string]*domain.Room
+	membersLimit    int
+	playlistLimit   int
+	updatesInterval time.Duration
 }
 
-func NewRoomService(membersLimit, playlistLimit int) RoomService {
+func NewRoomService(updatesInterval time.Duration, membersLimit, playlistLimit int) RoomService {
 	return RoomService{
-		rooms:         make(map[string]*domain.Room),
-		membersLimit:  membersLimit,
-		playlistLimit: playlistLimit,
+		rooms:           make(map[string]*domain.Room),
+		membersLimit:    membersLimit,
+		playlistLimit:   playlistLimit,
+		updatesInterval: updatesInterval,
 	}
 }
 
@@ -44,18 +46,12 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 
 	room := domain.NewRoom(creator, initialVideoURL, s.membersLimit, s.playlistLimit)
 	s.rooms[roomID] = room
-	room.SendMessageToAllMembers(&domain.Message{
-		Action: "room_created",
-		Data: map[string]any{
-			"room_id": roomID,
-		},
-	})
 
-	go room.SendStateToAllMembersPeriodically(10 * time.Second)
+	go room.SendStateToAllMembersPeriodically(s.updatesInterval)
 	go func() {
 		room.HandleMessages()
 		delete(s.rooms, roomID)
-		fmt.Println("room deleted")
+		slog.Info("room closed", "room_id", roomID)
 	}()
 
 	return roomID, room

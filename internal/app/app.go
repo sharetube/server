@@ -12,6 +12,7 @@ import (
 
 	"github.com/sharetube/server/internal/controller"
 	"github.com/sharetube/server/internal/service"
+	"golang.org/x/exp/slog"
 )
 
 type AppConfig struct {
@@ -24,7 +25,7 @@ type AppConfig struct {
 }
 
 func Run(ctx context.Context, cfg *AppConfig) error {
-	roomService := service.NewRoomService(cfg.MembersLimit, cfg.PlaylistLimit)
+	roomService := service.NewRoomService(cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
 
@@ -53,7 +54,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 		serverStopCtx()
 	}()
 
-	fmt.Println("Starting server...")
+	slog.InfoContext(serverCtx, "starting server", "address", server.Addr)
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		return err
