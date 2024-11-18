@@ -14,7 +14,7 @@ var (
 )
 
 type RoomService struct {
-	rooms           map[string]*domain.Room
+	rooms           map[string]*Room
 	membersLimit    int
 	playlistLimit   int
 	updatesInterval time.Duration
@@ -22,14 +22,14 @@ type RoomService struct {
 
 func NewRoomService(updatesInterval time.Duration, membersLimit, playlistLimit int) RoomService {
 	return RoomService{
-		rooms:           make(map[string]*domain.Room),
+		rooms:           make(map[string]*Room),
 		membersLimit:    membersLimit,
 		playlistLimit:   playlistLimit,
 		updatesInterval: updatesInterval,
 	}
 }
 
-func (s RoomService) GetRoom(roomID string) (*domain.Room, error) {
+func (s RoomService) GetRoom(roomID string) (*Room, error) {
 	room, ok := s.rooms[roomID]
 	if !ok {
 		return nil, ErrRoomNotFound
@@ -38,13 +38,13 @@ func (s RoomService) GetRoom(roomID string) (*domain.Room, error) {
 	return room, nil
 }
 
-func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string) (string, *domain.Room) {
+func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string) (string, *Room) {
 	roomID := uuid.NewString()
 	for s.rooms[roomID] != nil {
 		roomID = uuid.NewString()
 	}
 
-	room := domain.NewRoom(creator, initialVideoURL, s.membersLimit, s.playlistLimit)
+	room := newRoom(creator, initialVideoURL, s.membersLimit, s.playlistLimit)
 	s.rooms[roomID] = room
 
 	go room.SendStateToAllMembersPeriodically(s.updatesInterval)

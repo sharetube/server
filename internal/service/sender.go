@@ -1,13 +1,14 @@
-package domain
+package service
 
 import (
 	"log/slog"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/domain"
 )
 
-func (r *Room) sendMemberJoined(member *Member) {
+func (r *Room) sendMemberJoined(member *domain.Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_joined",
 		Data: map[string]any{
@@ -18,7 +19,7 @@ func (r *Room) sendMemberJoined(member *Member) {
 	})
 }
 
-func (r *Room) sendMemberLeft(member *Member) {
+func (r *Room) sendMemberLeft(member *domain.Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_left",
 		Data: map[string]any{
@@ -29,7 +30,7 @@ func (r *Room) sendMemberLeft(member *Member) {
 	})
 }
 
-func (r *Room) sendMemberPromoted(member *Member) {
+func (r *Room) sendMemberPromoted(member *domain.Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_promoted",
 		Data: map[string]any{
@@ -40,7 +41,7 @@ func (r *Room) sendMemberPromoted(member *Member) {
 	})
 }
 
-func (r *Room) sendMemberDemoted(member *Member) {
+func (r *Room) sendMemberDemoted(member *domain.Member) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "member_demoted",
 		Data: map[string]any{
@@ -51,7 +52,7 @@ func (r *Room) sendMemberDemoted(member *Member) {
 	})
 }
 
-func (r *Room) sendVideoAdded(video *Video) {
+func (r *Room) sendVideoAdded(video *domain.Video) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "video_added",
 		Data: map[string]any{
@@ -62,7 +63,7 @@ func (r *Room) sendVideoAdded(video *Video) {
 	})
 }
 
-func (r *Room) sendVideoRemoved(video *Video) {
+func (r *Room) sendVideoRemoved(video *domain.Video) {
 	r.SendMessageToAllMembers(&Message{
 		Action: "video_removed",
 		Data: map[string]any{
