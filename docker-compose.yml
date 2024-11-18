@@ -1,4 +1,18 @@
 services:
+  redis:
+    image: redis:7.4.1-alpine3.20
+    container_name: sharetube-redis
+    entrypoint: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    networks:
+      - sharetube
+
   server:
     container_name: sharetube-server
     build:
@@ -8,6 +22,8 @@ services:
     ports:
       - ${SERVER_PORT}:${SERVER_PORT}
     restart: unless-stopped
+    depends_on:
+      - redis
     networks:
       - sharetube
 
