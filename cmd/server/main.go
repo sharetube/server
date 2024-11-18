@@ -93,7 +93,7 @@ func loadAppConfig() *app.AppConfig {
 
 func main() {
 	ctx := context.Background()
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
 	appConfig := loadAppConfig()

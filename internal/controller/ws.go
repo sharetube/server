@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sharetube/server/internal/domain"
+	"github.com/sharetube/server/internal/service"
 )
 
 func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +40,7 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	roomID, room := c.roomService.CreateRoom(user, videoURL)
 
-	room.SendMessageToAllMembers(&domain.Message{
+	room.SendMessageToAllMembers(&service.Message{
 		Action: "room_created",
 		Data: map[string]any{
 			"room_id": roomID,
