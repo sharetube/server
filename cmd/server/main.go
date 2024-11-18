@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -32,7 +34,7 @@ var (
 	logLevel = configVar[string]{
 		envKey:       "LOG_LEVEL",
 		flagKey:      "log-level",
-		defaultValue: "info",
+		defaultValue: "INFO",
 	}
 	membersLimit = configVar[int]{
 		envKey:       "MEMBERS_LIMIT",
@@ -91,10 +93,20 @@ func loadAppConfig() *app.AppConfig {
 
 func main() {
 	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	appConfig := loadAppConfig()
 
-	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
-	fmt.Println(string(jsonConfig))
+	logLevel := slog.Level(0)
+	if err := logLevel.UnmarshalText([]byte(appConfig.LogLevel)); err != nil {
+		log.Fatal(err)
+	}
 
-	app.Run(ctx, appConfig)
+	slog.SetLogLoggerLevel(logLevel)
+
+	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
+	slog.InfoContext(ctx, "starting app with config", "config", string(jsonConfig))
+
+	log.Fatal(app.Run(ctx, appConfig))
 }

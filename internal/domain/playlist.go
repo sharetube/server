@@ -49,7 +49,6 @@ func (p Playlist) Length() int {
 }
 
 func (p Playlist) GetByID(id int) (Video, int, error) {
-	fmt.Printf("get video by id: %#v\n", id)
 	for index, video := range p.list {
 		if video.ID == id {
 			return video, index, nil
@@ -60,7 +59,6 @@ func (p Playlist) GetByID(id int) (Video, int, error) {
 }
 
 func (p *Playlist) Add(addedBy, url string) (Video, error) {
-	fmt.Printf("add video: %s, %s\n", addedBy, url)
 	if p.Length() >= p.limit {
 		return Video{}, fmt.Errorf("add video: %w", ErrPlaylistLimitReached)
 	}
@@ -77,14 +75,11 @@ func (p *Playlist) Add(addedBy, url string) (Video, error) {
 }
 
 func (p *Playlist) RemoveByID(id int) (Video, error) {
-	fmt.Printf("remove video by id: %#v\n", id)
 	member, index, err := p.GetByID(id)
 	if err != nil {
 		return Video{}, fmt.Errorf("remove video by id: %w", err)
 	}
 
-	fmt.Printf("removed video index: %v\n", index)
 	p.list = append(p.list[:index], p.list[index+1:]...)
-	fmt.Printf("video list: %v\n", p.list)
 	return member, nil
 }

@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/gorilla/websocket"
@@ -32,6 +33,7 @@ type Room struct {
 }
 
 func NewRoom(creator *Member, initialVideoURL string, membersLimit, playlistLimit int) *Room {
+	creator.IsAdmin = true
 	return &Room{
 		playlist: NewPlaylist(initialVideoURL, creator.ID, playlistLimit),
 		members:  NewMembers(creator, membersLimit),
@@ -55,6 +57,7 @@ func (r *Room) Close() {
 }
 
 func (r *Room) AddMember(member *Member) {
+	member.IsAdmin = false
 	if err := r.members.Add(member); err != nil {
 		r.sendError(member.Conn, err)
 		return
@@ -66,7 +69,6 @@ func (r *Room) AddMember(member *Member) {
 func (r *Room) RemoveMemberByConn(conn *websocket.Conn) {
 	member, err := r.members.RemoveByConn(conn)
 	if err != nil {
-		fmt.Printf("remove member by conn: %s\n", err)
 		return
 	}
 
@@ -82,11 +84,12 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
-			fmt.Println("ReadJson error", err)
+			slog.Warn("error reading message", "error", err)
 			r.RemoveMemberByConn(conn)
 			conn.Close()
 			return
 		}
+		slog.Info("message recieved", "message", input)
 		input.Sender = conn
 
 		r.inputCh <- input
@@ -114,14 +117,12 @@ func (r *Room) HandleMessages() {
 	for {
 		input, more := <-r.inputCh
 		if !more {
-			fmt.Println("message handling stopped")
+			slog.Debug("input channel closed")
 			return
 		}
 
-		fmt.Printf("message recieved: %+v\n", input)
 		switch input.Action {
 		case "get_state":
-			fmt.Println("get state")
 			r.SendMessageToAllMembers(&Message{
 				Action: "state",
 				Data:   r.GetState(),
@@ -282,7 +283,7 @@ func (r *Room) HandleMessages() {
 				r.sendVideoRemoved(video)
 			}
 		default:
-			fmt.Printf("unknown action: %s\n", input.Action)
+			slog.Warn("unknown action", "action", input.Action)
 			r.sendError(input.Sender, fmt.Errorf("unknown action: %s", input.Action))
 		}
 	}

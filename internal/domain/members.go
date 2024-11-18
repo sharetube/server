@@ -44,7 +44,6 @@ func (m Members) AsList() []*Member {
 }
 
 func (m Members) getPtrByID(id string) (*Member, int, error) {
-	fmt.Printf("get member by id: %#v\n", id)
 	for index, member := range m.list {
 		if member.ID == id {
 			return member, index, nil
@@ -64,7 +63,6 @@ func (m Members) GetByID(id string) (Member, int, error) {
 }
 
 func (m Members) GetByConn(conn *websocket.Conn) (Member, int, error) {
-	fmt.Println("get member by conn")
 	for index, member := range m.list {
 		if member.Conn == conn {
 			return *member, index, nil
@@ -75,7 +73,6 @@ func (m Members) GetByConn(conn *websocket.Conn) (Member, int, error) {
 }
 
 func (m *Members) Add(member *Member) error {
-	fmt.Printf("add member: %#v\n", member)
 	if _, _, err := m.GetByID(member.ID); err == nil {
 		return fmt.Errorf("add member: %w", ErrMemberAlreadyExists)
 	}
@@ -89,7 +86,6 @@ func (m *Members) Add(member *Member) error {
 }
 
 func (m *Members) RemoveByID(id string) (Member, error) {
-	fmt.Printf("remove member by id: %#v\n", id)
 	member, index, err := m.GetByID(id)
 	if err != nil {
 		return Member{}, fmt.Errorf("remove member by id: %w", err)
@@ -100,7 +96,6 @@ func (m *Members) RemoveByID(id string) (Member, error) {
 }
 
 func (m *Members) RemoveByConn(conn *websocket.Conn) (Member, error) {
-	fmt.Println("remove member by conn")
 	member, index, err := m.GetByConn(conn)
 	if err != nil {
 		return Member{}, fmt.Errorf("remove member by conn: %w", err)
@@ -111,7 +106,6 @@ func (m *Members) RemoveByConn(conn *websocket.Conn) (Member, error) {
 }
 
 func (m *Members) PromoteMemberByID(id string) (Member, error) {
-	fmt.Printf("promote member by id: %#v\n", id)
 	member, _, err := m.getPtrByID(id)
 	if err != nil {
 		return Member{}, fmt.Errorf("promote member by id: %w", err)
@@ -122,7 +116,6 @@ func (m *Members) PromoteMemberByID(id string) (Member, error) {
 }
 
 func (m *Members) DemoteMemberByID(id string) (Member, error) {
-	fmt.Printf("demote member by id: %#v\n", id)
 	member, _, err := m.getPtrByID(id)
 	if err != nil {
 		return Member{}, fmt.Errorf("demote member by id: %w", err)
