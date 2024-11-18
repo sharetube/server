@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/sharetube/server/internal/controller"
+	"github.com/sharetube/server/internal/repository/redis"
 	"github.com/sharetube/server/internal/service"
+	"github.com/sharetube/server/pkg/redisclient"
 	"golang.org/x/exp/slog"
 )
 
@@ -22,9 +24,38 @@ type AppConfig struct {
 	PlaylistLimit   int
 	UpdatesInterval time.Duration
 	LogLevel        string
+	RedisPort       int
+	RedisHost       string
+	RedisPassword   string `json:"-"`
+}
+
+// todo: add validation.
+func (cfg *AppConfig) Validate() error {
+	if cfg.MembersLimit < 1 {
+		return fmt.Errorf("members limit must be greater than 0")
+	}
+	if cfg.PlaylistLimit < 1 {
+		return fmt.Errorf("playlist limit must be greater than 0")
+	}
+	if cfg.UpdatesInterval < 1 {
+		return fmt.Errorf("updates interval must be greater than 0")
+	}
+	return nil
 }
 
 func Run(ctx context.Context, cfg *AppConfig) error {
+	rc, err := redisclient.NewRedisClient(&redisclient.Config{
+		Port:     cfg.RedisPort,
+		Host:     cfg.RedisHost,
+		Password: cfg.RedisPassword,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create redis client: %w", err)
+	}
+	defer rc.Close()
+
+	createRoomSessionRepo := redis.NewCreateRoomSessionRepo(rc, 30*time.Second)
+	createRoomSessionRepo.Set(ctx, "some-value")
 	roomService := service.NewRoomService(cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
@@ -55,8 +86,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}()
 
 	slog.InfoContext(serverCtx, "starting server", "address", server.Addr)
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 

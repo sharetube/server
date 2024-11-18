@@ -22,34 +22,49 @@ type configVar[T any] struct {
 
 var (
 	port = configVar[int]{
-		envKey:       "PORT",
-		flagKey:      "port",
+		envKey:       "SERVER_PORT",
+		flagKey:      "server-port",
 		defaultValue: 8080,
 	}
 	host = configVar[string]{
-		envKey:       "HOST",
-		flagKey:      "host",
+		envKey:       "SERVER_HOST",
+		flagKey:      "server-host",
 		defaultValue: "0.0.0.0",
 	}
 	logLevel = configVar[string]{
-		envKey:       "LOG_LEVEL",
-		flagKey:      "log-level",
+		envKey:       "SERVER_LOG_LEVEL",
+		flagKey:      "server-log-level",
 		defaultValue: "INFO",
 	}
 	membersLimit = configVar[int]{
-		envKey:       "MEMBERS_LIMIT",
-		flagKey:      "members-limit",
+		envKey:       "SERVER_MEMBERS_LIMIT",
+		flagKey:      "server-members-limit",
 		defaultValue: 9,
 	}
 	playlistLimit = configVar[int]{
-		envKey:       "PLAYLIST_LIMIT",
-		flagKey:      "playlist-limit",
+		envKey:       "SERVER_PLAYLIST_LIMIT",
+		flagKey:      "server-playlist-limit",
 		defaultValue: 25,
 	}
 	updatesInterval = configVar[time.Duration]{
-		envKey:       "UPDATES_INTERVAL",
-		flagKey:      "updates-interval",
+		envKey:       "SERVER_UPDATES_INTERVAL",
+		flagKey:      "server-updates-interval",
 		defaultValue: 5 * time.Second,
+	}
+	redisPort = configVar[int]{
+		envKey:       "REDIS_PORT",
+		flagKey:      "redis-port",
+		defaultValue: 6379,
+	}
+	redisHost = configVar[string]{
+		envKey:       "REDIS_HOST",
+		flagKey:      "redis-host",
+		defaultValue: "localhost",
+	}
+	redisPassword = configVar[string]{
+		envKey:       "REDIS_PASSWORD",
+		flagKey:      "redis-password",
+		defaultValue: "",
 	}
 )
 
@@ -61,13 +76,15 @@ func loadAppConfig() *app.AppConfig {
 	pflag.Int(membersLimit.flagKey, membersLimit.defaultValue, "Maximum number of members in the room")
 	pflag.Int(playlistLimit.flagKey, playlistLimit.defaultValue, "Maximum number of videos in the playlist")
 	pflag.Duration(updatesInterval.flagKey, updatesInterval.defaultValue, "Interval between updates")
+	pflag.Int(redisPort.flagKey, redisPort.defaultValue, "Redis port")
+	pflag.String(redisHost.flagKey, redisHost.defaultValue, "Redis host")
+	pflag.String(redisPassword.flagKey, redisPassword.defaultValue, "Redis password")
 	pflag.Parse()
 
 	// 2. Bind flags to viper
 	viper.BindPFlags(pflag.CommandLine)
 
 	// 3. Set up environment variables prefix and binding
-	viper.SetEnvPrefix("SERVER")
 	viper.AutomaticEnv()
 
 	// 4. Set defaults (lowest priority)
@@ -77,6 +94,9 @@ func loadAppConfig() *app.AppConfig {
 	viper.SetDefault(membersLimit.envKey, membersLimit.defaultValue)
 	viper.SetDefault(playlistLimit.envKey, playlistLimit.defaultValue)
 	viper.SetDefault(updatesInterval.envKey, updatesInterval.defaultValue)
+	viper.SetDefault(redisPort.envKey, redisPort.defaultValue)
+	viper.SetDefault(redisHost.envKey, redisHost.defaultValue)
+	viper.SetDefault(redisPassword.envKey, redisPassword.defaultValue)
 
 	// 5. Create config struct
 	config := &app.AppConfig{
@@ -86,6 +106,9 @@ func loadAppConfig() *app.AppConfig {
 		MembersLimit:    viper.GetInt(membersLimit.envKey),
 		PlaylistLimit:   viper.GetInt(playlistLimit.envKey),
 		UpdatesInterval: viper.GetDuration(updatesInterval.envKey),
+		RedisPort:       viper.GetInt(redisPort.envKey),
+		RedisHost:       viper.GetString(redisHost.envKey),
+		RedisPassword:   viper.GetString(redisPassword.envKey),
 	}
 
 	return config
