@@ -11,7 +11,6 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
-			slog.Warn("error reading message", "error", err)
 			r.RemoveMemberByConn(conn)
 			conn.Close()
 			return

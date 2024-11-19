@@ -47,6 +47,13 @@ func (s *RoomService) CreateRoom(creator *domain.Member, initialVideoURL string)
 	room := newRoom(creator, initialVideoURL, s.membersLimit, s.playlistLimit)
 	s.rooms[roomID] = room
 
+	room.SendMessageToAllMembers(&Message{
+		Action: "room_created",
+		Data: map[string]any{
+			"room_id": roomID,
+		},
+	})
+
 	go room.SendStateToAllMembersPeriodically(s.updatesInterval)
 	go func() {
 		room.HandleMessages()

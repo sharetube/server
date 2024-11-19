@@ -6,23 +6,21 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sharetube/server/internal/service"
 )
 
 func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	user, err := c.getUser(r)
 	if err != nil {
-		slog.Info("/ws/create-room:", "error", err)
+		slog.Info("CreateRoom:", "error", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	user.IsAdmin = true
-	slog.Debug("/ws/create-room: user recieved", "user", user)
+	slog.Debug("CreateRoom: user recieved", "user", user)
 
-	videoURL, err := c.getHeader(r, "Video-Url")
+	videoURL, err := c.getQueryParam(r, "video-url")
 	if err != nil {
-		slog.Info("/ws/create-room:", "error", err)
+		slog.Info("CreateRoom:", "error", err)
 		fmt.Fprint(w, err)
 		return
 	}
@@ -31,23 +29,16 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	// headers.Add("Set-Cookie", cookieString)
 	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
-		slog.Warn("/ws/create-room: failed to upgrade connection", "error", err)
+		slog.Warn("CreateRoom: failed to upgrade connection", "error", err)
 		return
 	}
-	slog.Debug("/ws/create-room: connection established", "user", user)
+	slog.Debug("CreateRoom: connection established", "user", user)
 
 	user.Conn = conn
 
 	roomID, room := c.roomService.CreateRoom(user, videoURL)
 
-	room.SendMessageToAllMembers(&service.Message{
-		Action: "room_created",
-		Data: map[string]any{
-			"room_id": roomID,
-		},
-	})
-
-	slog.Info("/ws/create-room: room created", "room_id", roomID, "room", room.GetState(), "user", user)
+	slog.Info("CreateRoom: room created", "room_id", roomID, "room", room.GetState(), "user", user)
 
 	go room.ReadMessages(conn)
 }
@@ -59,18 +50,17 @@ func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	user, err := c.getUser(r)
 	if err != nil {
-		slog.Info("join-room handler", "error", err)
+		slog.Info("JoinRoom:", "error", err)
 		fmt.Fprint(w, err)
 		return
 	}
 
-	user.IsAdmin = false
-	slog.Debug("join-room: user recieved", "user", user)
+	slog.Debug("JoinRoom: user recieved", "user", user)
 
 	roomID := chi.URLParam(r, "room-id")
 	room, err := c.roomService.GetRoom(roomID)
 	if err != nil {
-		slog.Info("/ws/join-room: failed to get room", "error", err)
+		slog.Info("JoinRoom: failed to get room", "error", err)
 		fmt.Fprint(w, err)
 		return
 	}
@@ -79,16 +69,16 @@ func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	// headers.Add("Set-Cookie", cookieString)
 	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
-		slog.Warn("/ws/join-room: failed to upgrade connection", "error", err)
+		slog.Warn("JoinRoom: failed to upgrade connection", "error", err)
 		return
 	}
-	slog.Debug("/ws/join-room: connection established", "user", user)
+	slog.Debug("JoinRoom: connection established", "user", user)
 
 	user.Conn = conn
 
 	room.AddMember(user)
 
-	slog.Info("/ws/join-room: user joined", "room_id", roomID, "room", room.GetState(), "user", user)
+	slog.Info("JoinRoom: user joined", "room_id", roomID, "room", room.GetState(), "user", user)
 
 	go room.ReadMessages(conn)
 }
