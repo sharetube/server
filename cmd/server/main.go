@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -122,7 +123,7 @@ func main() {
 	appConfig := loadAppConfig()
 
 	logLevel := slog.Level(0)
-	if err := logLevel.UnmarshalText([]byte(appConfig.LogLevel)); err != nil {
+	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(appConfig.LogLevel))); err != nil {
 		log.Fatal(err)
 	}
 

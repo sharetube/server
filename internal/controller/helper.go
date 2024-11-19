@@ -7,31 +7,27 @@ import (
 	"github.com/sharetube/server/internal/domain"
 )
 
-const (
-	headerPrefix = "St-"
-)
-
-func (c Controller) getHeader(r *http.Request, key string) (string, error) {
-	value := r.Header.Get(headerPrefix + key)
+func (c Controller) getQueryParam(r *http.Request, key string) (string, error) {
+	value := r.URL.Query().Get(key)
 	if value == "" {
-		return "", fmt.Errorf("header %s was not provided", key)
+		return "", fmt.Errorf("param %s was not provided", key)
 	}
 
 	return value, nil
 }
 
 func (c Controller) getUser(r *http.Request) (*domain.Member, error) {
-	username, err := c.getHeader(r, "Username")
+	username, err := c.getQueryParam(r, "username")
 	if err != nil {
 		return nil, err
 	}
 
-	color, err := c.getHeader(r, "Color")
+	color, err := c.getQueryParam(r, "color")
 	if err != nil {
 		return nil, err
 	}
 
-	avatarURL, err := c.getHeader(r, "Avatar-Url")
+	avatarURL, err := c.getQueryParam(r, "avatar-url")
 	if err != nil {
 		return nil, err
 	}
