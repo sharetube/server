@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/gorilla/websocket"
@@ -13,9 +14,31 @@ var (
 )
 
 type Input struct {
-	Action string          `json:"action"`
-	Sender *websocket.Conn `json:"-"`
-	Data   *string         `json:"data"`
+	Action string         `json:"action"`
+	Sender *domain.Member `json:"-"`
+	Data   []byte         `json:"data"`
+}
+
+func (i *Input) UnmarshalJSON(data []byte) error {
+	var dataMap map[string]any
+	if err := json.Unmarshal(data, &dataMap); err != nil {
+		return err
+	}
+
+	action, ok := dataMap["action"].(string)
+	if !ok {
+		return errors.New("invalid action")
+	}
+
+	i.Action = action
+
+	dataBytes, err := json.Marshal(dataMap["data"])
+	if err != nil {
+		return err
+	}
+	i.Data = dataBytes
+
+	return nil
 }
 
 type Message struct {
@@ -26,6 +49,7 @@ type Message struct {
 type Room struct {
 	playlist *domain.Playlist
 	members  *domain.Members
+	player   *domain.Player
 	inputCh  chan Input
 	closeCh  chan struct{}
 }
@@ -35,6 +59,7 @@ func newRoom(creator *domain.Member, initialVideoURL string, membersLimit, playl
 	return &Room{
 		playlist: domain.NewPlaylist(initialVideoURL, creator.ID, playlistLimit),
 		members:  domain.NewMembers(creator, membersLimit),
+		player:   domain.NewPlayer(initialVideoURL),
 		inputCh:  make(chan Input),
 		closeCh:  make(chan struct{}),
 	}

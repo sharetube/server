@@ -36,9 +36,7 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	user.Conn = conn
 
-	roomID, room := c.roomService.CreateRoom(user, videoURL)
-
-	slog.Info("CreateRoom: room created", "room_id", roomID, "room", room.GetState(), "user", user)
+	_, room := c.roomService.CreateRoom(user, videoURL)
 
 	go room.ReadMessages(conn)
 }
@@ -77,8 +75,6 @@ func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	user.Conn = conn
 
 	room.AddMember(user)
-
-	slog.Info("JoinRoom: user joined", "room_id", roomID, "room", room.GetState(), "user", user)
 
 	go room.ReadMessages(conn)
 }
