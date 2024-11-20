@@ -11,12 +11,19 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
+			slog.Debug("error reading message", "error", err)
 			r.RemoveMemberByConn(conn)
 			conn.Close()
 			return
 		}
 		slog.Info("message recieved", "message", input)
-		input.Sender = conn
+
+		member, _, err := r.members.GetByConn(conn)
+		if err != nil {
+			slog.Warn("error getting member", "error", err)
+			return
+		}
+		input.Sender = &member
 
 		r.inputCh <- input
 	}
@@ -57,7 +64,7 @@ func (r *Room) HandleMessages() {
 			removedMember, err := r.handleRemoveMember(&input)
 
 			if err != nil {
-				r.sendError(input.Sender, err)
+				r.sendError(input.Sender.Conn, err)
 			} else {
 				r.sendMemberLeft(removedMember)
 			}
@@ -65,7 +72,7 @@ func (r *Room) HandleMessages() {
 			promotedMember, err := r.handlePromoteMember(&input)
 
 			if err != nil {
-				r.sendError(input.Sender, err)
+				r.sendError(input.Sender.Conn, err)
 			} else {
 				r.sendMemberPromoted(promotedMember)
 			}
@@ -74,7 +81,7 @@ func (r *Room) HandleMessages() {
 			demotedMember, err := r.handleDemoteMember(&input)
 
 			if err != nil {
-				r.sendError(input.Sender, err)
+				r.sendError(input.Sender.Conn, err)
 			} else {
 				r.sendMemberDemoted(demotedMember)
 			}
@@ -82,7 +89,7 @@ func (r *Room) HandleMessages() {
 			video, err := r.handleAddVideo(&input)
 
 			if err != nil {
-				r.sendError(input.Sender, err)
+				r.sendError(input.Sender.Conn, err)
 			} else {
 				r.sendVideoAdded(video)
 			}
@@ -90,13 +97,20 @@ func (r *Room) HandleMessages() {
 			video, err := r.handleRemoveVideo(&input)
 
 			if err != nil {
-				r.sendError(input.Sender, err)
+				r.sendError(input.Sender.Conn, err)
 			} else {
 				r.sendVideoRemoved(video)
 			}
+		case "player_updated":
+			player, err := r.handlePlayerUpdated(&input)
+			if err != nil {
+				r.sendError(input.Sender.Conn, err)
+			} else {
+				r.sendPlayerUpdated(player)
+			}
 		default:
 			slog.Warn("unknown action", "action", input.Action)
-			r.sendError(input.Sender, fmt.Errorf("unknown action: %s", input.Action))
+			r.sendError(input.Sender.Conn, fmt.Errorf("unknown action: %s", input.Action))
 		}
 	}
 }

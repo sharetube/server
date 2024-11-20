@@ -21,8 +21,9 @@ type Video struct {
 type Playlist struct {
 	list          []Video
 	previousVideo *Video
-	lastID        int
-	limit         int
+	// currentVideo  *Video
+	lastID int
+	limit  int
 }
 
 func NewPlaylist(initialVideoURL, addedBy string, limit int) *Playlist {

@@ -74,6 +74,15 @@ func (r *Room) sendVideoRemoved(video *domain.Video) {
 	})
 }
 
+func (r *Room) sendPlayerUpdated(player *domain.Player) {
+	r.SendMessageToAllMembers(&Message{
+		Action: "player_updated",
+		Data: map[string]any{
+			"player": player,
+		},
+	})
+}
+
 func (r *Room) SendMessageToAllMembers(msg *Message) {
 	// slog.Debug("sending message to all members", "message", msg)
 	for _, member := range r.members.AsList() {

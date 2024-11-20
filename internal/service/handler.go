@@ -1,26 +1,27 @@
 package service
 
 import (
-	"strconv"
+	"encoding/json"
+	"log/slog"
 
 	"github.com/sharetube/server/internal/domain"
 )
 
 func (r *Room) handleRemoveMember(input *Input) (*domain.Member, error) {
-	if input.Data == nil {
-		return nil, ErrEmptyData
-	}
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
 
-	member, _, err := r.members.GetByConn(input.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	if !member.IsAdmin {
+	if !input.Sender.IsAdmin {
 		return nil, ErrPermissionDenied
 	}
 
-	removedMember, err := r.members.RemoveByID(*input.Data)
+	var memberID string
+	if err := json.Unmarshal(input.Data, &memberID); err != nil {
+		return nil, err
+	}
+
+	removedMember, err := r.members.RemoveByID(memberID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,20 +37,20 @@ func (r *Room) handleRemoveMember(input *Input) (*domain.Member, error) {
 }
 
 func (r *Room) handlePromoteMember(input *Input) (*domain.Member, error) {
-	if input.Data == nil {
-		return nil, ErrEmptyData
-	}
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
 
-	member, _, err := r.members.GetByConn(input.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	if !member.IsAdmin {
+	if !input.Sender.IsAdmin {
 		return nil, ErrPermissionDenied
 	}
 
-	promotedMember, err := r.members.PromoteMemberByID(*input.Data)
+	var memberID string
+	if err := json.Unmarshal(input.Data, &memberID); err != nil {
+		return nil, err
+	}
+
+	promotedMember, err := r.members.PromoteMemberByID(memberID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,20 +59,20 @@ func (r *Room) handlePromoteMember(input *Input) (*domain.Member, error) {
 }
 
 func (r *Room) handleDemoteMember(input *Input) (*domain.Member, error) {
-	if input.Data == nil {
-		return nil, ErrEmptyData
-	}
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
 
-	member, _, err := r.members.GetByConn(input.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	if !member.IsAdmin {
+	if !input.Sender.IsAdmin {
 		return nil, ErrPermissionDenied
 	}
 
-	demotedMember, err := r.members.DemoteMemberByID(*input.Data)
+	var memberID string
+	if err := json.Unmarshal(input.Data, &memberID); err != nil {
+		return nil, err
+	}
+
+	demotedMember, err := r.members.DemoteMemberByID(memberID)
 	if err != nil {
 		return nil, err
 	}
@@ -80,20 +81,20 @@ func (r *Room) handleDemoteMember(input *Input) (*domain.Member, error) {
 }
 
 func (r *Room) handleAddVideo(input *Input) (*domain.Video, error) {
-	member, _, err := r.members.GetByConn(input.Sender)
-	if err != nil {
-		return nil, err
-	}
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
 
-	if input.Data == nil {
-		return nil, ErrEmptyData
-	}
-
-	if !member.IsAdmin {
+	if !input.Sender.IsAdmin {
 		return nil, ErrPermissionDenied
 	}
 
-	video, err := r.playlist.Add(member.ID, *input.Data)
+	var videoURL string
+	if err := json.Unmarshal(input.Data, &videoURL); err != nil {
+		return nil, err
+	}
+
+	video, err := r.playlist.Add(input.Sender.ID, videoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -102,21 +103,16 @@ func (r *Room) handleAddVideo(input *Input) (*domain.Video, error) {
 }
 
 func (r *Room) handleRemoveVideo(input *Input) (*domain.Video, error) {
-	member, _, err := r.members.GetByConn(input.Sender)
-	if err != nil {
-		return nil, err
-	}
-
-	if !member.IsAdmin {
+	if !input.Sender.IsAdmin {
 		return nil, ErrPermissionDenied
 	}
 
-	if input.Data == nil {
-		return nil, ErrEmptyData
-	}
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
 
-	videoID, err := strconv.Atoi(*input.Data)
-	if err != nil {
+	var videoID int
+	if err := json.Unmarshal(input.Data, &videoID); err != nil {
 		return nil, err
 	}
 
@@ -126,4 +122,26 @@ func (r *Room) handleRemoveVideo(input *Input) (*domain.Video, error) {
 	}
 
 	return &video, nil
+}
+
+func (r *Room) handlePlayerUpdated(input *Input) (*domain.Player, error) {
+	// if input.Data == nil {
+	// 	return nil, ErrEmptyData
+	// }
+
+	var udpatedPlayer struct {
+		IsPlaying    bool    `json:"is_playing"`
+		CurrentTime  float64 `json:"current_time"`
+		PlaybackRate float64 `json:"playback_rate"`
+	}
+	if err := json.Unmarshal(input.Data, &udpatedPlayer); err != nil {
+		return nil, err
+	}
+	slog.Debug("player updated", "player", udpatedPlayer)
+
+	r.player.IsPlaying = udpatedPlayer.IsPlaying
+	r.player.CurrentTime = udpatedPlayer.CurrentTime
+	r.player.PlaybackRate = udpatedPlayer.PlaybackRate
+
+	return r.player, nil
 }
