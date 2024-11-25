@@ -1,8 +1,9 @@
-package service
+package room
 
 import (
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	"github.com/sharetube/server/internal/domain"
 )
@@ -129,19 +130,20 @@ func (r *Room) handlePlayerUpdated(input *Input) (*domain.Player, error) {
 	// 	return nil, ErrEmptyData
 	// }
 
-	var udpatedPlayer struct {
+	var updatedPlayer struct {
 		IsPlaying    bool    `json:"is_playing"`
 		CurrentTime  float64 `json:"current_time"`
 		PlaybackRate float64 `json:"playback_rate"`
 	}
-	if err := json.Unmarshal(input.Data, &udpatedPlayer); err != nil {
+	if err := json.Unmarshal(input.Data, &updatedPlayer); err != nil {
 		return nil, err
 	}
-	slog.Debug("player updated", "player", udpatedPlayer)
+	slog.Debug("player updated", "player", updatedPlayer)
 
-	r.player.IsPlaying = udpatedPlayer.IsPlaying
-	r.player.CurrentTime = udpatedPlayer.CurrentTime
-	r.player.PlaybackRate = udpatedPlayer.PlaybackRate
+	r.player.IsPlaying = updatedPlayer.IsPlaying
+	r.player.CurrentTime = updatedPlayer.CurrentTime
+	r.player.PlaybackRate = updatedPlayer.PlaybackRate
+	r.player.UpdatedAt = time.Now().UnixMilli()
 
 	return r.player, nil
 }

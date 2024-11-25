@@ -1,4 +1,4 @@
-package service
+package room
 
 import (
 	"fmt"
@@ -12,9 +12,11 @@ func (r *Room) ReadMessages(conn *websocket.Conn) {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
 			slog.Debug("error reading message", "error", err)
+			r.sendError(conn, fmt.Errorf("error reading message: %w", err))
 			r.RemoveMemberByConn(conn)
 			conn.Close()
 			return
+
 		}
 		slog.Info("message recieved", "message", input)
 

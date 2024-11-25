@@ -1,4 +1,4 @@
-package service
+package room
 
 import (
 	"log/slog"

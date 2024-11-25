@@ -122,7 +122,7 @@ func main() {
 
 	appConfig := loadAppConfig()
 
-	logLevel := slog.Level(0)
+	logLevel := slog.Level(slog.LevelDebug)
 	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(appConfig.LogLevel))); err != nil {
 		log.Fatal(err)
 	}

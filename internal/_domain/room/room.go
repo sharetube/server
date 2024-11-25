@@ -1,4 +1,4 @@
-package service
+package room
 
 import (
 	"encoding/json"
@@ -17,6 +17,7 @@ type Input struct {
 	Action string         `json:"action"`
 	Sender *domain.Member `json:"-"`
 	Data   []byte         `json:"data"`
+	// RequestID int            `json:"request_id"`
 }
 
 func (i *Input) UnmarshalJSON(data []byte) error {
@@ -47,6 +48,7 @@ type Message struct {
 }
 
 type Room struct {
+	id       string
 	playlist *domain.Playlist
 	members  *domain.Members
 	player   *domain.Player
@@ -54,10 +56,11 @@ type Room struct {
 	closeCh  chan struct{}
 }
 
-func newRoom(creator *domain.Member, initialVideoURL string, membersLimit, playlistLimit int) *Room {
+func NewRoom(creator *domain.Member, id, initialVideoURL string, membersLimit, playlistLimit int) *Room {
 	creator.IsAdmin = true
 	return &Room{
-		playlist: domain.NewPlaylist(initialVideoURL, creator.ID, playlistLimit),
+		id:       id,
+		playlist: domain.NewPlaylist(creator.ID, playlistLimit),
 		members:  domain.NewMembers(creator, membersLimit),
 		player:   domain.NewPlayer(initialVideoURL),
 		inputCh:  make(chan Input),
@@ -67,6 +70,7 @@ func newRoom(creator *domain.Member, initialVideoURL string, membersLimit, playl
 
 func (r Room) GetState() map[string]any {
 	return map[string]any{
+		"id":              r.id,
 		"playlist":        r.playlist.AsList(),
 		"playlist_length": r.playlist.Length(),
 		"members":         r.members.AsList(),

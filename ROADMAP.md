@@ -1,3 +1,0 @@
-# Road map
-
-- [ ] Playlist pagination

@@ -1,18 +1,25 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/service"
+	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/pkg/validator"
 )
 
-type Controller struct {
-	upgrader    websocket.Upgrader
-	roomService service.RoomService
+type iRoomService interface {
+	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
 }
 
-func NewController(roomService service.RoomService) *Controller {
+type Controller struct {
+	roomService iRoomService
+	upgrader    websocket.Upgrader
+	validate    *validator.Validator
+}
+
+func NewController(roomService iRoomService) *Controller {
 	return &Controller{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -20,5 +27,6 @@ func NewController(roomService service.RoomService) *Controller {
 			},
 		},
 		roomService: roomService,
+		validate:    validator.NewValidator(),
 	}
 }
