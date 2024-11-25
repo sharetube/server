@@ -56,3 +56,12 @@ func (r Repo) CreateMember(ctx context.Context, params *CreateMemberParams) erro
 	_, err := pipe.Exec(ctx)
 	return err
 }
+
+func (r Repo) GetMemberRoomId(ctx context.Context, memberID string) (string, error) {
+	roomID, err := r.rc.HGet(ctx, memberPrefix+":"+memberID, "room_id").Result()
+	if err != nil {
+		return "", err
+	}
+
+	return roomID, nil
+}

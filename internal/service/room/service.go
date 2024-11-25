@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/redis"
 )
 
@@ -20,18 +21,28 @@ type iRedisRepo interface {
 	CreateVideo(context.Context, *redis.CreateVideoParams) error
 	CreatePlayer(context.Context, *redis.CreatePlayerParams) error
 	CreateConnectToken(context.Context, string, string) error
+	GetMemberIDByConnectToken(context.Context, string) (string, error)
+	GetMemberRoomId(context.Context, string) (string, error)
+}
+
+type iWSRepo interface {
+	Add(*websocket.Conn, string) error
+	Remove(*websocket.Conn)
+	GetMemberID(*websocket.Conn) (string, error)
 }
 
 type Service struct {
 	redisRepo       iRedisRepo
+	wsRepo          iWSRepo
 	membersLimit    int
 	playlistLimit   int
 	updatesInterval time.Duration
 }
 
-func NewService(redisRepo iRedisRepo, updatesInterval time.Duration, membersLimit, playlistLimit int) Service {
+func NewService(redisRepo iRedisRepo, wsRepo iWSRepo, updatesInterval time.Duration, membersLimit, playlistLimit int) Service {
 	return Service{
 		redisRepo:       redisRepo,
+		wsRepo:          wsRepo,
 		membersLimit:    membersLimit,
 		playlistLimit:   playlistLimit,
 		updatesInterval: updatesInterval,
@@ -90,5 +101,26 @@ func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 		MemberID:     memberID,
 		ConnectToken: connectToken,
 	}, nil
+}
+
+func (s Service) GetMemberIDByConnectToken(ctx context.Context, connectToken string) (string, error) {
+	return s.redisRepo.GetMemberIDByConnectToken(ctx, connectToken)
+
+	//? check if room exists
+	// roomID, err := s.redisRepo.GetMemberRoomId(ctx, memberID)
+	// if err != nil {
+	// 	return err
+	// }
+}
+
+func (s Service) ConnectMember(ctx context.Context, conn *websocket.Conn, memberID string) error {
+	if err := s.wsRepo.Add(conn, memberID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s Service) AddVideo(ctx context.Context) {
 
 }

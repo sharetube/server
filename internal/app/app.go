@@ -12,6 +12,7 @@ import (
 
 	"github.com/sharetube/server/internal/controller"
 	"github.com/sharetube/server/internal/repository/redis"
+	wssender "github.com/sharetube/server/internal/repository/ws-sender"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/redisclient"
 	"golang.org/x/exp/slog"
@@ -55,7 +56,8 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	defer rc.Close()
 
 	roomRepo := redis.NewRepo(rc)
-	roomService := room.NewService(roomRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
+	wsRepo := wssender.NewRepo()
+	roomService := room.NewService(roomRepo, wsRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
 

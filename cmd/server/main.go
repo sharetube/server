@@ -117,17 +117,18 @@ func loadAppConfig() *app.AppConfig {
 
 func main() {
 	ctx := context.Background()
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
 
 	appConfig := loadAppConfig()
 
-	logLevel := slog.Level(slog.LevelDebug)
+	logLevel := slog.LevelDebug
 	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(appConfig.LogLevel))); err != nil {
 		log.Fatal(err)
 	}
 
-	slog.SetLogLoggerLevel(logLevel)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	}))
+	slog.SetDefault(logger)
 
 	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
 	slog.InfoContext(ctx, "starting app with config", "config", string(jsonConfig))
