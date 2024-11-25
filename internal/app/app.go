@@ -12,7 +12,7 @@ import (
 
 	"github.com/sharetube/server/internal/controller"
 	"github.com/sharetube/server/internal/repository/redis"
-	"github.com/sharetube/server/internal/service"
+	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/redisclient"
 	"golang.org/x/exp/slog"
 )
@@ -29,7 +29,7 @@ type AppConfig struct {
 	RedisPassword   string `json:"-"`
 }
 
-// todo: add validation.
+// todo: add validation
 func (cfg *AppConfig) Validate() error {
 	if cfg.MembersLimit < 1 {
 		return fmt.Errorf("members limit must be greater than 0")
@@ -54,13 +54,12 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	createRoomSessionRepo := redis.NewCreateRoomSessionRepo(rc, 30*time.Second)
-	createRoomSessionRepo.Set(ctx, "some-value")
-	roomService := service.NewRoomService(cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
+	roomRepo := redis.NewRepo(rc)
+	roomService := room.NewService(roomRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
 
-	// graceful shutdown.
+	// graceful shutdown
 	serverCtx, serverStopCtx := context.WithCancel(ctx)
 
 	sig := make(chan os.Signal, 1)

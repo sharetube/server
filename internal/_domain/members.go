@@ -20,6 +20,7 @@ type Member struct {
 	AvatarURL string          `json:"avatar_url"`
 	IsMuted   bool            `json:"is_muted"`
 	IsAdmin   bool            `json:"is_admin"`
+	IsOnline  bool            `json:"is_online"`
 	Conn      *websocket.Conn `json:"-"`
 }
 

@@ -14,29 +14,19 @@ type Video struct {
 	ID        int    `json:"id"`
 	URL       string `json:"url"`
 	AddedByID string `json:"added_by"`
-	WasPlayed bool   `json:"was_played"`
 }
 
 // todo: implement pagination
 type Playlist struct {
-	list          []Video
-	previousVideo *Video
-	// currentVideo  *Video
+	list   []Video
 	lastID int
 	limit  int
 }
 
-func NewPlaylist(initialVideoURL, addedBy string, limit int) *Playlist {
+func NewPlaylist(addedBy string, limit int) *Playlist {
 	return &Playlist{
-		list: []Video{
-			{
-				ID:        1,
-				URL:       initialVideoURL,
-				AddedByID: addedBy,
-				WasPlayed: false,
-			},
-		},
-		lastID: 1,
+		list:   make([]Video, 1),
+		lastID: 0,
 		limit:  limit,
 	}
 }

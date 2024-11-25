@@ -23,7 +23,8 @@ services:
       - ${SERVER_PORT}:${SERVER_PORT}
     restart: unless-stopped
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - sharetube
 
