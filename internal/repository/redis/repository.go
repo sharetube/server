@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -28,14 +27,6 @@ func NewRepo(rc *redis.Client) *Repo {
         return 0
     `).Val(),
 	}
-}
-
-func (r Repo) setWithExpire(ctx context.Context, key string, value interface{}) error {
-	pipe := r.rc.TxPipeline()
-	r.HSetIfNotExists(ctx, pipe, key, value)
-	pipe.Expire(ctx, key, 10*time.Minute)
-	_, err := pipe.Exec(ctx)
-	return err
 }
 
 func (r Repo) HSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) error {

@@ -11,6 +11,8 @@ import (
 
 type iRoomService interface {
 	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
+	GetMemberIDByConnectToken(context.Context, string) (string, error)
+	ConnectMember(context.Context, *websocket.Conn, string) error
 }
 
 type Controller struct {
