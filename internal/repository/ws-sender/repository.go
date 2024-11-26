@@ -6,34 +6,71 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var (
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
+)
+
 type Repo struct {
-	list map[*websocket.Conn]string
+	connList map[*websocket.Conn]string
+	idList   map[string]*websocket.Conn
 }
 
 func NewRepo() *Repo {
 	return &Repo{
-		list: make(map[*websocket.Conn]string),
+		connList: make(map[*websocket.Conn]string),
+		idList:   make(map[string]*websocket.Conn),
 	}
 }
 
 func (r *Repo) Add(conn *websocket.Conn, memberID string) error {
-	if r.list[conn] != "" {
-		return errors.New("connection already exists")
+	if r.connList[conn] != "" || r.idList[memberID] != nil {
+		return ErrAlreadyExists
 	}
 
-	r.list[conn] = memberID
+	r.connList[conn] = memberID
+	r.idList[memberID] = conn
 	return nil
 }
 
-func (r *Repo) Remove(conn *websocket.Conn) {
-	delete(r.list, conn)
+func (r *Repo) RemoveByConn(conn *websocket.Conn) error {
+	memberID, ok := r.connList[conn]
+	if !ok {
+		return ErrNotFound
+	}
+
+	delete(r.connList, conn)
+	delete(r.idList, memberID)
+
+	return nil
+}
+
+func (r *Repo) RemoveByMemberID(memberID string) error {
+	conn, ok := r.idList[memberID]
+	if !ok {
+		return ErrNotFound
+	}
+
+	delete(r.connList, conn)
+	delete(r.idList, memberID)
+
+	return nil
 }
 
 func (r *Repo) GetMemberID(conn *websocket.Conn) (string, error) {
-	memberID, ok := r.list[conn]
+	memberID, ok := r.connList[conn]
 	if !ok {
-		return "", errors.New("connection not found")
+		return "", ErrNotFound
 	}
 
 	return memberID, nil
+}
+
+func (r *Repo) GetConn(memberID string) (*websocket.Conn, error) {
+	conn, ok := r.idList[memberID]
+	if !ok {
+		return nil, ErrNotFound
+	}
+
+	return conn, nil
 }

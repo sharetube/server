@@ -45,14 +45,23 @@ func (r Repo) HSetIfNotExists(ctx context.Context, c redis.Scripter, key string,
 			redisKey = field.Name
 		}
 
-		// Convert field value to string
-		fieldValue := v.Field(i).Interface()
-		strValue, err := json.Marshal(fieldValue)
-		if err != nil {
-			return err
+		var strValue string
+		if v.Field(i).Kind() == reflect.String {
+			strValue = v.Field(i).String()
+		} else {
+			// Convert field value to string
+			fieldValue := v.Field(i).Interface()
+
+			b, err := json.Marshal(fieldValue)
+			if err != nil {
+				return err
+			}
+
+			strValue = string(b)
 		}
 
 		args = append(args, redisKey, string(strValue))
+
 	}
 
 	result, err := c.EvalSha(ctx, r.script, []string{key}, args...).Result()
