@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/service/room"
 )
 
 type Input struct {
@@ -88,11 +89,38 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		// 		r.sendMemberDemoted(demotedMember)
 		// 	}
 		case "add_video":
+			var data struct {
+				VideoURL string `json:"video_url"`
+			}
+			if err := json.Unmarshal(input.Data, &data); err != nil {
+				slog.Warn("failed to unmarshal data", "error", err)
+				if err := c.writeError(conn, err); err != nil {
+					slog.Warn("failed to write error", "error", err)
+					return
+				}
+				continue
+			}
 
-			// if err != nil {
-			// } else {
-			// 	r.sendVideoAdded(video)
-			// }
+			addVideoResponse, err := c.roomService.AddVideo(r.Context(), &room.AddVideoParams{
+				Conn:     conn,
+				VideoURL: data.VideoURL,
+			})
+			if err != nil {
+				slog.Warn("failed to add video", "error", err)
+				if err := c.writeError(conn, err); err != nil {
+					slog.Warn("failed to write error", "error", err)
+					return
+				}
+				continue
+			}
+
+			if err := c.broadcast(addVideoResponse.Conns, &Output{
+				Action: "add_video",
+				Data:   addVideoResponse.VideoID,
+			}); err != nil {
+				slog.Warn("failed to broadcast", "error", err)
+				return
+			}
 		// case "remove_video":
 		// 	video, err := r.handleRemoveVideo(&input)
 
@@ -123,6 +151,20 @@ func (c Controller) writeError(conn *websocket.Conn, err error) error {
 		Action: "error",
 		Data:   err.Error(),
 	})
+}
+
+func (c Controller) writeOutput(conn *websocket.Conn, output *Output) error {
+	return conn.WriteJSON(output)
+}
+
+func (c Controller) broadcast(conns []*websocket.Conn, output *Output) error {
+	for _, conn := range conns {
+		if err := c.writeOutput(conn, output); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {

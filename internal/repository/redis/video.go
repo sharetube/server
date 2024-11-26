@@ -15,7 +15,7 @@ type Video struct {
 }
 
 type CreateVideoParams struct {
-	ID        string
+	VideoID   string
 	RoomID    string
 	URL       string
 	AddedByID string
@@ -29,7 +29,8 @@ func (r Repo) CreateVideo(ctx context.Context, params *CreateVideoParams) error 
 		AddedByID: params.AddedByID,
 		RoomID:    params.RoomID,
 	}
-	videoKey := videoPrefix + ":" + params.ID
+
+	videoKey := videoPrefix + ":" + params.VideoID
 	r.HSetIfNotExists(ctx, pipe, videoKey, video)
 	// pipe.Expire(ctx, memberKey, 10*time.Minute)
 
@@ -37,7 +38,7 @@ func (r Repo) CreateVideo(ctx context.Context, params *CreateVideoParams) error 
 	lastScore := pipe.ZCard(ctx, memberListKey).Val()
 	pipe.ZAdd(ctx, memberListKey, redis.Z{
 		Score:  float64(lastScore + 1),
-		Member: videoKey,
+		Member: params.VideoID,
 	})
 	// pipe.Expire(ctx, memberListKey, 10*time.Minute)
 

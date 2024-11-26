@@ -13,6 +13,7 @@ type iRoomService interface {
 	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
 	GetMemberIDByConnectToken(context.Context, string) (string, error)
 	ConnectMember(context.Context, *websocket.Conn, string) error
+	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
 }
 
 type Controller struct {

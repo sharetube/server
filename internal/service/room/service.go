@@ -23,11 +23,14 @@ type iRedisRepo interface {
 	CreateConnectToken(context.Context, string, string) error
 	GetMemberIDByConnectToken(context.Context, string) (string, error)
 	GetMemberRoomId(context.Context, string) (string, error)
+	GetMemberIDs(context.Context, string) ([]string, error)
 }
 
 type iWSRepo interface {
 	Add(*websocket.Conn, string) error
-	Remove(*websocket.Conn)
+	RemoveByMemberID(string) error
+	RemoveByConn(*websocket.Conn) error
+	GetConn(string) (*websocket.Conn, error)
 	GetMemberID(*websocket.Conn) (string, error)
 }
 
@@ -68,7 +71,7 @@ func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 
 	memberID := uuid.NewString()
 	if err := s.redisRepo.CreateMember(ctx, &redis.CreateMemberParams{
-		ID:        memberID,
+		MemberID:  memberID,
 		Username:  params.Username,
 		Color:     params.Color,
 		AvatarURL: params.AvatarURL,
@@ -121,6 +124,71 @@ func (s Service) ConnectMember(ctx context.Context, conn *websocket.Conn, member
 	return nil
 }
 
-func (s Service) AddVideo(ctx context.Context) {
+type AddVideoParams struct {
+	Conn     *websocket.Conn
+	VideoURL string
+}
 
+type AddVideoResponse struct {
+	VideoID   string
+	AddedByID string
+	Conns     []*websocket.Conn
+}
+
+func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
+	memberID, err := s.wsRepo.GetMemberID(params.Conn)
+	if err != nil {
+		slog.Info("failed to get member id", "err", err)
+		return AddVideoResponse{}, err
+	}
+
+	roomID, err := s.redisRepo.GetMemberRoomId(ctx, memberID)
+	if err != nil {
+		slog.Info("failed to get room id", "err", err)
+		return AddVideoResponse{}, err
+	}
+
+	videoID := uuid.NewString()
+	if err := s.redisRepo.CreateVideo(ctx, &redis.CreateVideoParams{
+		VideoID:   videoID,
+		RoomID:    roomID,
+		URL:       params.VideoURL,
+		AddedByID: memberID,
+	}); err != nil {
+		slog.Info("failed to create video", "err", err)
+		return AddVideoResponse{}, err
+	}
+
+	conns, err := s.getConnsByRoomID(ctx, roomID)
+	if err != nil {
+		slog.Info("failed to get conns", "err", err)
+		return AddVideoResponse{}, err
+	}
+
+	return AddVideoResponse{
+		VideoID:   videoID,
+		AddedByID: memberID,
+		Conns:     conns,
+	}, nil
+}
+
+func (s Service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websocket.Conn, error) {
+	memberIDs, err := s.redisRepo.GetMemberIDs(ctx, roomID)
+	if err != nil {
+		slog.Info("failed to get member ids", "err", err)
+		return nil, err
+	}
+
+	conns := make([]*websocket.Conn, 0, len(memberIDs))
+	for _, memberID := range memberIDs {
+		conn, err := s.wsRepo.GetConn(memberID)
+		if err != nil {
+			slog.Info("failed to get conn", "err", err)
+			return nil, err
+		}
+
+		conns = append(conns, conn)
+	}
+
+	return conns, nil
 }
