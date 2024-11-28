@@ -12,19 +12,25 @@ import (
 )
 
 var (
-	ErrRoomNotFound = errors.New("room not found")
+	ErrPermissionDenied     = errors.New("permission denied")
+	ErrPlaylistLimitReached = errors.New("playlist limit reached")
+	ErrRoomNotFound         = errors.New("room not found")
 )
 
 // todo: move params structs from redis to repository package
 type iRedisRepo interface {
 	SetMember(context.Context, *repository.SetMemberParams) error
 	SetVideo(context.Context, *repository.SetVideoParams) error
+	GetPlaylist(context.Context, string) ([]string, error)
+	GetVideo(context.Context, string) (repository.Video, error)
 	SetPlayer(context.Context, *repository.SetPlayerParams) error
 	SetCreateRoomSession(context.Context, *repository.SetCreateRoomSessionParams) error
 	SetJoinRoomSession(context.Context, *repository.SetJoinRoomSessionParams) error
 	GetCreateRoomSession(context.Context, string) (repository.CreateRoomSession, error)
 	GetMemberRoomId(context.Context, string) (string, error)
 	GetMemberIDs(context.Context, string) ([]string, error)
+	GetPlaylistLength(context.Context, string) (int, error)
+	IsMemberAdmin(context.Context, string) (bool, error)
 	GetJoinRoomSession(context.Context, string) (repository.JoinRoomSession, error)
 }
 
@@ -183,54 +189,6 @@ func (s Service) JoinRoom(ctx context.Context, params *JoinRoomParams) error {
 	}
 
 	return nil
-}
-
-type AddVideoParams struct {
-	Conn     *websocket.Conn
-	VideoURL string
-}
-
-type AddVideoResponse struct {
-	VideoID   string
-	AddedByID string
-	Conns     []*websocket.Conn
-}
-
-func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	memberID, err := s.wsRepo.GetMemberID(params.Conn)
-	if err != nil {
-		slog.Info("failed to get member id", "err", err)
-		return AddVideoResponse{}, err
-	}
-
-	roomID, err := s.redisRepo.GetMemberRoomId(ctx, memberID)
-	if err != nil {
-		slog.Info("failed to get room id", "err", err)
-		return AddVideoResponse{}, err
-	}
-
-	videoID := uuid.NewString()
-	if err := s.redisRepo.SetVideo(ctx, &repository.SetVideoParams{
-		VideoID:   videoID,
-		RoomID:    roomID,
-		URL:       params.VideoURL,
-		AddedByID: memberID,
-	}); err != nil {
-		slog.Info("failed to create video", "err", err)
-		return AddVideoResponse{}, err
-	}
-
-	conns, err := s.getConnsByRoomID(ctx, roomID)
-	if err != nil {
-		slog.Info("failed to get conns", "err", err)
-		return AddVideoResponse{}, err
-	}
-
-	return AddVideoResponse{
-		VideoID:   videoID,
-		AddedByID: memberID,
-		Conns:     conns,
-	}, nil
 }
 
 func (s Service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websocket.Conn, error) {

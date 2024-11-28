@@ -88,8 +88,11 @@ func (c Controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 			}
 
 			if err := c.broadcast(addVideoResponse.Conns, &Output{
-				Action: "add_video",
-				Data:   addVideoResponse.VideoID,
+				Action: "video_added",
+				Data: map[string]any{
+					"added_video": addVideoResponse.AddedVideo,
+					"playlist":    addVideoResponse.Playlist,
+				},
 			}); err != nil {
 				slog.Warn("failed to broadcast", "error", err)
 				return
