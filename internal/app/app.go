@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,11 +12,10 @@ import (
 	"time"
 
 	"github.com/sharetube/server/internal/controller"
-	"github.com/sharetube/server/internal/repository/redis"
-	wssender "github.com/sharetube/server/internal/repository/ws-sender"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/repository/inmemory/conn"
+	roomR "github.com/sharetube/server/internal/repository/redis/room"
+	roomS "github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/redisclient"
-	"golang.org/x/exp/slog"
 )
 
 type AppConfig struct {
@@ -55,9 +55,9 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc)
-	wsRepo := wssender.NewRepo()
-	roomService := room.NewService(roomRepo, wsRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
+	roomRepo := roomR.NewRepo(rc)
+	wsRepo := conn.NewRepo()
+	roomService := roomS.NewService(roomRepo, wsRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
 

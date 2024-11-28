@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func (c Controller) CORSMiddleware(next http.Handler) http.Handler {
+func (c controller) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -21,24 +21,24 @@ func (c Controller) CORSMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-func (c Controller) Mux() http.Handler {
+func (c controller) Mux() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(c.CORSMiddleware)
+	r.Use(c.corsMiddleware)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/room", func(r chi.Router) {
 			// r.Get("/{room-id}", c.GetRoom)
 			r.Route("/create", func(r chi.Router) {
 				r.Post("/validate", c.validateCreateRoom)
-				r.Get("/ws", c.CreateRoom)
+				r.Get("/ws", c.createRoom)
 			})
 			r.Route("/{room-id}", func(r chi.Router) {
 				r.Route("/join", func(r chi.Router) {
 					r.Post("/validate", c.validateJoinRoom)
-					r.Get("/ws", c.JoinRoom)
+					r.Get("/ws", c.joinRoom)
 				})
 			})
 		})

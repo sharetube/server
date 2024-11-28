@@ -21,7 +21,7 @@ type validateCreateRoomResponse struct {
 	ConnectToken string `json:"connect_token"`
 }
 
-func (c Controller) validateCreateRoom(w http.ResponseWriter, r *http.Request) {
+func (c controller) validateCreateRoom(w http.ResponseWriter, r *http.Request) {
 	var req validateCreateRoom
 
 	if err := rest.ReadJSON(r, &req); err != nil {
@@ -36,7 +36,7 @@ func (c Controller) validateCreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectToken, err := c.roomService.CreateRoomCreateSession(r.Context(), &room.CreateRoomCreateSessionParams{
+	connectToken, err := c.roomService.CreateCreateRoomSession(r.Context(), &room.CreateRoomCreateSessionParams{
 		Username:        req.Username,
 		Color:           req.Color,
 		AvatarURL:       req.AvatarURL,
@@ -73,7 +73,7 @@ type validateJoinRoomResponse struct {
 	ConnectToken string `json:"connect_token"`
 }
 
-func (c Controller) validateJoinRoom(w http.ResponseWriter, r *http.Request) {
+func (c controller) validateJoinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
 		slog.Info("ValidateJoinRoom", "room_id is empty", "")
@@ -95,7 +95,7 @@ func (c Controller) validateJoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectToken, err := c.roomService.CreateRoomJoinSession(r.Context(), &room.CreateRoomJoinSessionParams{
+	connectToken, err := c.roomService.CreateJoinRoomSession(r.Context(), &room.CreateRoomJoinSessionParams{
 		Username:  req.Username,
 		Color:     req.Color,
 		AvatarURL: req.AvatarURL,

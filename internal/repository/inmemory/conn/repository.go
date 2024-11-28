@@ -1,4 +1,4 @@
-package wssender
+package conn
 
 import (
 	"errors"
@@ -11,19 +11,19 @@ var (
 	ErrAlreadyExists = errors.New("already exists")
 )
 
-type Repo struct {
+type repo struct {
 	connList map[*websocket.Conn]string
 	idList   map[string]*websocket.Conn
 }
 
-func NewRepo() *Repo {
-	return &Repo{
+func NewRepo() *repo {
+	return &repo{
 		connList: make(map[*websocket.Conn]string),
 		idList:   make(map[string]*websocket.Conn),
 	}
 }
 
-func (r *Repo) Add(conn *websocket.Conn, memberID string) error {
+func (r *repo) Add(conn *websocket.Conn, memberID string) error {
 	if r.connList[conn] != "" || r.idList[memberID] != nil {
 		return ErrAlreadyExists
 	}
@@ -33,7 +33,7 @@ func (r *Repo) Add(conn *websocket.Conn, memberID string) error {
 	return nil
 }
 
-func (r *Repo) RemoveByConn(conn *websocket.Conn) error {
+func (r *repo) RemoveByConn(conn *websocket.Conn) error {
 	memberID, ok := r.connList[conn]
 	if !ok {
 		return ErrNotFound
@@ -45,7 +45,7 @@ func (r *Repo) RemoveByConn(conn *websocket.Conn) error {
 	return nil
 }
 
-func (r *Repo) RemoveByMemberID(memberID string) error {
+func (r *repo) RemoveByMemberID(memberID string) error {
 	conn, ok := r.idList[memberID]
 	if !ok {
 		return ErrNotFound
@@ -57,7 +57,7 @@ func (r *Repo) RemoveByMemberID(memberID string) error {
 	return nil
 }
 
-func (r *Repo) GetMemberID(conn *websocket.Conn) (string, error) {
+func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
 	memberID, ok := r.connList[conn]
 	if !ok {
 		return "", ErrNotFound
@@ -66,7 +66,7 @@ func (r *Repo) GetMemberID(conn *websocket.Conn) (string, error) {
 	return memberID, nil
 }
 
-func (r *Repo) GetConn(memberID string) (*websocket.Conn, error) {
+func (r *repo) GetConn(memberID string) (*websocket.Conn, error) {
 	conn, ok := r.idList[memberID]
 	if !ok {
 		return nil, ErrNotFound

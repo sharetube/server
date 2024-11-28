@@ -14,26 +14,20 @@ type AddVideoParams struct {
 	VideoURL string
 }
 
-type Video struct {
-	ID        string `json:"id"`
-	URL       string `json:"url"`
-	AddedByID string `json:"added_by_id"`
-}
-
 type AddVideoResponse struct {
 	AddedVideo Video
 	Conns      []*websocket.Conn
 	Playlist   []Video
 }
 
-func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	memberID, err := s.wsRepo.GetMemberID(params.Conn)
+func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
+	memberID, err := s.connRepo.GetMemberID(params.Conn)
 	if err != nil {
 		slog.Info("failed to get member id", "err", err)
 		return AddVideoResponse{}, err
 	}
 
-	isAdmin, err := s.redisRepo.IsMemberAdmin(ctx, memberID)
+	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, memberID)
 	if err != nil {
 		slog.Info("failed to check if member is admin", "err", err)
 		return AddVideoResponse{}, err
@@ -42,13 +36,13 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPermissionDenied
 	}
 
-	roomID, err := s.redisRepo.GetMemberRoomId(ctx, memberID)
+	roomID, err := s.roomRepo.GetMemberRoomId(ctx, memberID)
 	if err != nil {
 		slog.Info("failed to get room id", "err", err)
 		return AddVideoResponse{}, err
 	}
 
-	playlistLength, err := s.redisRepo.GetPlaylistLength(ctx, roomID)
+	playlistLength, err := s.roomRepo.GetPlaylistLength(ctx, roomID)
 	if err != nil {
 		slog.Info("failed to get playlist length", "err", err)
 		return AddVideoResponse{}, err
@@ -59,7 +53,7 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	videoID := uuid.NewString()
-	if err := s.redisRepo.SetVideo(ctx, &repository.SetVideoParams{
+	if err := s.roomRepo.SetVideo(ctx, &repository.SetVideoParams{
 		VideoID:   videoID,
 		RoomID:    roomID,
 		URL:       params.VideoURL,
@@ -75,7 +69,7 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, err
 	}
 
-	playlistIDs, err := s.redisRepo.GetPlaylist(ctx, roomID)
+	playlistIDs, err := s.roomRepo.GetPlaylist(ctx, roomID)
 	if err != nil {
 		slog.Info("failed to get playlist", "err", err)
 		return AddVideoResponse{}, err
@@ -83,7 +77,7 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	playlist := make([]Video, 0, len(playlistIDs))
 	for _, videoID := range playlistIDs {
-		video, err := s.redisRepo.GetVideo(ctx, videoID)
+		video, err := s.roomRepo.GetVideo(ctx, videoID)
 		if err != nil {
 			slog.Info("failed to get video", "err", err)
 			return AddVideoResponse{}, err

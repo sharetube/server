@@ -25,7 +25,7 @@ type Output struct {
 }
 
 // ? pass memberID
-func (c Controller) readMessages(ctx context.Context, conn *websocket.Conn) {
+func (c controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
@@ -122,7 +122,7 @@ func (c Controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 	}
 }
 
-func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
+func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	connectToken, err := c.getQueryParam(r, "connect-token")
 	if err != nil {
 		slog.Info("CreateRoom:", "error", err)
@@ -154,18 +154,18 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	c.readMessages(r.Context(), conn)
 }
 
-func (c Controller) writeError(conn *websocket.Conn, err error) error {
+func (c controller) writeError(conn *websocket.Conn, err error) error {
 	return conn.WriteJSON(Output{
 		Action: "error",
 		Data:   err.Error(),
 	})
 }
 
-func (c Controller) writeOutput(conn *websocket.Conn, output *Output) error {
+func (c controller) writeOutput(conn *websocket.Conn, output *Output) error {
 	return conn.WriteJSON(output)
 }
 
-func (c Controller) broadcast(conns []*websocket.Conn, output *Output) error {
+func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	for _, conn := range conns {
 		if err := c.writeOutput(conn, output); err != nil {
 			return err
@@ -175,7 +175,7 @@ func (c Controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	return nil
 }
 
-func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
+func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
 		rest.WriteJSON(w, http.StatusNotFound, rest.Envelope{"error": "room not found"})
