@@ -48,6 +48,15 @@ func (r Repo) GetMemberRoomId(ctx context.Context, memberID string) (string, err
 	return roomID, nil
 }
 
+func (r Repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) {
+	isAdmin, err := r.rc.HGet(ctx, memberPrefix+":"+memberID, "is_admin").Bool()
+	if err != nil {
+		return false, err
+	}
+
+	return isAdmin, nil
+}
+
 func (r Repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error) {
 	memberListKey := r.getMemberListKey(roomID)
 	memberIDs, err := r.rc.ZRange(ctx, memberListKey, 0, -1).Result()
