@@ -1,14 +1,17 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/pkg/rest"
 )
 
 type Input struct {
@@ -21,38 +24,8 @@ type Output struct {
 	Data   interface{} `json:"data"`
 }
 
-func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
-	connectToken, err := c.getQueryParam(r, "connect-token")
-	if err != nil {
-		slog.Info("CreateRoom:", "error", err)
-		fmt.Fprint(w, err)
-		return
-	}
-
-	slog.Debug("CreateRoom: connect-token recieved", "connect_token", connectToken)
-
-	memberID, err := c.roomService.GetMemberIDByConnectToken(r.Context(), connectToken)
-	if err != nil {
-		slog.Info("CreateRoom:", "error", err)
-		fmt.Fprint(w, err)
-		return
-	}
-	slog.Debug("CreateRoom: memberID recieved", "member_id", memberID)
-
-	headers := http.Header{}
-	// headers.Add("Set-Cookie", cookieString)
-	conn, err := c.upgrader.Upgrade(w, r, headers)
-	if err != nil {
-		slog.Warn("CreateRoom: failed to upgrade connection", "error", err)
-		return
-	}
-	slog.Debug("CreateRoom: connection established", "user", connectToken)
-
-	if err := c.roomService.ConnectMember(r.Context(), conn, memberID); err != nil {
-		slog.Warn("CreateRoom: failed to connect member", "error", err)
-		return
-	}
-
+// ? pass memberID
+func (c Controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
@@ -101,7 +74,7 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			addVideoResponse, err := c.roomService.AddVideo(r.Context(), &room.AddVideoParams{
+			addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
 				Conn:     conn,
 				VideoURL: data.VideoURL,
 			})
@@ -146,6 +119,38 @@ func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (c Controller) CreateRoom(w http.ResponseWriter, r *http.Request) {
+	connectToken, err := c.getQueryParam(r, "connect-token")
+	if err != nil {
+		slog.Info("CreateRoom:", "error", err)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	slog.Debug("CreateRoom: connect-token recieved", "connect_token", connectToken)
+
+	headers := http.Header{}
+	// headers.Add("Set-Cookie", cookieString)
+	conn, err := c.upgrader.Upgrade(w, r, headers)
+	if err != nil {
+		slog.Warn("CreateRoom: failed to upgrade connection", "error", err)
+		return
+	}
+	slog.Debug("CreateRoom: connection established", "user", connectToken)
+
+	if err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
+		ConnectToken: connectToken,
+		Conn:         conn,
+	}); err != nil {
+		slog.Info("CreateRoom:", "error", err)
+		conn.Close()
+		fmt.Fprint(w, err)
+		return
+	}
+
+	c.readMessages(r.Context(), conn)
+}
+
 func (c Controller) writeError(conn *websocket.Conn, err error) error {
 	return conn.WriteJSON(Output{
 		Action: "error",
@@ -167,40 +172,41 @@ func (c Controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	return nil
 }
 
-// func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
-// 	// for _, c := range r.Cookies() {
-// 	// 	fmt.Printf("Cookie: %#v\n", c)
-// 	// }
+func (c Controller) JoinRoom(w http.ResponseWriter, r *http.Request) {
+	roomID := chi.URLParam(r, "room-id")
+	if roomID == "" {
+		rest.WriteJSON(w, http.StatusNotFound, rest.Envelope{"error": "room not found"})
+		return
+	}
 
-// 	user, err := c.getUser(r)
-// 	if err != nil {
-// 		slog.Info("JoinRoom:", "error", err)
-// 		fmt.Fprint(w, err)
-// 		return
-// 	}
+	connectToken, err := c.getQueryParam(r, "connect-token")
+	if err != nil {
+		slog.Info("JoinRoom", "error", err)
+		fmt.Fprint(w, err)
+		return
+	}
 
-// 	slog.Debug("JoinRoom: user recieved", "user", user)
+	slog.Debug("JoinRoom connect-token recieved", "connect_token", connectToken)
 
-// 	roomID := chi.URLParam(r, "room-id")
-// 	room, err := c.roomService.GetRoom(roomID)
-// 	if err != nil {
-// 		slog.Info("JoinRoom: failed to get room", "error", err)
-// 		fmt.Fprint(w, err)
-// 		return
-// 	}
+	headers := http.Header{}
+	// headers.Add("Set-Cookie", cookieString)
+	conn, err := c.upgrader.Upgrade(w, r, headers)
+	if err != nil {
+		slog.Warn("JoinRoom failed to upgrade connection", "error", err)
+		return
+	}
+	slog.Debug("JoinRoom connection established", "user", connectToken)
 
-// 	headers := http.Header{}
-// 	// headers.Add("Set-Cookie", cookieString)
-// 	conn, err := c.upgrader.Upgrade(w, r, headers)
-// 	if err != nil {
-// 		slog.Warn("JoinRoom: failed to upgrade connection", "error", err)
-// 		return
-// 	}
-// 	slog.Debug("JoinRoom: connection established", "user", user)
+	if err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
+		ConnectToken: connectToken,
+		Conn:         conn,
+		RoomID:       roomID,
+	}); err != nil {
+		slog.Info("JoinRoom", "error", err)
+		conn.Close()
+		fmt.Fprint(w, err)
+		return
+	}
 
-// 	user.Conn = conn
-
-// 	room.AddMember(user)
-
-// 	go room.ReadMessages(conn)
-// }
+	c.readMessages(r.Context(), conn)
+}
