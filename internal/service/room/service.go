@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository/redis"
+	"github.com/sharetube/server/internal/repository"
 )
 
 var (
@@ -17,15 +17,15 @@ var (
 
 // todo: move params structs from redis to repository package
 type iRedisRepo interface {
-	SetMember(context.Context, *redis.SetMemberParams) error
-	SetVideo(context.Context, *redis.SetVideoParams) error
-	SetPlayer(context.Context, *redis.SetPlayerParams) error
-	SetCreateRoomSession(context.Context, *redis.SetCreateRoomSessionParams) error
-	SetJoinRoomSession(context.Context, *redis.SetJoinRoomSessionParams) error
-	GetCreateRoomSession(context.Context, string) (redis.CreateRoomSession, error)
+	SetMember(context.Context, *repository.SetMemberParams) error
+	SetVideo(context.Context, *repository.SetVideoParams) error
+	SetPlayer(context.Context, *repository.SetPlayerParams) error
+	SetCreateRoomSession(context.Context, *repository.SetCreateRoomSessionParams) error
+	SetJoinRoomSession(context.Context, *repository.SetJoinRoomSessionParams) error
+	GetCreateRoomSession(context.Context, string) (repository.CreateRoomSession, error)
 	GetMemberRoomId(context.Context, string) (string, error)
 	GetMemberIDs(context.Context, string) ([]string, error)
-	GetJoinRoomSession(context.Context, string) (redis.JoinRoomSession, error)
+	GetJoinRoomSession(context.Context, string) (repository.JoinRoomSession, error)
 }
 
 type iWSRepo interface {
@@ -64,7 +64,7 @@ type CreateRoomCreateSessionParams struct {
 // todo: rename
 func (s Service) CreateRoomCreateSession(ctx context.Context, params *CreateRoomCreateSessionParams) (string, error) {
 	connectToken := uuid.NewString()
-	if err := s.redisRepo.SetCreateRoomSession(ctx, &redis.SetCreateRoomSessionParams{
+	if err := s.redisRepo.SetCreateRoomSession(ctx, &repository.SetCreateRoomSessionParams{
 		ID:              connectToken,
 		Username:        params.Username,
 		Color:           params.Color,
@@ -85,8 +85,9 @@ type CreateRoomJoinSessionParams struct {
 }
 
 func (s Service) CreateRoomJoinSession(ctx context.Context, params *CreateRoomJoinSessionParams) (string, error) {
+	// todo: check room exists
 	connectToken := uuid.NewString()
-	if err := s.redisRepo.SetJoinRoomSession(ctx, &redis.SetJoinRoomSessionParams{
+	if err := s.redisRepo.SetJoinRoomSession(ctx, &repository.SetJoinRoomSessionParams{
 		ID:        connectToken,
 		Username:  params.Username,
 		Color:     params.Color,
@@ -106,6 +107,7 @@ type CreateRoomParams struct {
 
 func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) error {
 	roomID := uuid.NewString()
+	slog.Info("create room", "roomID", roomID)
 
 	createRoomSession, err := s.redisRepo.GetCreateRoomSession(ctx, params.ConnectToken)
 	if err != nil {
@@ -113,7 +115,7 @@ func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) error
 	}
 
 	memberID := uuid.NewString()
-	if err := s.redisRepo.SetMember(ctx, &redis.SetMemberParams{
+	if err := s.redisRepo.SetMember(ctx, &repository.SetMemberParams{
 		MemberID:  memberID,
 		Username:  createRoomSession.Username,
 		Color:     createRoomSession.Color,
@@ -126,7 +128,7 @@ func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) error
 		return err
 	}
 
-	if err := s.redisRepo.SetPlayer(ctx, &redis.SetPlayerParams{
+	if err := s.redisRepo.SetPlayer(ctx, &repository.SetPlayerParams{
 		CurrentVideoURL: createRoomSession.InitialVideoURL,
 		IsPlaying:       false,
 		CurrentTime:     0,
@@ -158,12 +160,12 @@ func (s Service) JoinRoom(ctx context.Context, params *JoinRoomParams) error {
 		return err
 	}
 
-	if joinRoomSession.RoomID != params.RoomID {
-		return errors.New("wrong room id")
-	}
+	// if joinRoomSession.RoomID != params.RoomID {
+	// 	return errors.New("wrong room id")
+	// }
 
 	memberID := uuid.NewString()
-	if err := s.redisRepo.SetMember(ctx, &redis.SetMemberParams{
+	if err := s.redisRepo.SetMember(ctx, &repository.SetMemberParams{
 		MemberID:  memberID,
 		Username:  joinRoomSession.Username,
 		Color:     joinRoomSession.Color,
@@ -208,7 +210,7 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	videoID := uuid.NewString()
-	if err := s.redisRepo.SetVideo(ctx, &redis.SetVideoParams{
+	if err := s.redisRepo.SetVideo(ctx, &repository.SetVideoParams{
 		VideoID:   videoID,
 		RoomID:    roomID,
 		URL:       params.VideoURL,

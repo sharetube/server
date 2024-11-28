@@ -9,14 +9,15 @@ import (
 )
 
 type Repo struct {
-	rc     *redis.Client
-	script string
+	rc                    *redis.Client
+	hSetIfNotExistsScript string
+	maxScoreScript        string
 }
 
 func NewRepo(rc *redis.Client) *Repo {
 	return &Repo{
 		rc: rc,
-		script: rc.ScriptLoad(context.Background(), `
+		hSetIfNotExistsScript: rc.ScriptLoad(context.Background(), `
         local key = KEYS[1]
         if redis.call('EXISTS', key) == 0 then
             for i = 1, #ARGV, 2 do
@@ -26,10 +27,24 @@ func NewRepo(rc *redis.Client) *Repo {
         end
         return 0
     `).Val(),
+		maxScoreScript: rc.ScriptLoad(context.Background(), `
+		local maxScore = redis.call('ZREVRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+		local nextScore = 1
+		if #maxScore > 0 then
+			nextScore = tonumber(maxScore[2]) + 1
+		end
+		redis.call('ZADD', KEYS[1], nextScore, ARGV[1])
+		return nextScore
+	`).Val(),
 	}
 }
 
-func (r Repo) HSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
+func (r Repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
+	_, err := c.EvalSha(ctx, r.maxScoreScript, []string{key}, value).Result()
+	return err
+}
+
+func (r Repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
 	v := reflect.ValueOf(value)
 	t := v.Type()
 
@@ -64,7 +79,7 @@ func (r Repo) HSetIfNotExists(ctx context.Context, c redis.Scripter, key string,
 
 	}
 
-	result, err := c.EvalSha(ctx, r.script, []string{key}, args...).Result()
+	result, err := c.EvalSha(ctx, r.hSetIfNotExistsScript, []string{key}, args...).Result()
 	if err != nil {
 		return err
 	}

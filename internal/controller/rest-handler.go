@@ -21,7 +21,7 @@ type validateCreateRoomResponse struct {
 	ConnectToken string `json:"connect_token"`
 }
 
-func (c Controller) ValidateCreateRoom(w http.ResponseWriter, r *http.Request) {
+func (c Controller) validateCreateRoom(w http.ResponseWriter, r *http.Request) {
 	var req validateCreateRoom
 
 	if err := rest.ReadJSON(r, &req); err != nil {
@@ -73,7 +73,7 @@ type validateJoinRoomResponse struct {
 	ConnectToken string `json:"connect_token"`
 }
 
-func (c Controller) ValidateJoinRoom(w http.ResponseWriter, r *http.Request) {
+func (c Controller) validateJoinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
 		slog.Info("ValidateJoinRoom", "room_id is empty", "")

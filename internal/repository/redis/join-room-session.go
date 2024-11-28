@@ -4,36 +4,23 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/sharetube/server/internal/repository"
 )
 
 const joinRoomSessinPrefix = "join-room-session"
 
-type JoinRoomSession struct {
-	Username  string `redis:"username"`
-	Color     string `redis:"color"`
-	AvatarURL string `redis:"avatar_url"`
-	RoomID    string `redis:"room_id"`
-}
-
-type SetJoinRoomSessionParams struct {
-	ID        string
-	Username  string
-	Color     string
-	AvatarURL string
-	RoomID    string
-}
-
-func (r Repo) SetJoinRoomSession(ctx context.Context, params *SetJoinRoomSessionParams) error {
+func (r Repo) SetJoinRoomSession(ctx context.Context, params *repository.SetJoinRoomSessionParams) error {
 	pipe := r.rc.TxPipeline()
 
-	joinRoomSession := JoinRoomSession{
+	joinRoomSession := repository.JoinRoomSession{
 		Username:  params.Username,
 		Color:     params.Color,
 		AvatarURL: params.AvatarURL,
 		RoomID:    params.RoomID,
 	}
 	joinRoomSessionKey := joinRoomSessinPrefix + ":" + params.ID
-	if err := r.HSetIfNotExists(ctx, pipe, joinRoomSessionKey, joinRoomSession); err != nil {
+	if err := r.hSetIfNotExists(ctx, pipe, joinRoomSessionKey, joinRoomSession); err != nil {
 
 	}
 	pipe.Expire(ctx, joinRoomSessionKey, 10*time.Minute)
@@ -42,14 +29,14 @@ func (r Repo) SetJoinRoomSession(ctx context.Context, params *SetJoinRoomSession
 	return err
 }
 
-func (r Repo) GetJoinRoomSession(ctx context.Context, id string) (JoinRoomSession, error) {
-	var joinRoomSession JoinRoomSession
+func (r Repo) GetJoinRoomSession(ctx context.Context, id string) (repository.JoinRoomSession, error) {
+	var joinRoomSession repository.JoinRoomSession
 	if err := r.rc.HGetAll(ctx, joinRoomSessinPrefix+":"+id).Scan(&joinRoomSession); err != nil {
-		return JoinRoomSession{}, err
+		return repository.JoinRoomSession{}, err
 	}
 
 	if joinRoomSession.Username == "" {
-		return JoinRoomSession{}, fmt.Errorf("join room session not found")
+		return repository.JoinRoomSession{}, fmt.Errorf("join room session not found")
 	}
 
 	return joinRoomSession, nil
