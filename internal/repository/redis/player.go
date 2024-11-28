@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"time"
 )
 
 type Player struct {
@@ -12,7 +13,7 @@ type Player struct {
 	UpdatedAt       int64   `redis:"updated_at"`
 }
 
-type CreatePlayerParams struct {
+type SetPlayerParams struct {
 	CurrentVideoURL string
 	IsPlaying       bool
 	CurrentTime     float64
@@ -21,7 +22,7 @@ type CreatePlayerParams struct {
 	RoomID          string
 }
 
-func (r Repo) CreatePlayer(ctx context.Context, params *CreatePlayerParams) error {
+func (r Repo) SetPlayer(ctx context.Context, params *SetPlayerParams) error {
 	pipe := r.rc.TxPipeline()
 
 	player := Player{
@@ -33,7 +34,7 @@ func (r Repo) CreatePlayer(ctx context.Context, params *CreatePlayerParams) erro
 	}
 	playerKey := "room" + ":" + params.RoomID + ":player"
 	r.HSetIfNotExists(ctx, pipe, playerKey, player)
-	// pipe.Expire(ctx, memberKey, 10*time.Minute)
+	pipe.Expire(ctx, playerKey, 10*time.Minute)
 
 	_, err := pipe.Exec(ctx)
 	return err

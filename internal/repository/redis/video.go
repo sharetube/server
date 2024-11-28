@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -14,14 +15,14 @@ type Video struct {
 	RoomID    string `redis:"room_id"`
 }
 
-type CreateVideoParams struct {
+type SetVideoParams struct {
 	VideoID   string
 	RoomID    string
 	URL       string
 	AddedByID string
 }
 
-func (r Repo) CreateVideo(ctx context.Context, params *CreateVideoParams) error {
+func (r Repo) SetVideo(ctx context.Context, params *SetVideoParams) error {
 	pipe := r.rc.TxPipeline()
 
 	video := Video{
@@ -32,7 +33,7 @@ func (r Repo) CreateVideo(ctx context.Context, params *CreateVideoParams) error 
 
 	videoKey := videoPrefix + ":" + params.VideoID
 	r.HSetIfNotExists(ctx, pipe, videoKey, video)
-	// pipe.Expire(ctx, memberKey, 10*time.Minute)
+	pipe.Expire(ctx, videoKey, 10*time.Minute)
 
 	memberListKey := "room" + ":" + params.RoomID + ":" + "playlist"
 	lastScore := pipe.ZCard(ctx, memberListKey).Val()
@@ -40,7 +41,7 @@ func (r Repo) CreateVideo(ctx context.Context, params *CreateVideoParams) error 
 		Score:  float64(lastScore + 1),
 		Member: params.VideoID,
 	})
-	// pipe.Expire(ctx, memberListKey, 10*time.Minute)
+	pipe.Expire(ctx, memberListKey, 10*time.Minute)
 
 	_, err := pipe.Exec(ctx)
 	return err

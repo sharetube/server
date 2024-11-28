@@ -10,9 +10,10 @@ import (
 )
 
 type iRoomService interface {
-	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
-	GetMemberIDByConnectToken(context.Context, string) (string, error)
-	ConnectMember(context.Context, *websocket.Conn, string) error
+	CreateRoomCreateSession(context.Context, *room.CreateRoomCreateSessionParams) (string, error)
+	CreateRoomJoinSession(context.Context, *room.CreateRoomJoinSessionParams) (string, error)
+	CreateRoom(context.Context, *room.CreateRoomParams) error
+	JoinRoom(context.Context, *room.JoinRoomParams) error
 	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
 }
 

@@ -17,13 +17,15 @@ var (
 
 // todo: move params structs from redis to repository package
 type iRedisRepo interface {
-	CreateMember(context.Context, *redis.CreateMemberParams) error
-	CreateVideo(context.Context, *redis.CreateVideoParams) error
-	CreatePlayer(context.Context, *redis.CreatePlayerParams) error
-	CreateConnectToken(context.Context, string, string) error
-	GetMemberIDByConnectToken(context.Context, string) (string, error)
+	SetMember(context.Context, *redis.SetMemberParams) error
+	SetVideo(context.Context, *redis.SetVideoParams) error
+	SetPlayer(context.Context, *redis.SetPlayerParams) error
+	SetCreateRoomSession(context.Context, *redis.SetCreateRoomSessionParams) error
+	SetJoinRoomSession(context.Context, *redis.SetJoinRoomSessionParams) error
+	GetCreateRoomSession(context.Context, string) (redis.CreateRoomSession, error)
 	GetMemberRoomId(context.Context, string) (string, error)
 	GetMemberIDs(context.Context, string) ([]string, error)
+	GetJoinRoomSession(context.Context, string) (redis.JoinRoomSession, error)
 }
 
 type iWSRepo interface {
@@ -52,72 +54,129 @@ func NewService(redisRepo iRedisRepo, wsRepo iWSRepo, updatesInterval time.Durat
 	}
 }
 
-type CreateRoomParams struct {
+type CreateRoomCreateSessionParams struct {
 	Username        string
 	Color           string
 	AvatarURL       string
 	InitialVideoURL string
 }
 
-type CreateRoomResponse struct {
-	RoomID       string
-	MemberID     string
-	ConnectToken string
+// todo: rename
+func (s Service) CreateRoomCreateSession(ctx context.Context, params *CreateRoomCreateSessionParams) (string, error) {
+	connectToken := uuid.NewString()
+	if err := s.redisRepo.SetCreateRoomSession(ctx, &redis.SetCreateRoomSessionParams{
+		ID:              connectToken,
+		Username:        params.Username,
+		Color:           params.Color,
+		AvatarURL:       params.AvatarURL,
+		InitialVideoURL: params.InitialVideoURL,
+	}); err != nil {
+		return "", err
+	}
+
+	return connectToken, nil
 }
 
-func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) (CreateRoomResponse, error) {
-	slog.Info("creating room", "params", params)
-	roomID := uuid.NewString()
+type CreateRoomJoinSessionParams struct {
+	Username  string
+	Color     string
+	AvatarURL string
+	RoomID    string
+}
 
-	memberID := uuid.NewString()
-	if err := s.redisRepo.CreateMember(ctx, &redis.CreateMemberParams{
-		MemberID:  memberID,
+func (s Service) CreateRoomJoinSession(ctx context.Context, params *CreateRoomJoinSessionParams) (string, error) {
+	connectToken := uuid.NewString()
+	if err := s.redisRepo.SetJoinRoomSession(ctx, &redis.SetJoinRoomSessionParams{
+		ID:        connectToken,
 		Username:  params.Username,
 		Color:     params.Color,
 		AvatarURL: params.AvatarURL,
+		RoomID:    params.RoomID,
+	}); err != nil {
+		return "", err
+	}
+
+	return connectToken, nil
+}
+
+type CreateRoomParams struct {
+	ConnectToken string
+	Conn         *websocket.Conn
+}
+
+func (s Service) CreateRoom(ctx context.Context, params *CreateRoomParams) error {
+	roomID := uuid.NewString()
+
+	createRoomSession, err := s.redisRepo.GetCreateRoomSession(ctx, params.ConnectToken)
+	if err != nil {
+		return err
+	}
+
+	memberID := uuid.NewString()
+	if err := s.redisRepo.SetMember(ctx, &redis.SetMemberParams{
+		MemberID:  memberID,
+		Username:  createRoomSession.Username,
+		Color:     createRoomSession.Color,
+		AvatarURL: createRoomSession.AvatarURL,
 		IsMuted:   false,
 		IsAdmin:   true,
 		IsOnline:  false,
 		RoomID:    roomID,
 	}); err != nil {
-		return CreateRoomResponse{}, err
+		return err
 	}
 
-	if err := s.redisRepo.CreatePlayer(ctx, &redis.CreatePlayerParams{
-		CurrentVideoURL: params.InitialVideoURL,
+	if err := s.redisRepo.SetPlayer(ctx, &redis.SetPlayerParams{
+		CurrentVideoURL: createRoomSession.InitialVideoURL,
 		IsPlaying:       false,
 		CurrentTime:     0,
 		PlaybackRate:    1,
 		UpdatedAt:       time.Now().Unix(),
 		RoomID:          roomID,
 	}); err != nil {
-		return CreateRoomResponse{}, err
+		return err
 	}
 
-	connectToken := uuid.NewString()
-	if err := s.redisRepo.CreateConnectToken(ctx, connectToken, memberID); err != nil {
-		return CreateRoomResponse{}, err
+	if err := s.wsRepo.Add(params.Conn, memberID); err != nil {
+		return err
 	}
 
-	return CreateRoomResponse{
-		RoomID:       roomID,
-		MemberID:     memberID,
-		ConnectToken: connectToken,
-	}, nil
+	return nil
 }
 
-func (s Service) GetMemberIDByConnectToken(ctx context.Context, connectToken string) (string, error) {
-	return s.redisRepo.GetMemberIDByConnectToken(ctx, connectToken)
-
-	//? check if room exists
-	// roomID, err := s.redisRepo.GetMemberRoomId(ctx, memberID)
-	// if err != nil {
-	// 	return err
-	// }
+type JoinRoomParams struct {
+	ConnectToken string
+	Conn         *websocket.Conn
+	RoomID       string
 }
 
-func (s Service) ConnectMember(ctx context.Context, conn *websocket.Conn, memberID string) error {
-	if err := s.wsRepo.Add(conn, memberID); err != nil {
+func (s Service) JoinRoom(ctx context.Context, params *JoinRoomParams) error {
+	slog.Info("joining room", "params", params)
+
+	joinRoomSession, err := s.redisRepo.GetJoinRoomSession(ctx, params.ConnectToken)
+	if err != nil {
+		return err
+	}
+
+	if joinRoomSession.RoomID != params.RoomID {
+		return errors.New("wrong room id")
+	}
+
+	memberID := uuid.NewString()
+	if err := s.redisRepo.SetMember(ctx, &redis.SetMemberParams{
+		MemberID:  memberID,
+		Username:  joinRoomSession.Username,
+		Color:     joinRoomSession.Color,
+		AvatarURL: joinRoomSession.AvatarURL,
+		IsMuted:   false,
+		IsAdmin:   false,
+		IsOnline:  false,
+		RoomID:    joinRoomSession.RoomID,
+	}); err != nil {
+		return err
+	}
+
+	if err := s.wsRepo.Add(params.Conn, memberID); err != nil {
 		return err
 	}
 
@@ -149,7 +208,7 @@ func (s Service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	videoID := uuid.NewString()
-	if err := s.redisRepo.CreateVideo(ctx, &redis.CreateVideoParams{
+	if err := s.redisRepo.SetVideo(ctx, &redis.SetVideoParams{
 		VideoID:   videoID,
 		RoomID:    roomID,
 		URL:       params.VideoURL,
