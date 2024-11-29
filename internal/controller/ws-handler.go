@@ -20,12 +20,11 @@ type Input struct {
 }
 
 type Output struct {
-	Action string      `json:"action"`
-	Data   interface{} `json:"data"`
+	Action string `json:"action"`
+	Data   any    `json:"data"`
 }
 
-// ? pass memberID
-func (c controller) readMessages(ctx context.Context, conn *websocket.Conn) {
+func (c controller) readMessages(ctx context.Context, conn *websocket.Conn, memberID, roomID string) {
 	for {
 		var input Input
 		if err := conn.ReadJSON(&input); err != nil {
@@ -36,14 +35,43 @@ func (c controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 		slog.Info("message recieved", "message", input)
 
 		switch input.Action {
-		// case "remove_member":
-		// 	removedMember, err := r.handleRemoveMember(&input)
+		case "remove_member":
+			var data struct {
+				MemberID string `json:"member_id"`
+			}
+			if err := json.Unmarshal(input.Data, &data); err != nil {
+				slog.Warn("failed to unmarshal data", "error", err)
+				if err := c.writeError(conn, err); err != nil {
+					slog.Warn("failed to write error", "error", err)
+					return
+				}
+				continue
+			}
 
-		// 	if err != nil {
-		// 		r.sendError(input.Sender.Conn, err)
-		// 	} else {
-		// 		r.sendMemberLeft(removedMember)
-		// 	}
+			removeVideoResponse, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
+				RemovedMemberID: data.MemberID,
+				MemberID:        memberID,
+				RoomID:          roomID,
+			})
+			if err != nil {
+				slog.Warn("failed to remove member", "error", err)
+				if err := c.writeError(conn, err); err != nil {
+					slog.Warn("failed to write error", "error", err)
+					return
+				}
+				continue
+			}
+
+			if err := c.broadcast(removeVideoResponse.Conns, &Output{
+				Action: "member_removed",
+				Data: map[string]any{
+					"removed_member_id": data.MemberID,
+					"memberlist":        removeVideoResponse.Memberlist,
+				},
+			}); err != nil {
+				slog.Warn("failed to broadcast", "error", err)
+				return
+			}
 		// case "promote_member":
 		// 	promotedMember, err := r.handlePromoteMember(&input)
 
@@ -75,7 +103,8 @@ func (c controller) readMessages(ctx context.Context, conn *websocket.Conn) {
 			}
 
 			addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
-				Conn:     conn,
+				// Conn:     conn,
+				MemberID: memberID,
 				VideoURL: data.VideoURL,
 			})
 			if err != nil {
@@ -141,17 +170,18 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Debug("CreateRoom: connection established", "user", connectToken)
 
-	if err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
+	createRoomResponse, err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
 		ConnectToken: connectToken,
 		Conn:         conn,
-	}); err != nil {
+	})
+	if err != nil {
 		slog.Info("CreateRoom:", "error", err)
 		conn.Close()
 		fmt.Fprint(w, err)
 		return
 	}
 
-	c.readMessages(r.Context(), conn)
+	c.readMessages(r.Context(), conn, createRoomResponse.MemberID, createRoomResponse.RoomID)
 }
 
 func (c controller) writeError(conn *websocket.Conn, err error) error {
@@ -168,7 +198,8 @@ func (c controller) writeOutput(conn *websocket.Conn, output *Output) error {
 func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	for _, conn := range conns {
 		if err := c.writeOutput(conn, output); err != nil {
-			return err
+			slog.Warn("failed to broadcast", "error", err)
+			// return err
 		}
 	}
 
@@ -200,16 +231,27 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Debug("JoinRoom connection established", "user", connectToken)
 
-	if err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
+	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
 		ConnectToken: connectToken,
 		Conn:         conn,
 		RoomID:       roomID,
-	}); err != nil {
+	})
+	if err != nil {
 		slog.Info("JoinRoom", "error", err)
 		conn.Close()
 		fmt.Fprint(w, err)
 		return
 	}
 
-	c.readMessages(r.Context(), conn)
+	if err := c.broadcast(joinRoomResponse.Conns, &Output{
+		Action: "member_joined",
+		Data: map[string]any{
+			"joined_member": joinRoomResponse.JoinedMember,
+		},
+	}); err != nil {
+		slog.Warn("failed to broadcast", "error", err)
+		return
+	}
+
+	c.readMessages(r.Context(), conn, joinRoomResponse.JoinedMember.ID, roomID)
 }

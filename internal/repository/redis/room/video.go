@@ -32,6 +32,14 @@ func (r Repo) GetPlaylistLength(ctx context.Context, roomID string) (int, error)
 func (r Repo) SetVideo(ctx context.Context, params *repository.SetVideoParams) error {
 	pipe := r.rc.TxPipeline()
 
+	// playlistVersionKey := r.getPlaylistVersionKey(params.RoomID)
+	// playlistVersion, err := r.rc.Get(ctx, playlistVersionKey).Int()
+	// fmt.Printf("playlistVersion: %d\n", playlistVersion)
+	// if err != nil {
+	// 	fmt.Printf("set video error: %v\n", err)
+	// 	return err
+	// }
+
 	video := repository.Video{
 		URL:       params.URL,
 		AddedByID: params.AddedByID,

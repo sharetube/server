@@ -41,4 +41,5 @@ type SetVideoParams struct {
 	RoomID    string
 	URL       string
 	AddedByID string
+	Version   int
 }

@@ -61,13 +61,18 @@ type CreateRoomParams struct {
 	Conn         *websocket.Conn
 }
 
-func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) error {
+type CreateRoomResponse struct {
+	MemberID string
+	RoomID   string
+}
+
+func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (CreateRoomResponse, error) {
 	roomID := uuid.NewString()
 	slog.Info("create room", "roomID", roomID)
 
 	createRoomSession, err := s.roomRepo.GetCreateRoomSession(ctx, params.ConnectToken)
 	if err != nil {
-		return err
+		return CreateRoomResponse{}, err
 	}
 
 	memberID := uuid.NewString()
@@ -81,7 +86,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) error
 		IsOnline:  false,
 		RoomID:    roomID,
 	}); err != nil {
-		return err
+		return CreateRoomResponse{}, err
 	}
 
 	if err := s.roomRepo.SetPlayer(ctx, &repository.SetPlayerParams{
@@ -92,14 +97,17 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) error
 		UpdatedAt:       time.Now().Unix(),
 		RoomID:          roomID,
 	}); err != nil {
-		return err
+		return CreateRoomResponse{}, err
 	}
 
 	if err := s.connRepo.Add(params.Conn, memberID); err != nil {
-		return err
+		return CreateRoomResponse{}, err
 	}
 
-	return nil
+	return CreateRoomResponse{
+		MemberID: memberID,
+		RoomID:   roomID,
+	}, nil
 }
 
 type JoinRoomParams struct {
@@ -108,12 +116,18 @@ type JoinRoomParams struct {
 	RoomID       string
 }
 
-func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) error {
+type JoinRoomResponse struct {
+	JoinedMember Member
+	MemberList   []Member
+	Conns        []*websocket.Conn
+}
+
+func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
 	slog.Info("joining room", "params", params)
 
 	joinRoomSession, err := s.roomRepo.GetJoinRoomSession(ctx, params.ConnectToken)
 	if err != nil {
-		return err
+		return JoinRoomResponse{}, err
 	}
 
 	// if joinRoomSession.RoomID != params.RoomID {
@@ -131,12 +145,29 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) error {
 		IsOnline:  false,
 		RoomID:    joinRoomSession.RoomID,
 	}); err != nil {
-		return err
+		return JoinRoomResponse{}, err
 	}
 
 	if err := s.connRepo.Add(params.Conn, memberID); err != nil {
-		return err
+		return JoinRoomResponse{}, err
 	}
 
-	return nil
+	conns, err := s.getConnsByRoomID(ctx, joinRoomSession.RoomID)
+	if err != nil {
+		slog.Info("failed to get conns", "err", err)
+		return JoinRoomResponse{}, err
+	}
+
+	return JoinRoomResponse{
+		Conns: conns,
+		JoinedMember: Member{
+			ID:        memberID,
+			Username:  joinRoomSession.Username,
+			Color:     joinRoomSession.Color,
+			AvatarURL: joinRoomSession.AvatarURL,
+			IsMuted:   false,
+			IsAdmin:   false,
+			IsOnline:  false,
+		},
+	}, nil
 }

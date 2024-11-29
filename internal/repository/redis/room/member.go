@@ -3,9 +3,14 @@ package room
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/sharetube/server/internal/repository"
+)
+
+var (
+	ErrMemberNotFound = errors.New("member not found")
 )
 
 const memberPrefix = "member"
@@ -39,10 +44,24 @@ func (r Repo) SetMember(ctx context.Context, params *repository.SetMemberParams)
 	return err
 }
 
+func (r Repo) RemoveMember(ctx context.Context, memberID string) error {
+	res, err := r.rc.Del(ctx, memberPrefix+":"+memberID).Result()
+	if err != nil {
+		slog.Info("failed to delete member", "err", err)
+		return err
+	}
+
+	if res == 0 {
+		return ErrMemberNotFound
+	}
+
+	return nil
+}
+
 func (r Repo) GetMemberRoomId(ctx context.Context, memberID string) (string, error) {
 	roomID := r.rc.HGet(ctx, memberPrefix+":"+memberID, "room_id").Val()
 	if roomID == "" {
-		return "", errors.New("member not found")
+		return "", ErrMemberNotFound
 	}
 
 	return roomID, nil
@@ -65,4 +84,14 @@ func (r Repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error)
 	}
 
 	return memberIDs, nil
+}
+
+func (r Repo) GetMember(ctx context.Context, memberID string) (repository.Member, error) {
+	var member repository.Member
+	err := r.rc.HGetAll(ctx, memberPrefix+":"+memberID).Scan(&member)
+	if err != nil {
+		return repository.Member{}, err
+	}
+
+	return member, nil
 }

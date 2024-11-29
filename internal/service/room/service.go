@@ -18,6 +18,8 @@ var (
 type iRoomRepo interface {
 	// member
 	SetMember(context.Context, *repository.SetMemberParams) error
+	GetMember(context.Context, string) (repository.Member, error)
+	RemoveMember(context.Context, string) error
 	GetMemberRoomId(context.Context, string) (string, error)
 	GetMemberIDs(context.Context, string) ([]string, error)
 	IsMemberAdmin(context.Context, string) (bool, error)
