@@ -38,6 +38,7 @@ func (r *repo) RemoveByConn(conn *websocket.Conn) error {
 	if !ok {
 		return ErrNotFound
 	}
+	conn.Close()
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)
@@ -50,6 +51,7 @@ func (r *repo) RemoveByMemberID(memberID string) error {
 	if !ok {
 		return ErrNotFound
 	}
+	conn.Close()
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)

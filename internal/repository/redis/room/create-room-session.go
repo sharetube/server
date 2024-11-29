@@ -30,12 +30,17 @@ func (r Repo) SetCreateRoomSession(ctx context.Context, params *repository.SetCr
 
 func (r Repo) GetCreateRoomSession(ctx context.Context, createRoomSessionID string) (repository.CreateRoomSession, error) {
 	var createRoomSession repository.CreateRoomSession
-	if err := r.rc.HGetAll(ctx, createRoomSessinPrefix+":"+createRoomSessionID).Scan(&createRoomSession); err != nil {
+	createRoomSessionKey := createRoomSessinPrefix + ":" + createRoomSessionID
+	if err := r.rc.HGetAll(ctx, createRoomSessionKey).Scan(&createRoomSession); err != nil {
 		return repository.CreateRoomSession{}, err
 	}
 
 	if createRoomSession.Username == "" {
 		return repository.CreateRoomSession{}, fmt.Errorf("create room session not found")
+	}
+
+	if err := r.rc.Del(ctx, createRoomSessionKey).Err(); err != nil {
+		slog.Error("failed to delete create room session", "err", err)
 	}
 
 	slog.Info("create room session", "createRoomSession", createRoomSession)

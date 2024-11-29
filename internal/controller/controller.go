@@ -12,9 +12,10 @@ import (
 type iRoomService interface {
 	CreateCreateRoomSession(context.Context, *room.CreateRoomCreateSessionParams) (string, error)
 	CreateJoinRoomSession(context.Context, *room.CreateRoomJoinSessionParams) (string, error)
-	CreateRoom(context.Context, *room.CreateRoomParams) error
-	JoinRoom(context.Context, *room.JoinRoomParams) error
+	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
+	JoinRoom(context.Context, *room.JoinRoomParams) (room.JoinRoomResponse, error)
 	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
+	RemoveMember(context.Context, *room.RemoveMemberParams) (room.RemoveMemberResponse, error)
 }
 
 type controller struct {

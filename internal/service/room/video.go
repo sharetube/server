@@ -10,7 +10,8 @@ import (
 )
 
 type AddVideoParams struct {
-	Conn     *websocket.Conn
+	// Conn     *websocket.Conn
+	MemberID string
 	VideoURL string
 }
 
@@ -21,13 +22,13 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	memberID, err := s.connRepo.GetMemberID(params.Conn)
-	if err != nil {
-		slog.Info("failed to get member id", "err", err)
-		return AddVideoResponse{}, err
-	}
+	// memberID, err := s.connRepo.GetMemberID(params.Conn)
+	// if err != nil {
+	// 	slog.Info("failed to get member id", "err", err)
+	// 	return AddVideoResponse{}, err
+	// }
 
-	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, memberID)
+	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.MemberID)
 	if err != nil {
 		slog.Info("failed to check if member is admin", "err", err)
 		return AddVideoResponse{}, err
@@ -36,7 +37,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPermissionDenied
 	}
 
-	roomID, err := s.roomRepo.GetMemberRoomId(ctx, memberID)
+	roomID, err := s.roomRepo.GetMemberRoomId(ctx, params.MemberID)
 	if err != nil {
 		slog.Info("failed to get room id", "err", err)
 		return AddVideoResponse{}, err
@@ -57,7 +58,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		VideoID:   videoID,
 		RoomID:    roomID,
 		URL:       params.VideoURL,
-		AddedByID: memberID,
+		AddedByID: params.MemberID,
 	}); err != nil {
 		slog.Info("failed to create video", "err", err)
 		return AddVideoResponse{}, err
@@ -94,7 +95,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		AddedVideo: Video{
 			ID:        videoID,
 			URL:       params.VideoURL,
-			AddedByID: memberID,
+			AddedByID: params.MemberID,
 		},
 		Conns:    conns,
 		Playlist: playlist,
