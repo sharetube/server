@@ -19,22 +19,18 @@ type iRoomRepo interface {
 	// member
 	SetMember(context.Context, *repository.SetMemberParams) error
 	GetMember(context.Context, string) (repository.Member, error)
-	RemoveMember(context.Context, string) error
+	RemoveMember(context.Context, string, string) error
 	GetMemberRoomId(context.Context, string) (string, error)
-	GetMemberIDs(context.Context, string) ([]string, error)
+	GetMembersIDs(context.Context, string) ([]string, error)
 	IsMemberAdmin(context.Context, string) (bool, error)
 	// video
 	SetVideo(context.Context, *repository.SetVideoParams) error
-	GetPlaylist(context.Context, string) ([]string, error)
+	GetVideosIDs(context.Context, string) ([]string, error)
 	GetVideo(context.Context, string) (repository.Video, error)
 	GetPlaylistLength(context.Context, string) (int, error)
 	// player
 	SetPlayer(context.Context, *repository.SetPlayerParams) error
-	// room
-	SetCreateRoomSession(context.Context, *repository.SetCreateRoomSessionParams) error
-	GetCreateRoomSession(context.Context, string) (repository.CreateRoomSession, error)
-	SetJoinRoomSession(context.Context, *repository.SetJoinRoomSessionParams) error
-	GetJoinRoomSession(context.Context, string) (repository.JoinRoomSession, error)
+	GetPlayer(context.Context, string) (repository.Player, error)
 }
 
 type iConnRepo interface {

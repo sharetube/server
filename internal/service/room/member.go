@@ -18,6 +18,35 @@ type RemoveMemberResponse struct {
 	Memberlist []Member
 }
 
+func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
+	memberlistIDs, err := s.roomRepo.GetMembersIDs(ctx, roomID)
+	if err != nil {
+		slog.Info("failed to get memberlist", "err", err)
+		return []Member{}, err
+	}
+
+	memberlist := make([]Member, 0, len(memberlistIDs))
+	for _, memberID := range memberlistIDs {
+		member, err := s.roomRepo.GetMember(ctx, memberID)
+		if err != nil {
+			slog.Info("failed to get member", "err", err)
+			return []Member{}, err
+		}
+
+		memberlist = append(memberlist, Member{
+			ID:        memberID,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   member.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsOnline:  member.IsOnline,
+		})
+	}
+
+	return memberlist, nil
+}
+
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.MemberID)
 	if err != nil {
@@ -28,7 +57,7 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, ErrPermissionDenied
 	}
 
-	if err := s.roomRepo.RemoveMember(ctx, params.RemovedMemberID); err != nil {
+	if err := s.roomRepo.RemoveMember(ctx, params.RemovedMemberID, params.RoomID); err != nil {
 		slog.Info("failed to remove member", "err", err)
 		return RemoveMemberResponse{}, err
 	}
@@ -44,29 +73,10 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, err
 	}
 
-	memberlistIDs, err := s.roomRepo.GetMemberIDs(ctx, params.RoomID)
+	memberlist, err := s.getMemberList(ctx, params.RoomID)
 	if err != nil {
 		slog.Info("failed to get memberlist", "err", err)
 		return RemoveMemberResponse{}, err
-	}
-
-	memberlist := make([]Member, 0, len(memberlistIDs))
-	for _, memberID := range memberlistIDs {
-		member, err := s.roomRepo.GetMember(ctx, memberID)
-		if err != nil {
-			slog.Info("failed to get member", "err", err)
-			return RemoveMemberResponse{}, err
-		}
-
-		memberlist = append(memberlist, Member{
-			ID:        memberID,
-			Username:  member.Username,
-			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
-			IsMuted:   member.IsMuted,
-			IsAdmin:   member.IsAdmin,
-			IsOnline:  member.IsOnline,
-		})
 	}
 
 	return RemoveMemberResponse{
