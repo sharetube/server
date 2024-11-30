@@ -35,7 +35,6 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 }
 
 type AddVideoParams struct {
-	// Conn     *websocket.Conn
 	MemberID string
 	VideoURL string
 }
@@ -47,12 +46,6 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	// memberID, err := s.connRepo.GetMemberID(params.Conn)
-	// if err != nil {
-	// 	slog.Info("failed to get member id", "err", err)
-	// 	return AddVideoResponse{}, err
-	// }
-
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.MemberID)
 	if err != nil {
 		slog.Info("failed to check if member is admin", "err", err)
@@ -109,5 +102,54 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		},
 		Conns:    conns,
 		Playlist: playlist,
+	}, nil
+}
+
+type RemoveVideoParams struct {
+	SenderID string
+	VideoID  string
+	RoomID   string
+}
+
+type RemoveVideoResponse struct {
+	Conns          []*websocket.Conn
+	Playlist       []Video
+	RemovedVideoID string
+}
+
+func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
+	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
+	if err != nil {
+		slog.Info("failed to check if member is admin", "err", err)
+		return RemoveVideoResponse{}, err
+	}
+	if !isAdmin {
+		return RemoveVideoResponse{}, ErrPermissionDenied
+	}
+
+	if err := s.roomRepo.RemoveVideo(ctx, &repository.RemoveVideoParams{
+		VideoID: params.VideoID,
+		RoomID:  params.RoomID,
+	}); err != nil {
+		slog.Info("failed to remove video", "err", err)
+		return RemoveVideoResponse{}, err
+	}
+
+	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	if err != nil {
+		slog.Info("failed to get conns", "err", err)
+		return RemoveVideoResponse{}, err
+	}
+
+	playlist, err := s.getPlaylist(ctx, params.RoomID)
+	if err != nil {
+		slog.Info("failed to get playlist", "err", err)
+		return RemoveVideoResponse{}, err
+	}
+
+	return RemoveVideoResponse{
+		Conns:          conns,
+		Playlist:       playlist,
+		RemovedVideoID: params.VideoID,
 	}, nil
 }

@@ -10,19 +10,7 @@ import (
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
-	username, err := c.getQueryParam(r, "username")
-	if err != nil {
-		slog.Info("CreateRoom", "error", err)
-		return
-	}
-
-	color, err := c.getQueryParam(r, "color")
-	if err != nil {
-		slog.Info("CreateRoom", "error", err)
-		return
-	}
-
-	avatarURL, err := c.getQueryParam(r, "avatar-url")
+	user, err := c.getUser(r)
 	if err != nil {
 		slog.Info("CreateRoom", "error", err)
 		return
@@ -35,9 +23,9 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createRoomResponse, err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
-		Username:        username,
-		Color:           color,
-		AvatarURL:       avatarURL,
+		Username:        user.username,
+		Color:           user.color,
+		AvatarURL:       user.avatarURL,
 		InitialVideoURL: initialVideoURL,
 	})
 	if err != nil {
@@ -85,28 +73,16 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, err := c.getQueryParam(r, "username")
-	if err != nil {
-		slog.Info("JoinRoom", "error", err)
-		return
-	}
-
-	color, err := c.getQueryParam(r, "color")
-	if err != nil {
-		slog.Info("JoinRoom", "error", err)
-		return
-	}
-
-	avatarURL, err := c.getQueryParam(r, "avatar-url")
+	user, err := c.getUser(r)
 	if err != nil {
 		slog.Info("JoinRoom", "error", err)
 		return
 	}
 
 	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
-		Username:  username,
-		Color:     color,
-		AvatarURL: avatarURL,
+		Username:  user.username,
+		Color:     user.color,
+		AvatarURL: user.avatarURL,
 		RoomID:    roomID,
 	})
 	if err != nil {

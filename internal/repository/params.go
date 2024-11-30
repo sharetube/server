@@ -27,6 +27,11 @@ type SetMemberParams struct {
 	RoomID    string
 }
 
+type RemoveMemberParams struct {
+	MemberID string
+	RoomID   string
+}
+
 type SetPlayerParams struct {
 	CurrentVideoURL string
 	IsPlaying       bool
@@ -42,4 +47,9 @@ type SetVideoParams struct {
 	URL       string
 	AddedByID string
 	Version   int
+}
+
+type RemoveVideoParams struct {
+	VideoID string
+	RoomID  string
 }
