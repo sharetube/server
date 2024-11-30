@@ -1,12 +1,20 @@
 package controller
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/rest"
+)
+
+type contextKey int
+
+const (
+	roomIDCtxKey contextKey = iota
+	memberIDCtxKey
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +63,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.writeOutput(conn, &Output{
+	if err := conn.WriteJSON(&Output{
 		Action: "room_created",
 		Data:   roomState,
 	}); err != nil {
@@ -63,9 +71,11 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.readMessages(r.Context(), conn, createRoomResponse.MemberID, createRoomResponse.RoomID)
-}
+	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
+	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
 
+	c.wsmux.ServeWebSocket(ctx, conn)
+}
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
@@ -112,7 +122,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.writeOutput(conn, &Output{
+	if err := conn.WriteJSON(&Output{
 		Action: "room_joined",
 		Data:   roomState,
 	}); err != nil {
@@ -131,5 +141,8 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.readMessages(r.Context(), conn, joinRoomResponse.JoinedMember.ID, roomID)
+	ctx := context.WithValue(r.Context(), roomIDCtxKey, roomID)
+	ctx = context.WithValue(ctx, memberIDCtxKey, joinRoomResponse.JoinedMember.ID)
+
+	c.wsmux.ServeWebSocket(ctx, conn)
 }

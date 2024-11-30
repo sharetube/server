@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func (c controller) Mux() http.Handler {
+func (c *controller) GetMux() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
