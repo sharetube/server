@@ -24,3 +24,13 @@ func (r Repo) SetPlayer(ctx context.Context, params *repository.SetPlayerParams)
 	_, err := pipe.Exec(ctx)
 	return err
 }
+
+func (r Repo) GetPlayer(ctx context.Context, roomID string) (repository.Player, error) {
+	playerKey := "room" + ":" + roomID + ":player"
+	var player repository.Player
+	if err := r.rc.HGetAll(ctx, playerKey).Scan(&player); err != nil {
+		return repository.Player{}, err
+	}
+
+	return player, nil
+}

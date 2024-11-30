@@ -44,7 +44,12 @@ func (r Repo) SetMember(ctx context.Context, params *repository.SetMemberParams)
 	return err
 }
 
-func (r Repo) RemoveMember(ctx context.Context, memberID string) error {
+func (r Repo) RemoveMember(ctx context.Context, memberID, roomID string) error {
+	if err := r.rc.ZRem(ctx, r.getMemberListKey(roomID), memberID).Err(); err != nil {
+		slog.Info("failed to remove member from memberlist", "err", err)
+		return err
+	}
+
 	res, err := r.rc.Del(ctx, memberPrefix+":"+memberID).Result()
 	if err != nil {
 		slog.Info("failed to delete member", "err", err)
@@ -76,7 +81,7 @@ func (r Repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) 
 	return isAdmin, nil
 }
 
-func (r Repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error) {
+func (r Repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error) {
 	memberListKey := r.getMemberListKey(roomID)
 	memberIDs, err := r.rc.ZRange(ctx, memberListKey, 0, -1).Result()
 	if err != nil {

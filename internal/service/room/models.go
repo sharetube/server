@@ -1,17 +1,32 @@
 package room
 
 type Video struct {
-	ID        string
-	URL       string
-	AddedByID string
+	ID        string `json:"id"`
+	URL       string `json:"url"`
+	AddedByID string `json:"added_by_id"`
 }
 
 type Member struct {
-	ID        string
-	Username  string
-	Color     string
-	AvatarURL string
-	IsMuted   bool
-	IsAdmin   bool
-	IsOnline  bool
+	ID        string `json:"id"`
+	Username  string `json:"username"`
+	Color     string `json:"color"`
+	AvatarURL string `json:"avatar_url"`
+	IsMuted   bool   `json:"is_muted"`
+	IsAdmin   bool   `json:"is_admin"`
+	IsOnline  bool   `json:"is_online"`
+}
+
+type Player struct {
+	CurrentVideoURL string  `json:"current_video_url"`
+	IsPlaying       bool    `json:"is_playing"`
+	CurrentTime     float64 `json:"current_time"`
+	PlaybackRate    float64 `json:"playback_rate"`
+	UpdatedAt       int64   `json:"updated_at"`
+}
+
+type RoomState struct {
+	RoomID     string   `json:"room_id"`
+	Player     Player   `json:"player"`
+	MemberList []Member `json:"member_list"`
+	Playlist   []Video  `json:"playlist"`
 }

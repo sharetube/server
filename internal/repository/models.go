@@ -1,19 +1,5 @@
 package repository
 
-type CreateRoomSession struct {
-	Username        string `redis:"username"`
-	Color           string `redis:"color"`
-	AvatarURL       string `redis:"avatar_url"`
-	InitialVideoURL string `redis:"initial_video_url"`
-}
-
-type JoinRoomSession struct {
-	Username  string `redis:"username"`
-	Color     string `redis:"color"`
-	AvatarURL string `redis:"avatar_url"`
-	RoomID    string `redis:"room_id"`
-}
-
 type Member struct {
 	Username  string `redis:"username"`
 	Color     string `redis:"color"`

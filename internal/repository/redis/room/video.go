@@ -73,7 +73,7 @@ func (r Repo) GetVideo(ctx context.Context, videoID string) (repository.Video, e
 	return video, nil
 }
 
-func (r Repo) GetPlaylist(ctx context.Context, roomID string) ([]string, error) {
+func (r Repo) GetVideosIDs(ctx context.Context, roomID string) ([]string, error) {
 	playlistKey := r.getPlaylistKey(roomID)
 	res, err := r.rc.ZRangeByScore(ctx, playlistKey, &redis.ZRangeBy{
 		Min: "-inf",

@@ -9,6 +9,31 @@ import (
 	"github.com/sharetube/server/internal/repository"
 )
 
+func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error) {
+	videosIDs, err := s.roomRepo.GetVideosIDs(ctx, roomID)
+	if err != nil {
+		slog.Info("failed to get memberlist", "err", err)
+		return []Video{}, err
+	}
+
+	playlist := make([]Video, 0, len(videosIDs))
+	for _, videoID := range videosIDs {
+		video, err := s.roomRepo.GetVideo(ctx, videoID)
+		if err != nil {
+			slog.Info("failed to get member", "err", err)
+			return []Video{}, err
+		}
+
+		playlist = append(playlist, Video{
+			ID:        videoID,
+			URL:       video.URL,
+			AddedByID: video.AddedByID,
+		})
+	}
+
+	return playlist, nil
+}
+
 type AddVideoParams struct {
 	// Conn     *websocket.Conn
 	MemberID string
@@ -70,25 +95,10 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, err
 	}
 
-	playlistIDs, err := s.roomRepo.GetPlaylist(ctx, roomID)
+	playlist, err := s.getPlaylist(ctx, roomID)
 	if err != nil {
 		slog.Info("failed to get playlist", "err", err)
 		return AddVideoResponse{}, err
-	}
-
-	playlist := make([]Video, 0, len(playlistIDs))
-	for _, videoID := range playlistIDs {
-		video, err := s.roomRepo.GetVideo(ctx, videoID)
-		if err != nil {
-			slog.Info("failed to get video", "err", err)
-			return AddVideoResponse{}, err
-		}
-
-		playlist = append(playlist, Video{
-			ID:        videoID,
-			URL:       video.URL,
-			AddedByID: video.AddedByID,
-		})
 	}
 
 	return AddVideoResponse{
