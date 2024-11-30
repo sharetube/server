@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -60,14 +61,22 @@ func (c controller) writeError(conn *websocket.Conn, err error) error {
 	})
 }
 
-func (c controller) writeOutput(conn *websocket.Conn, output *Output) error {
-	return conn.WriteJSON(output)
-}
-
 func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	for _, conn := range conns {
-		if err := c.writeOutput(conn, output); err != nil {
+		if err := conn.WriteJSON(output); err != nil {
 			slog.Warn("failed to broadcast", "error", err)
+		}
+	}
+
+	return nil
+}
+
+func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMessage, v any) error {
+	if err := json.Unmarshal(data, &v); err != nil {
+		slog.Warn("failed to unmarshal data", "error", err)
+		if err := c.writeError(conn, err); err != nil {
+			slog.Warn("failed to write error", "error", err)
+			return err
 		}
 	}
 

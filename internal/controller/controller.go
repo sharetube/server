@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/validator"
+	"github.com/sharetube/server/pkg/wsrouter"
 )
 
 type iRoomService interface {
@@ -23,11 +24,12 @@ type iRoomService interface {
 type controller struct {
 	roomService iRoomService
 	upgrader    websocket.Upgrader
+	wsmux       *wsrouter.WSRouter
 	validate    *validator.Validator
 }
 
 func NewController(roomService iRoomService) *controller {
-	return &controller{
+	c := controller{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
@@ -36,4 +38,7 @@ func NewController(roomService iRoomService) *controller {
 		roomService: roomService,
 		validate:    validator.NewValidator(),
 	}
+	c.wsmux = c.initWSMux()
+
+	return &c
 }

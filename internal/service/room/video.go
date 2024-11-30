@@ -36,6 +36,7 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 
 type AddVideoParams struct {
 	MemberID string
+	RoomID   string
 	VideoURL string
 }
 
@@ -55,13 +56,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPermissionDenied
 	}
 
-	roomID, err := s.roomRepo.GetMemberRoomId(ctx, params.MemberID)
-	if err != nil {
-		slog.Info("failed to get room id", "err", err)
-		return AddVideoResponse{}, err
-	}
-
-	playlistLength, err := s.roomRepo.GetPlaylistLength(ctx, roomID)
+	playlistLength, err := s.roomRepo.GetPlaylistLength(ctx, params.RoomID)
 	if err != nil {
 		slog.Info("failed to get playlist length", "err", err)
 		return AddVideoResponse{}, err
@@ -74,7 +69,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	videoID := uuid.NewString()
 	if err := s.roomRepo.SetVideo(ctx, &repository.SetVideoParams{
 		VideoID:   videoID,
-		RoomID:    roomID,
+		RoomID:    params.RoomID,
 		URL:       params.VideoURL,
 		AddedByID: params.MemberID,
 	}); err != nil {
@@ -82,13 +77,13 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, roomID)
+	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
 		slog.Info("failed to get conns", "err", err)
 		return AddVideoResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, roomID)
+	playlist, err := s.getPlaylist(ctx, params.RoomID)
 	if err != nil {
 		slog.Info("failed to get playlist", "err", err)
 		return AddVideoResponse{}, err

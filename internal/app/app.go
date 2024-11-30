@@ -59,7 +59,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	wsRepo := conn.NewRepo()
 	roomService := roomS.NewService(roomRepo, wsRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
-	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.Mux()}
+	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 
 	// graceful shutdown
 	serverCtx, serverStopCtx := context.WithCancel(ctx)
