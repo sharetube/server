@@ -25,7 +25,7 @@ var (
 	port = configVar[int]{
 		envKey:       "SERVER_PORT",
 		flagKey:      "server-port",
-		defaultValue: 8080,
+		defaultValue: 80,
 	}
 	host = configVar[string]{
 		envKey:       "SERVER_HOST",
@@ -60,7 +60,7 @@ var (
 	redisHost = configVar[string]{
 		envKey:       "REDIS_HOST",
 		flagKey:      "redis-host",
-		defaultValue: "localhost",
+		defaultValue: "sharetube-redis",
 	}
 	redisPassword = configVar[string]{
 		envKey:       "REDIS_PASSWORD",

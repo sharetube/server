@@ -15,11 +15,11 @@ var (
 
 const memberPrefix = "member"
 
-func (r Repo) getMemberListKey(roomID string) string {
+func (r repo) getMemberListKey(roomID string) string {
 	return "room" + ":" + roomID + ":" + "memberlist"
 }
 
-func (r Repo) SetMember(ctx context.Context, params *repository.SetMemberParams) error {
+func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams) error {
 	pipe := r.rc.TxPipeline()
 
 	member := repository.Member{
@@ -44,13 +44,13 @@ func (r Repo) SetMember(ctx context.Context, params *repository.SetMemberParams)
 	return err
 }
 
-func (r Repo) RemoveMember(ctx context.Context, memberID, roomID string) error {
-	if err := r.rc.ZRem(ctx, r.getMemberListKey(roomID), memberID).Err(); err != nil {
+func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberParams) error {
+	if err := r.rc.ZRem(ctx, r.getMemberListKey(params.RoomID), params.MemberID).Err(); err != nil {
 		slog.Info("failed to remove member from memberlist", "err", err)
 		return err
 	}
 
-	res, err := r.rc.Del(ctx, memberPrefix+":"+memberID).Result()
+	res, err := r.rc.Del(ctx, memberPrefix+":"+params.MemberID).Result()
 	if err != nil {
 		slog.Info("failed to delete member", "err", err)
 		return err
@@ -63,7 +63,7 @@ func (r Repo) RemoveMember(ctx context.Context, memberID, roomID string) error {
 	return nil
 }
 
-func (r Repo) GetMemberRoomId(ctx context.Context, memberID string) (string, error) {
+func (r repo) GetMemberRoomId(ctx context.Context, memberID string) (string, error) {
 	roomID := r.rc.HGet(ctx, memberPrefix+":"+memberID, "room_id").Val()
 	if roomID == "" {
 		return "", ErrMemberNotFound
@@ -72,7 +72,7 @@ func (r Repo) GetMemberRoomId(ctx context.Context, memberID string) (string, err
 	return roomID, nil
 }
 
-func (r Repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) {
+func (r repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) {
 	isAdmin, err := r.rc.HGet(ctx, memberPrefix+":"+memberID, "is_admin").Bool()
 	if err != nil {
 		return false, err
@@ -81,7 +81,7 @@ func (r Repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) 
 	return isAdmin, nil
 }
 
-func (r Repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error) {
+func (r repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error) {
 	memberListKey := r.getMemberListKey(roomID)
 	memberIDs, err := r.rc.ZRange(ctx, memberListKey, 0, -1).Result()
 	if err != nil {
@@ -91,7 +91,7 @@ func (r Repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error
 	return memberIDs, nil
 }
 
-func (r Repo) GetMember(ctx context.Context, memberID string) (repository.Member, error) {
+func (r repo) GetMember(ctx context.Context, memberID string) (repository.Member, error) {
 	var member repository.Member
 	err := r.rc.HGetAll(ctx, memberPrefix+":"+memberID).Scan(&member)
 	if err != nil {
@@ -99,4 +99,28 @@ func (r Repo) GetMember(ctx context.Context, memberID string) (repository.Member
 	}
 
 	return member, nil
+}
+
+func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_admin", isAdmin).Err()
+}
+
+func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_online", isOnline).Err()
+}
+
+func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_muted", isMuted).Err()
+}
+
+func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "color", color).Err()
+}
+
+func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL string) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "avatar_url", avatarURL).Err()
+}
+
+func (r repo) UpdateMemberUsername(ctx context.Context, memberID, username string) error {
+	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "username", username).Err()
 }

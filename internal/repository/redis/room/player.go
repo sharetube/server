@@ -7,7 +7,7 @@ import (
 	"github.com/sharetube/server/internal/repository"
 )
 
-func (r Repo) SetPlayer(ctx context.Context, params *repository.SetPlayerParams) error {
+func (r repo) SetPlayer(ctx context.Context, params *repository.SetPlayerParams) error {
 	pipe := r.rc.TxPipeline()
 
 	player := repository.Player{
@@ -25,7 +25,7 @@ func (r Repo) SetPlayer(ctx context.Context, params *repository.SetPlayerParams)
 	return err
 }
 
-func (r Repo) GetPlayer(ctx context.Context, roomID string) (repository.Player, error) {
+func (r repo) GetPlayer(ctx context.Context, roomID string) (repository.Player, error) {
 	playerKey := "room" + ":" + roomID + ":player"
 	var player repository.Player
 	if err := r.rc.HGetAll(ctx, playerKey).Scan(&player); err != nil {

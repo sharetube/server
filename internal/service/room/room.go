@@ -24,7 +24,6 @@ type CreateRoomResponse struct {
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (CreateRoomResponse, error) {
 	roomID := uuid.NewString()
-	slog.Info("create room", "roomID", roomID)
 
 	memberID := uuid.NewString()
 	if err := s.roomRepo.SetMember(ctx, &repository.SetMemberParams{
