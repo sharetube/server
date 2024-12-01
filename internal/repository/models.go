@@ -17,9 +17,9 @@ type Video struct {
 }
 
 type Player struct {
-	CurrentVideoURL string  `redis:"current_video_url"`
-	IsPlaying       bool    `redis:"is_playing"`
-	CurrentTime     float64 `redis:"current_time"`
-	PlaybackRate    float64 `redis:"playback_rate"`
-	UpdatedAt       int64   `redis:"updated_at"`
+	VideoURL     string  `redis:"video_url"`
+	IsPlaying    bool    `redis:"is_playing"`
+	CurrentTime  float64 `redis:"current_time"`
+	PlaybackRate float64 `redis:"playback_rate"`
+	UpdatedAt    int64   `redis:"updated_at"`
 }

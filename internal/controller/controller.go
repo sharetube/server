@@ -15,6 +15,7 @@ type iRoomService interface {
 	ConnectMember(*room.ConnectMemberParams) error
 	DisconnectMember(context.Context, *room.DisconnectMemberParams) (room.DisconnectMemberResponse, error)
 	GetRoomState(ctx context.Context, roomID string) (room.RoomState, error)
+	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) (room.UpdatePlayerStateResponse, error)
 	JoinRoom(context.Context, *room.JoinRoomParams) (room.JoinRoomResponse, error)
 	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
 	RemoveVideo(context.Context, *room.RemoveVideoParams) (room.RemoveVideoResponse, error)

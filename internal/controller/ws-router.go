@@ -21,6 +21,10 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
 	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
 
+	// player
+	mux.Handle("UPDATE_PLAYER", c.handleUpdatePlayer)
+	// mux.Handle("CHANGE_VIDEO", c.handleChangeVideo)
+
 	return mux
 }
 
@@ -48,6 +52,82 @@ func (c controller) handleGetState(ctx context.Context, conn *websocket.Conn, pa
 		return
 	}
 }
+
+func (c controller) handleUpdatePlayer(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	roomID := c.getRoomIDFromCtx(ctx)
+	memberID := c.getMemberIDFromCtx(ctx)
+
+	var data struct {
+		IsPlaying    bool    `json:"is_playing"`
+		CurrentTime  float64 `json:"current_time"`
+		PlaybackRate float64 `json:"playback_rate"`
+		UpdatedAt    int64   `json:"updated_at"`
+	}
+	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		return
+	}
+
+	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
+		IsPlaying:    data.IsPlaying,
+		CurrentTime:  data.CurrentTime,
+		PlaybackRate: data.PlaybackRate,
+		UpdatedAt:    data.UpdatedAt,
+		SenderID:     memberID,
+		RoomID:       roomID,
+	})
+	if err != nil {
+		slog.Info("failed to update player state", "error", err)
+		if err := c.writeError(conn, err); err != nil {
+			slog.Warn("failed to write error", "error", err)
+			return
+		}
+	}
+
+	if err := c.broadcast(updatePlayerStateResp.Conns, &Output{
+		Action: "player_updated",
+		Data:   updatePlayerStateResp.PlayerState,
+	}); err != nil {
+		slog.Warn("failed to broadcast", "error", err)
+		return
+	}
+}
+
+// func (c controller) handleChangeVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+// 	roomID := c.getRoomIDFromCtx(ctx)
+// 	memberID := c.getMemberIDFromCtx(ctx)
+
+// 	var data struct {
+// 		VideoID   string `json:"video_id"`
+// 		UpdatedAt int64  `json:"updated_at"`
+// 	}
+// 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+// 		return
+// 	}
+
+// 	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
+// 		IsPlaying:    data.IsPlaying,
+// 		CurrentTime:  data.CurrentTime,
+// 		PlaybackRate: data.PlaybackRate,
+// 		UpdatedAt:    data.UpdatedAt,
+// 		SenderID:     memberID,
+// 		RoomID:       roomID,
+// 	})
+// 	if err != nil {
+// 		slog.Info("failed to update player state", "error", err)
+// 		if err := c.writeError(conn, err); err != nil {
+// 			slog.Warn("failed to write error", "error", err)
+// 			return
+// 		}
+// 	}
+
+// 	if err := c.broadcast(updatePlayerStateResp.Conns, &Output{
+// 		Action: "player_updated",
+// 		Data:   updatePlayerStateResp.PlayerState,
+// 	}); err != nil {
+// 		slog.Warn("failed to broadcast", "error", err)
+// 		return
+// 	}
+// }
 
 func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	roomID := c.getRoomIDFromCtx(ctx)

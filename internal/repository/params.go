@@ -49,6 +49,14 @@ type SetVideoParams struct {
 	Version   int
 }
 
+type UpdatePlayerStateParams struct {
+	IsPlaying    bool
+	CurrentTime  float64
+	PlaybackRate float64
+	UpdatedAt    int64
+	RoomID       string
+}
+
 type RemoveVideoParams struct {
 	VideoID string
 	RoomID  string

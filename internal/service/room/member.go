@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/repository"
 )
 
 func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
@@ -66,14 +67,14 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, ErrMemberNotFound
 	}
 
-	con, err := s.connRepo.GetConn(params.RemovedMemberID)
+	conn, err := s.connRepo.GetConn(params.RemovedMemberID)
 	if err != nil {
 		slog.Info("failed to get conn", "err", err)
 		return RemoveMemberResponse{}, err
 	}
 
 	return RemoveMemberResponse{
-		Conn: con,
+		Conn: conn,
 	}, nil
 }
 
@@ -120,5 +121,65 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 
 	return PromoteMemberResponse{
 		Conns: conns,
+	}, nil
+}
+
+type DisconnectMemberParams struct {
+	MemberID string
+	RoomID   string
+}
+
+type DisconnectMemberResponse struct {
+	Conns         []*websocket.Conn
+	Memberlist    []Member
+	IsRoomDeleted bool
+}
+
+func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberParams) (DisconnectMemberResponse, error) {
+	s.roomRepo.RemoveMember(ctx, &repository.RemoveMemberParams{
+		MemberID: params.MemberID,
+		RoomID:   params.RoomID,
+	})
+	s.connRepo.RemoveByMemberID(params.MemberID)
+
+	memberlist, err := s.getMemberList(ctx, params.RoomID)
+	if err != nil {
+		slog.Info("failed to get memberlist", "err", err)
+		return DisconnectMemberResponse{}, err
+	}
+
+	if len(memberlist) == 0 {
+		s.roomRepo.RemovePlayer(ctx, params.RoomID)
+		videosID, err := s.roomRepo.GetVideosIDs(ctx, params.RoomID)
+		if err != nil {
+			slog.Info("failed to get videos", "err", err)
+			return DisconnectMemberResponse{}, err
+		}
+
+		for _, videoID := range videosID {
+			if err := s.roomRepo.RemoveVideo(ctx, &repository.RemoveVideoParams{
+				VideoID: videoID,
+				RoomID:  params.RoomID,
+			}); err != nil {
+				slog.Info("failed to remove video", "err", err)
+				return DisconnectMemberResponse{}, err
+			}
+		}
+
+		return DisconnectMemberResponse{
+			IsRoomDeleted: true,
+		}, nil
+	}
+
+	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	if err != nil {
+		slog.Info("failed to get conns", "err", err)
+		return DisconnectMemberResponse{}, err
+	}
+
+	return DisconnectMemberResponse{
+		Conns:         conns,
+		Memberlist:    memberlist,
+		IsRoomDeleted: false,
 	}, nil
 }
