@@ -3,7 +3,7 @@ package wsrouter
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,7 +27,7 @@ func (r *WSRouter) Handle(messageType string, handler HandlerFunc) {
 	r.routes[messageType] = handler
 }
 
-func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) {
+func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 	defer conn.Close()
 
 	for {
@@ -35,15 +35,14 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) {
 		var msg message
 		err := conn.ReadJSON(&msg)
 		if err != nil {
-			log.Println("Error reading message:", err)
-			return
+			return err
 		}
 
 		// Route the message to the appropriate handler
 		if handler, exists := r.routes[msg.Type]; exists {
 			handler(ctx, conn, msg.Payload)
 		} else {
-			log.Printf("No handler for message type: %s\n", msg.Type)
+			return errors.New("no handler for message type")
 		}
 	}
 }

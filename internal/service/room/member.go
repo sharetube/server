@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
 )
 
 func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
@@ -44,8 +43,7 @@ type RemoveMemberParams struct {
 }
 
 type RemoveMemberResponse struct {
-	Conns      []*websocket.Conn
-	Memberlist []Member
+	Conn *websocket.Conn
 }
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
@@ -58,34 +56,24 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, ErrPermissionDenied
 	}
 
-	if err := s.roomRepo.RemoveMember(ctx, &repository.RemoveMemberParams{
-		MemberID: params.RemovedMemberID,
-		RoomID:   params.RoomID,
-	}); err != nil {
-		slog.Info("failed to remove member", "err", err)
-		return RemoveMemberResponse{}, err
-	}
-
-	if err := s.connRepo.RemoveByMemberID(params.RemovedMemberID); err != nil {
-		slog.Info("failed to remove conn", "err", err)
-		return RemoveMemberResponse{}, err
-	}
-
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	roomID, err := s.roomRepo.GetMemberRoomId(ctx, params.RemovedMemberID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
+		slog.Info("failed to get room id", "err", err)
 		return RemoveMemberResponse{}, err
 	}
 
-	memberlist, err := s.getMemberList(ctx, params.RoomID)
+	if roomID != params.RoomID {
+		return RemoveMemberResponse{}, ErrMemberNotFound
+	}
+
+	con, err := s.connRepo.GetConn(params.RemovedMemberID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
+		slog.Info("failed to get conn", "err", err)
 		return RemoveMemberResponse{}, err
 	}
 
 	return RemoveMemberResponse{
-		Conns:      conns,
-		Memberlist: memberlist,
+		Conn: con,
 	}, nil
 }
 
@@ -107,6 +95,16 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	}
 	if !isAdmin {
 		return PromoteMemberResponse{}, ErrPermissionDenied
+	}
+
+	roomid, err := s.roomRepo.GetMemberRoomId(ctx, params.PromotedMemberID)
+	if err != nil {
+		slog.Info("failed to get room id", "err", err)
+		return PromoteMemberResponse{}, err
+	}
+
+	if roomid != params.RoomID {
+		return PromoteMemberResponse{}, ErrMemberNotFound
 	}
 
 	if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.PromotedMemberID, true); err != nil {

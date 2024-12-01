@@ -33,6 +33,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		slog.Info("CreateRoom", "error", err)
 		return
 	}
+	defer c.disconnect(r.Context(), createRoomResponse.MemberID, createRoomResponse.RoomID)
 
 	headers := http.Header{}
 	// headers.Add("Set-Cookie", cookieString)
@@ -70,6 +71,28 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	c.wsmux.ServeConn(ctx, conn)
 }
 
+func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
+	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+		MemberID: memberID,
+		RoomID:   roomID,
+	})
+	if err != nil {
+		slog.Warn("JoinRoom failed to disconnect member", "error", err)
+	}
+
+	if !disconnectMemberResp.IsRoomDeleted {
+		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
+			Action: "member_disconnected",
+			Data: map[string]any{
+				"disconnected_member_id": memberID,
+				"memberlist":             disconnectMemberResp.Memberlist,
+			},
+		}); err != nil {
+			slog.Warn("JoinRoom failed to broadcast", "error", err)
+		}
+	}
+}
+
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
@@ -93,6 +116,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		slog.Info("JoinRoom", "error", err)
 		return
 	}
+	defer c.disconnect(r.Context(), joinRoomResponse.JoinedMember.ID, roomID)
 
 	headers := http.Header{}
 	// headers.Add("Set-Cookie", cookieString)
@@ -138,5 +162,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), roomIDCtxKey, roomID)
 	ctx = context.WithValue(ctx, memberIDCtxKey, joinRoomResponse.JoinedMember.ID)
 
-	c.wsmux.ServeConn(ctx, conn)
+	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
+		slog.Info("Serving conn exited", "error", err)
+	}
 }

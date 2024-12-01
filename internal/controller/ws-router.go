@@ -5,10 +5,24 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/wsrouter"
 )
+
+func (c controller) getWSRouter() *wsrouter.WSRouter {
+	mux := wsrouter.New()
+	mux.Handle("GET_STATE", c.handleGetState)
+	// video
+	mux.Handle("ADD_VIDEO", c.handleAddVideo)
+	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
+	// member
+	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
+	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
+
+	return mux
+}
 
 type Output struct {
 	Action string `json:"action"`
@@ -82,7 +96,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		return
 	}
 
-	removeVideoResponse, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
+	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
 		RemovedMemberID: data.MemberID,
 		SenderID:        memberID,
 		RoomID:          roomID,
@@ -95,16 +109,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		}
 	}
 
-	if err := c.broadcast(removeVideoResponse.Conns, &Output{
-		Action: "member_removed",
-		Data: map[string]any{
-			"removed_member_id": data.MemberID,
-			"memberlist":        removeVideoResponse.Memberlist,
-		},
-	}); err != nil {
-		slog.Warn("failed to broadcast", "error", err)
-		return
-	}
+	removeMemberResp.Conn.Close()
 }
 
 func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
@@ -112,14 +117,14 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	memberID := c.getMemberIDFromCtx(ctx)
 
 	var data struct {
-		MemberID string `json:"member_id"`
+		MemberID uuid.UUID `json:"member_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
 		return
 	}
 
 	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &room.PromoteMemberParams{
-		PromotedMemberID: data.MemberID,
+		PromotedMemberID: data.MemberID.String(),
 		SenderID:         memberID,
 		RoomID:           roomID,
 	})
@@ -186,17 +191,4 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		slog.Warn("failed to broadcast", "error", err)
 		return
 	}
-}
-
-func (c controller) getWSRouter() *wsrouter.WSRouter {
-	mux := wsrouter.New()
-	mux.Handle("GET_STATE", c.handleGetState)
-	// video
-	mux.Handle("ADD_VIDEO", c.handleAddVideo)
-	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
-	// member
-	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
-	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
-
-	return mux
 }

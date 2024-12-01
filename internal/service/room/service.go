@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrPermissionDenied     = errors.New("permission denied")
+	ErrMemberNotFound       = errors.New("member not found")
 	ErrPlaylistLimitReached = errors.New("playlist limit reached")
 	ErrRoomNotFound         = errors.New("room not found")
 )
@@ -39,6 +40,7 @@ type iRoomRepo interface {
 	// player
 	SetPlayer(context.Context, *repository.SetPlayerParams) error
 	GetPlayer(context.Context, string) (repository.Player, error)
+	RemovePlayer(context.Context, string) error
 }
 
 type iConnRepo interface {
