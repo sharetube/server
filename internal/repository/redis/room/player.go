@@ -20,11 +20,11 @@ func (r repo) SetPlayer(ctx context.Context, params *repository.SetPlayerParams)
 	pipe := r.rc.TxPipeline()
 
 	player := repository.Player{
-		CurrentVideoURL: params.CurrentVideoURL,
-		IsPlaying:       params.IsPlaying,
-		CurrentTime:     params.CurrentTime,
-		PlaybackRate:    params.PlaybackRate,
-		UpdatedAt:       params.UpdatedAt,
+		VideoURL:     params.CurrentVideoURL,
+		IsPlaying:    params.IsPlaying,
+		CurrentTime:  params.CurrentTime,
+		PlaybackRate: params.PlaybackRate,
+		UpdatedAt:    params.UpdatedAt,
 	}
 	playerKey := r.getPlayerKey(params.RoomID)
 	r.hSetIfNotExists(ctx, pipe, playerKey, player)
@@ -54,4 +54,27 @@ func (r repo) RemovePlayer(ctx context.Context, roomID string) error {
 	}
 
 	return nil
+}
+
+func (r repo) UpdatePlayerVideo(ctx context.Context, roomID string, videoURL string) error {
+	key := r.getPlayerKey(roomID)
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrPlayerNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "video_url", videoURL).Err()
+}
+
+func (r repo) UpdatePlayerState(ctx context.Context, params *repository.UpdatePlayerStateParams) error {
+	key := r.getPlayerKey(params.RoomID)
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrPlayerNotFound
+	}
+
+	return r.rc.HSet(ctx, key,
+		"is_playing", params.IsPlaying,
+		"current_time", params.CurrentTime,
+		"playback_rate", params.PlaybackRate,
+		"updated_at", params.UpdatedAt,
+	).Err()
 }

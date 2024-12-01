@@ -17,11 +17,18 @@ type Member struct {
 }
 
 type Player struct {
-	CurrentVideoURL string  `json:"current_video_url"`
-	IsPlaying       bool    `json:"is_playing"`
-	CurrentTime     float64 `json:"current_time"`
-	PlaybackRate    float64 `json:"playback_rate"`
-	UpdatedAt       int64   `json:"updated_at"`
+	VideoURL     string  `json:"video_url"`
+	IsPlaying    bool    `json:"is_playing"`
+	CurrentTime  float64 `json:"current_time"`
+	PlaybackRate float64 `json:"playback_rate"`
+	UpdatedAt    int64   `json:"updated_at"`
+}
+
+type PlayerState struct {
+	IsPlaying    bool    `json:"is_playing"`
+	CurrentTime  float64 `json:"current_time"`
+	PlaybackRate float64 `json:"playback_rate"`
+	UpdatedAt    int64   `json:"updated_at"`
 }
 
 type RoomState struct {
