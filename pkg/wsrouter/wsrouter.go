@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Message struct {
+type message struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
@@ -19,7 +19,7 @@ type WSRouter struct {
 	routes map[string]HandlerFunc
 }
 
-func NewWSRouter() *WSRouter {
+func New() *WSRouter {
 	return &WSRouter{routes: make(map[string]HandlerFunc)}
 }
 
@@ -27,12 +27,12 @@ func (r *WSRouter) Handle(messageType string, handler HandlerFunc) {
 	r.routes[messageType] = handler
 }
 
-func (r *WSRouter) ServeWebSocket(ctx context.Context, conn *websocket.Conn) {
+func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) {
 	defer conn.Close()
 
 	for {
 		// Read JSON message from the connection
-		var msg Message
+		var msg message
 		err := conn.ReadJSON(&msg)
 		if err != nil {
 			log.Println("Error reading message:", err)

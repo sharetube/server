@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository"
-	"github.com/sharetube/server/pkg/random"
 )
 
 type CreateRoomParams struct {
@@ -24,7 +23,7 @@ type CreateRoomResponse struct {
 }
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (CreateRoomResponse, error) {
-	roomID := random.GenerateRandomString(8)
+	roomID := s.generator.GenerateRandomString(8)
 
 	memberID := uuid.NewString()
 	if err := s.roomRepo.SetMember(ctx, &repository.SetMemberParams{

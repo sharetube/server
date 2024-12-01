@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/pkg/randstr"
 )
 
 var (
@@ -48,20 +49,30 @@ type iConnRepo interface {
 	GetMemberID(*websocket.Conn) (string, error)
 }
 
+type iGenerator interface {
+	GenerateRandomString(length int) string
+}
+
 type service struct {
 	roomRepo        iRoomRepo
 	connRepo        iConnRepo
+	generator       iGenerator
 	membersLimit    int
 	playlistLimit   int
 	updatesInterval time.Duration
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, updatesInterval time.Duration, membersLimit, playlistLimit int) service {
-	return service{
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, updatesInterval time.Duration, membersLimit, playlistLimit int) *service {
+	s := service{
 		roomRepo:        redisRepo,
 		connRepo:        connRepo,
 		membersLimit:    membersLimit,
 		playlistLimit:   playlistLimit,
 		updatesInterval: updatesInterval,
 	}
+
+	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	s.generator = randstr.New(letterBytes)
+
+	return &s
 }
