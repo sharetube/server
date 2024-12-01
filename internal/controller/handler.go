@@ -10,13 +10,6 @@ import (
 	"github.com/sharetube/server/pkg/rest"
 )
 
-type contextKey int
-
-const (
-	roomIDCtxKey contextKey = iota
-	memberIDCtxKey
-)
-
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	user, err := c.getUser(r)
 	if err != nil {
@@ -74,8 +67,9 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
 	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
 
-	c.wsmux.ServeWebSocket(ctx, conn)
+	c.wsmux.ServeConn(ctx, conn)
 }
+
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
@@ -144,5 +138,5 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), roomIDCtxKey, roomID)
 	ctx = context.WithValue(ctx, memberIDCtxKey, joinRoomResponse.JoinedMember.ID)
 
-	c.wsmux.ServeWebSocket(ctx, conn)
+	c.wsmux.ServeConn(ctx, conn)
 }

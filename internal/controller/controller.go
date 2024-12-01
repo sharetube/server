@@ -38,7 +38,7 @@ func NewController(roomService iRoomService) *controller {
 		roomService: roomService,
 		validate:    validator.NewValidator(),
 	}
-	c.wsmux = c.initWSMux()
+	c.wsmux = c.getWSRouter()
 
 	return &c
 }

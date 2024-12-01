@@ -72,7 +72,7 @@ func (r repo) GetVideo(ctx context.Context, videoID string) (repository.Video, e
 	}
 
 	if video.URL == "" {
-		return repository.Video{}, errors.New("video not found")
+		return repository.Video{}, ErrVideoNotFound
 	}
 
 	return video, nil
@@ -80,10 +80,7 @@ func (r repo) GetVideo(ctx context.Context, videoID string) (repository.Video, e
 
 func (r repo) GetVideosIDs(ctx context.Context, roomID string) ([]string, error) {
 	playlistKey := r.getPlaylistKey(roomID)
-	res, err := r.rc.ZRangeByScore(ctx, playlistKey, &redis.ZRangeBy{
-		Min: "-inf",
-		Max: "+inf",
-	}).Result()
+	res, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
 	if err != nil {
 		return nil, err
 	}
