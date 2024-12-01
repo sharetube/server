@@ -78,6 +78,7 @@ func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMess
 			slog.Warn("failed to write error", "error", err)
 			return err
 		}
+		return err
 	}
 
 	return nil

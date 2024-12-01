@@ -102,25 +102,56 @@ func (r repo) GetMember(ctx context.Context, memberID string) (repository.Member
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_admin", isAdmin).Err()
+	//? Maybe dont check existence because there is check on service layer that member in current room
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "is_admin", isAdmin).Err()
 }
 
 func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_online", isOnline).Err()
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "is_online", isOnline).Err()
 }
 
 func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "is_muted", isMuted).Err()
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "is_muted", isMuted).Err()
 }
 
 func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "color", color).Err()
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "color", color).Err()
 }
 
 func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL string) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "avatar_url", avatarURL).Err()
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err()
 }
 
 func (r repo) UpdateMemberUsername(ctx context.Context, memberID, username string) error {
-	return r.rc.HSet(ctx, memberPrefix+":"+memberID, "username", username).Err()
+	key := memberPrefix + ":" + memberID
+	if r.rc.Exists(ctx, key).Val() == 0 {
+		return ErrMemberNotFound
+	}
+
+	return r.rc.HSet(ctx, key, "username", username).Err()
 }
