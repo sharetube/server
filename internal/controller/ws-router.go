@@ -40,8 +40,9 @@ func (c controller) handleGetState(ctx context.Context, conn *websocket.Conn, pa
 		slog.Warn("failed to get room state", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	if err := conn.WriteJSON(&Output{
@@ -64,6 +65,7 @@ func (c controller) handleUpdatePlayer(ctx context.Context, conn *websocket.Conn
 		UpdatedAt    int64   `json:"updated_at"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		slog.Info("failed to unmarshal payload", "error", err)
 		return
 	}
 
@@ -79,8 +81,9 @@ func (c controller) handleUpdatePlayer(ctx context.Context, conn *websocket.Conn
 		slog.Info("failed to update player state", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	if err := c.broadcast(updatePlayerStateResp.Conns, &Output{
@@ -137,6 +140,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 		VideoURL string `json:"video_url"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		slog.Info("failed to unmarshal payload", "error", err)
 		return
 	}
 
@@ -149,8 +153,9 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 		slog.Warn("failed to add video", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
@@ -170,14 +175,20 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 	memberID := c.getMemberIDFromCtx(ctx)
 
 	var data struct {
-		MemberID string `json:"member_id"`
+		MemberID uuid.UUID `json:"member_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		slog.Info("failed to unmarshal payload", "error", err)
+		return
+	}
+
+	if data.MemberID == uuid.Nil {
+		slog.Warn("invalid member id", "member_id", data.MemberID)
 		return
 	}
 
 	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
-		RemovedMemberID: data.MemberID,
+		RemovedMemberID: data.MemberID.String(),
 		SenderID:        memberID,
 		RoomID:          roomID,
 	})
@@ -185,8 +196,9 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		slog.Warn("failed to remove member", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	removeMemberResp.Conn.Close()
@@ -200,6 +212,12 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		MemberID uuid.UUID `json:"member_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		slog.Info("failed to unmarshal payload", "error", err)
+		return
+	}
+
+	if data.MemberID == uuid.Nil {
+		slog.Warn("invalid member id", "member_id", data.MemberID)
 		return
 	}
 
@@ -212,8 +230,9 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		slog.Warn("failed to promote member", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	if err := c.broadcast(promoteMemberResp.Conns, &Output{
@@ -222,7 +241,6 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 			"promoted_member_id": data.MemberID,
 		},
 	}); err != nil {
-
 		slog.Warn("failed to broadcast", "error", err)
 		return
 	}
@@ -236,6 +254,7 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		VideoID string `json:"video_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		slog.Info("failed to unmarshal payload", "error", err)
 		return
 	}
 
@@ -243,8 +262,9 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		slog.Warn("failed to unmarshal data", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	addVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
@@ -256,8 +276,9 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		slog.Warn("failed to remove video", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			slog.Warn("failed to write error", "error", err)
-			return
 		}
+
+		return
 	}
 
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
@@ -267,7 +288,6 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 			"playlist":      addVideoResponse.Playlist,
 		},
 	}); err != nil {
-
 		slog.Warn("failed to broadcast", "error", err)
 		return
 	}
