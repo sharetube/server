@@ -2,6 +2,7 @@ package conn
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -14,6 +15,7 @@ var (
 type repo struct {
 	connList map[*websocket.Conn]string
 	idList   map[string]*websocket.Conn
+	mu       sync.RWMutex
 }
 
 func NewRepo() *repo {
@@ -24,6 +26,9 @@ func NewRepo() *repo {
 }
 
 func (r *repo) Add(conn *websocket.Conn, memberID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if r.connList[conn] != "" || r.idList[memberID] != nil {
 		return ErrAlreadyExists
 	}
@@ -34,6 +39,9 @@ func (r *repo) Add(conn *websocket.Conn, memberID string) error {
 }
 
 func (r *repo) RemoveByConn(conn *websocket.Conn) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	memberID, ok := r.connList[conn]
 	if !ok {
 		return ErrNotFound
@@ -47,6 +55,9 @@ func (r *repo) RemoveByConn(conn *websocket.Conn) error {
 }
 
 func (r *repo) RemoveByMemberID(memberID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	conn, ok := r.idList[memberID]
 	if !ok {
 		return ErrNotFound
@@ -60,6 +71,9 @@ func (r *repo) RemoveByMemberID(memberID string) error {
 }
 
 func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	memberID, ok := r.connList[conn]
 	if !ok {
 		return "", ErrNotFound
@@ -69,6 +83,9 @@ func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
 }
 
 func (r *repo) GetConn(memberID string) (*websocket.Conn, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	conn, ok := r.idList[memberID]
 	if !ok {
 		return nil, ErrNotFound
