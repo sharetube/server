@@ -8,6 +8,7 @@ import (
 )
 
 func (s service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websocket.Conn, error) {
+	slog.Debug("Service getConnsByRoomID", "roomID", roomID)
 	memberIDs, err := s.roomRepo.GetMembersIDs(ctx, roomID)
 	if err != nil {
 		slog.Info("failed to get member ids", "err", err)

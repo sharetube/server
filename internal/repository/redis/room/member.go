@@ -2,26 +2,35 @@ package room
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/sharetube/server/internal/repository"
 )
 
-var (
-	ErrMemberNotFound = errors.New("member not found")
-)
-
 const memberPrefix = "member"
+
+func (r repo) getMemberKey(memberID string) string {
+	return memberPrefix + ":" + memberID
+}
 
 func (r repo) getMemberListKey(roomID string) string {
 	return "room" + ":" + roomID + ":" + "memberlist"
 }
 
-func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams) error {
+func (r repo) addMemberToList(ctx context.Context, roomID, memberID string) error {
+	memberListKey := r.getMemberListKey(roomID)
 	pipe := r.rc.TxPipeline()
 
+	r.addWithIncrement(ctx, pipe, memberListKey, memberID)
+	pipe.Expire(ctx, memberListKey, 10*time.Minute)
+
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams) error {
+	slog.Info("RedisRepo:SetMember", "params", params)
 	member := repository.Member{
 		Username:  params.Username,
 		Color:     params.Color,
@@ -31,17 +40,25 @@ func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams)
 		IsOnline:  params.IsOnline,
 		RoomID:    params.RoomID,
 	}
-	memberKey := memberPrefix + ":" + params.MemberID
-	r.hSetIfNotExists(ctx, pipe, memberKey, member)
-	pipe.Expire(ctx, memberKey, 10*time.Minute)
+	memberKey := r.getMemberKey(params.MemberID)
+	if err := r.hSetIfNotExists(ctx, r.rc, memberKey, member); err != nil {
+		return err
+	}
 
-	memberListKey := r.getMemberListKey(params.RoomID)
+	if err := r.rc.Expire(ctx, memberKey, 10*time.Minute).Err(); err != nil {
+		return err
+	}
 
-	r.addWithIncrement(ctx, pipe, memberListKey, params.MemberID)
-	pipe.Expire(ctx, memberListKey, 10*time.Minute)
+	if err := r.addMemberToList(ctx, params.RoomID, params.MemberID); err != nil {
+		return err
+	}
 
-	_, err := pipe.Exec(ctx)
-	return err
+	return nil
+}
+
+func (r repo) AddMemberToList(ctx context.Context, params *repository.AddMemberToListParams) error {
+	slog.Info("RedisRepo:AddMemberToList", "params", params)
+	return r.addMemberToList(ctx, params.RoomID, params.MemberID)
 }
 
 func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberParams) error {
@@ -50,15 +67,15 @@ func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberP
 		return err
 	}
 
-	res, err := r.rc.Del(ctx, memberPrefix+":"+params.MemberID).Result()
-	if err != nil {
-		slog.Info("failed to delete member", "err", err)
-		return err
-	}
+	// res, err := r.rc.Del(ctx, memberPrefix+":"+params.MemberID).Result()
+	// if err != nil {
+	// 	slog.Info("failed to delete member", "err", err)
+	// 	return err
+	// }
 
-	if res == 0 {
-		return ErrMemberNotFound
-	}
+	// if res == 0 {
+	// 	return repository.ErrMemberNotFound
+	// }
 
 	return nil
 }
@@ -66,7 +83,7 @@ func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberP
 func (r repo) GetMemberRoomId(ctx context.Context, memberID string) (string, error) {
 	roomID := r.rc.HGet(ctx, memberPrefix+":"+memberID, "room_id").Val()
 	if roomID == "" {
-		return "", ErrMemberNotFound
+		return "", repository.ErrMemberNotFound
 	}
 
 	return roomID, nil
@@ -88,6 +105,10 @@ func (r repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error
 		return nil, err
 	}
 
+	if len(memberIDs) == 0 {
+		return nil, repository.ErrMemberNotFound
+	}
+
 	return memberIDs, nil
 }
 
@@ -98,6 +119,10 @@ func (r repo) GetMember(ctx context.Context, memberID string) (repository.Member
 		return repository.Member{}, err
 	}
 
+	if member.Username == "" {
+		return repository.Member{}, repository.ErrMemberNotFound
+	}
+
 	return member, nil
 }
 
@@ -105,7 +130,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin 
 	//? Maybe dont check existence because there is check on service layer that member in current room
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "is_admin", isAdmin).Err()
@@ -114,7 +139,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin 
 func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error {
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "is_online", isOnline).Err()
@@ -123,7 +148,7 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnlin
 func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error {
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "is_muted", isMuted).Err()
@@ -132,7 +157,7 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted 
 func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) error {
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "color", color).Err()
@@ -141,7 +166,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) err
 func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL string) error {
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err()
@@ -150,7 +175,7 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL str
 func (r repo) UpdateMemberUsername(ctx context.Context, memberID, username string) error {
 	key := memberPrefix + ":" + memberID
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrMemberNotFound
+		return repository.ErrMemberNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "username", username).Err()

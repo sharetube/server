@@ -2,15 +2,12 @@ package room
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/sharetube/server/internal/repository"
 )
 
-var (
-	ErrPlayerNotFound = errors.New("player not found")
-)
+var ()
 
 func (r repo) getPlayerKey(roomID string) string {
 	return "room" + ":" + roomID + ":player"
@@ -50,7 +47,7 @@ func (r repo) RemovePlayer(ctx context.Context, roomID string) error {
 	}
 
 	if res == 0 {
-		return ErrPlayerNotFound
+		return repository.ErrPlayerNotFound
 	}
 
 	return nil
@@ -59,7 +56,7 @@ func (r repo) RemovePlayer(ctx context.Context, roomID string) error {
 func (r repo) UpdatePlayerVideo(ctx context.Context, roomID string, videoURL string) error {
 	key := r.getPlayerKey(roomID)
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrPlayerNotFound
+		return repository.ErrPlayerNotFound
 	}
 
 	return r.rc.HSet(ctx, key, "video_url", videoURL).Err()
@@ -68,7 +65,7 @@ func (r repo) UpdatePlayerVideo(ctx context.Context, roomID string, videoURL str
 func (r repo) UpdatePlayerState(ctx context.Context, params *repository.UpdatePlayerStateParams) error {
 	key := r.getPlayerKey(params.RoomID)
 	if r.rc.Exists(ctx, key).Val() == 0 {
-		return ErrPlayerNotFound
+		return repository.ErrPlayerNotFound
 	}
 
 	return r.rc.HSet(ctx, key,

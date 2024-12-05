@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: ShareTube API
+  version: 1.0.0
+components:
+  schemas:
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        color:
+          type: string
+        avatar_url:
+          type: string
+        is_admin:
+          type: boolean
+        is_online:
+          type: boolean
+        is_muted:
+          type: boolean
+    Video:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        added_by:
+          type: string
+    Player:
+      type: object
+      properties:
+        video_url:
+          type: string
+        current_time:
+          type: integer
+        playback_rate:
+          type: integer
+        is_playing:
+          type: boolean
+        updated_at:
+          type: integer
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+        player:
+          $ref: '#/components/schemas/Player'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        playlist:
+          type: array
+          items:
+            $ref: '#/components/schemas/Video'
+
+paths:
+  /room/create:
+    post:
+      description: Create new room
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                video_url:
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Invalid input
+        "422":
+          description: Validation exception
