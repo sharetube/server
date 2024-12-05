@@ -13,6 +13,7 @@ func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string
 	return err
 }
 
+// Same as HSet, but returns error if key already exists (implemented with lua script)
 func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
 	v := reflect.ValueOf(value)
 	t := v.Type()

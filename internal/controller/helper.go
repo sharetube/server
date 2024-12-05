@@ -1,12 +1,14 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/service/room"
 )
 
 func (c controller) getQueryParam(r *http.Request, key string) (string, error) {
@@ -19,18 +21,12 @@ func (c controller) getQueryParam(r *http.Request, key string) (string, error) {
 }
 
 type user struct {
-	authToken string
 	username  string
 	color     string
 	avatarURL string
 }
 
 func (c controller) getUser(r *http.Request) (user, error) {
-	// authToken, err := c.getQueryParam(r, "auth-token")
-	// if err != nil {
-	// 	return user{}, err
-	// }
-
 	username, err := c.getQueryParam(r, "username")
 	if err != nil {
 		return user{}, err
@@ -47,7 +43,6 @@ func (c controller) getUser(r *http.Request) (user, error) {
 	}
 
 	return user{
-		// authToken: authToken,
 		username:  username,
 		color:     color,
 		avatarURL: avatarURL,
@@ -82,4 +77,26 @@ func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMess
 	}
 
 	return nil
+}
+
+func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
+	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+		MemberID: memberID,
+		RoomID:   roomID,
+	})
+	if err != nil {
+		slog.Warn("JoinRoom failed to disconnect member", "error", err)
+	}
+
+	if !disconnectMemberResp.IsRoomDeleted {
+		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
+			Action: "member_disconnected",
+			Data: map[string]any{
+				"disconnected_member_id": memberID,
+				"memberlist":             disconnectMemberResp.Memberlist,
+			},
+		}); err != nil {
+			slog.Warn("JoinRoom failed to broadcast", "error", err)
+		}
+	}
 }

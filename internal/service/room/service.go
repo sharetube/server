@@ -20,17 +20,18 @@ var (
 type iRoomRepo interface {
 	// member
 	SetMember(context.Context, *repository.SetMemberParams) error
+	AddMemberToList(context.Context, *repository.AddMemberToListParams) error
 	RemoveMember(context.Context, *repository.RemoveMemberParams) error
 	GetMember(context.Context, string) (repository.Member, error)
 	GetMemberRoomId(context.Context, string) (string, error)
 	GetMembersIDs(context.Context, string) ([]string, error)
 	IsMemberAdmin(context.Context, string) (bool, error)
-	UpdateMemberIsAdmin(context.Context, string, bool) error
-	UpdateMemberIsMuted(context.Context, string, bool) error
-	UpdateMemberIsOnline(context.Context, string, bool) error
-	UpdateMemberUsername(context.Context, string, string) error
-	UpdateMemberColor(context.Context, string, string) error
-	UpdateMemberAvatarURL(context.Context, string, string) error
+	UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error
+	UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error
+	UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error
+	UpdateMemberUsername(ctx context.Context, memberID string, username string) error
+	UpdateMemberColor(ctx context.Context, memberID string, color string) error
+	UpdateMemberAvatarURL(ctx context.Context, memberID string, avatarURL string) error
 	// video
 	SetVideo(context.Context, *repository.SetVideoParams) error
 	RemoveVideo(context.Context, *repository.RemoveVideoParams) error
@@ -43,6 +44,9 @@ type iRoomRepo interface {
 	RemovePlayer(context.Context, string) error
 	UpdatePlayerState(context.Context, *repository.UpdatePlayerStateParams) error
 	UpdatePlayerVideo(ctx context.Context, roomID string, videoURL string) error
+	// auth token
+	SetAuthToken(context.Context, *repository.SetAuthTokenParams) error
+	GetMemberIDByAuthToken(context.Context, string) (string, error)
 }
 
 type iConnRepo interface {

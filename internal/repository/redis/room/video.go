@@ -10,9 +10,7 @@ import (
 	"github.com/sharetube/server/internal/repository"
 )
 
-var (
-	ErrVideoNotFound = errors.New("video not found")
-)
+var ()
 
 const videoPrefix = "video"
 
@@ -72,7 +70,7 @@ func (r repo) GetVideo(ctx context.Context, videoID string) (repository.Video, e
 	}
 
 	if video.URL == "" {
-		return repository.Video{}, ErrVideoNotFound
+		return repository.Video{}, repository.ErrVideoNotFound
 	}
 
 	return video, nil
@@ -101,7 +99,7 @@ func (r repo) RemoveVideo(ctx context.Context, params *repository.RemoveVideoPar
 	}
 
 	if res == 0 {
-		return ErrVideoNotFound
+		return repository.ErrVideoNotFound
 	}
 
 	return nil

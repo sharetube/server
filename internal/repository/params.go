@@ -61,3 +61,13 @@ type RemoveVideoParams struct {
 	VideoID string
 	RoomID  string
 }
+
+type SetAuthTokenParams struct {
+	AuthToken string
+	MemberID  string
+}
+
+type AddMemberToListParams struct {
+	MemberID string
+	RoomID   string
+}

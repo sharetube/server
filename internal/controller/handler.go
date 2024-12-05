@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sharetube/server/internal/service/room"
-	"github.com/sharetube/server/pkg/rest"
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +58,10 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := conn.WriteJSON(&Output{
 		Action: "room_created",
-		Data:   roomState,
+		Data: map[string]any{
+			"auth_token": createRoomResponse.AuthToken,
+			"room_state": roomState,
+		},
 	}); err != nil {
 		slog.Warn("CreateRoom failed to write output", "error", err)
 		return
@@ -71,32 +73,10 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	c.wsmux.ServeConn(ctx, conn)
 }
 
-func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
-	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
-		MemberID: memberID,
-		RoomID:   roomID,
-	})
-	if err != nil {
-		slog.Warn("JoinRoom failed to disconnect member", "error", err)
-	}
-
-	if !disconnectMemberResp.IsRoomDeleted {
-		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
-			Action: "member_disconnected",
-			Data: map[string]any{
-				"disconnected_member_id": memberID,
-				"memberlist":             disconnectMemberResp.Memberlist,
-			},
-		}); err != nil {
-			slog.Warn("JoinRoom failed to broadcast", "error", err)
-		}
-	}
-}
-
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
-		rest.WriteJSON(w, http.StatusNotFound, rest.Envelope{"error": "room not found"})
+		slog.Info("JoinRoom", "error", "room-id URLParam empty")
 		return
 	}
 
@@ -106,10 +86,13 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authToken := r.URL.Query().Get("auth-token")
+
 	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
 		Username:  user.username,
 		Color:     user.color,
 		AvatarURL: user.avatarURL,
+		AuthToken: authToken,
 		RoomID:    roomID,
 	})
 	if err != nil {
@@ -142,7 +125,11 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := conn.WriteJSON(&Output{
 		Action: "room_joined",
-		Data:   roomState,
+		// todo: define output data structs
+		Data: map[string]any{
+			"auth_token": joinRoomResponse.AuthToken,
+			"room_state": roomState,
+		},
 	}); err != nil {
 		slog.Warn("JoinRoom failed to write output", "error", err)
 		return
