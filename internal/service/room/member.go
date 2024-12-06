@@ -2,7 +2,6 @@ package room
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository"
@@ -11,7 +10,6 @@ import (
 func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
 	memberlistIDs, err := s.roomRepo.GetMembersIDs(ctx, roomID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
 		return []Member{}, err
 	}
 
@@ -19,7 +17,6 @@ func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, er
 	for _, memberID := range memberlistIDs {
 		member, err := s.roomRepo.GetMember(ctx, memberID)
 		if err != nil {
-			slog.Info("failed to get member", "err", err)
 			return []Member{}, err
 		}
 
@@ -50,16 +47,15 @@ type RemoveMemberResponse struct {
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return RemoveMemberResponse{}, err
 	}
+
 	if !isAdmin {
 		return RemoveMemberResponse{}, ErrPermissionDenied
 	}
 
-	roomID, err := s.roomRepo.GetMemberRoomId(ctx, params.RemovedMemberID)
+	roomID, err := s.roomRepo.GetMemberRoomID(ctx, params.RemovedMemberID)
 	if err != nil {
-		slog.Info("failed to get room id", "err", err)
 		return RemoveMemberResponse{}, err
 	}
 
@@ -69,7 +65,6 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 
 	conn, err := s.connRepo.GetConn(params.RemovedMemberID)
 	if err != nil {
-		slog.Info("failed to get conn", "err", err)
 		return RemoveMemberResponse{}, err
 	}
 
@@ -91,16 +86,14 @@ type PromoteMemberResponse struct {
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return PromoteMemberResponse{}, err
 	}
 	if !isAdmin {
 		return PromoteMemberResponse{}, ErrPermissionDenied
 	}
 
-	roomid, err := s.roomRepo.GetMemberRoomId(ctx, params.PromotedMemberID)
+	roomid, err := s.roomRepo.GetMemberRoomID(ctx, params.PromotedMemberID)
 	if err != nil {
-		slog.Info("failed to get room id", "err", err)
 		return PromoteMemberResponse{}, err
 	}
 
@@ -109,13 +102,11 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	}
 
 	if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.PromotedMemberID, true); err != nil {
-		slog.Info("failed to promote member", "err", err)
 		return PromoteMemberResponse{}, err
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return PromoteMemberResponse{}, err
 	}
 
@@ -144,26 +135,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	memberlist, err := s.getMemberList(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
 		return DisconnectMemberResponse{}, err
 	}
 
 	if len(memberlist) == 0 {
-		s.roomRepo.RemovePlayer(ctx, params.RoomID)
-		videosID, err := s.roomRepo.GetVideosIDs(ctx, params.RoomID)
-		if err != nil {
-			slog.Info("failed to get videos", "err", err)
+		if err := s.deleteRoom(ctx, params.RoomID); err != nil {
 			return DisconnectMemberResponse{}, err
-		}
-
-		for _, videoID := range videosID {
-			if err := s.roomRepo.RemoveVideo(ctx, &repository.RemoveVideoParams{
-				VideoID: videoID,
-				RoomID:  params.RoomID,
-			}); err != nil {
-				slog.Info("failed to remove video", "err", err)
-				return DisconnectMemberResponse{}, err
-			}
 		}
 
 		return DisconnectMemberResponse{
@@ -173,7 +150,6 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return DisconnectMemberResponse{}, err
 	}
 

@@ -10,15 +10,18 @@ import (
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
+	funcName := "controller.createRoom"
+	slog.DebugContext(r.Context(), funcName, "called")
+
 	user, err := c.getUser(r)
 	if err != nil {
-		slog.Info("CreateRoom", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
 	initialVideoURL, err := c.getQueryParam(r, "video-url")
 	if err != nil {
-		slog.Info("CreateRoom", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -29,7 +32,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		InitialVideoURL: initialVideoURL,
 	})
 	if err != nil {
-		slog.Info("CreateRoom", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 	defer c.disconnect(r.Context(), createRoomResponse.MemberID, createRoomResponse.RoomID)
@@ -38,7 +41,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	// headers.Add("Set-Cookie", cookieString)
 	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
-		slog.Warn("CreateRoom failed to upgrade connection", "error", err)
+		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -46,13 +49,13 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 		MemberID: createRoomResponse.MemberID,
 	}); err != nil {
-		slog.Warn("CreateRoom failed to connect member", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
 	roomState, err := c.roomService.GetRoomState(r.Context(), createRoomResponse.RoomID)
 	if err != nil {
-		slog.Warn("CreateRoom failed to get room state", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -63,26 +66,32 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 			"room_state": roomState,
 		},
 	}); err != nil {
-		slog.Warn("CreateRoom failed to write output", "error", err)
+		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
 
 	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
 	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
 
-	c.wsmux.ServeConn(ctx, conn)
+	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
+		slog.InfoContext(r.Context(), funcName, "error", err)
+		return
+	}
 }
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
+	funcName := "controller.joinRoom"
+	slog.DebugContext(r.Context(), funcName, "called")
+
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
-		slog.Info("JoinRoom", "error", "room-id URLParam empty")
+		slog.InfoContext(r.Context(), funcName, "error", "room-id is empty")
 		return
 	}
 
 	user, err := c.getUser(r)
 	if err != nil {
-		slog.Info("JoinRoom", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -96,7 +105,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		RoomID:    roomID,
 	})
 	if err != nil {
-		slog.Info("JoinRoom", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 	defer c.disconnect(r.Context(), joinRoomResponse.JoinedMember.ID, roomID)
@@ -105,7 +114,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	// headers.Add("Set-Cookie", cookieString)
 	conn, err := c.upgrader.Upgrade(w, r, headers)
 	if err != nil {
-		slog.Warn("JoinRoom failed to upgrade connection", "error", err)
+		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -113,13 +122,13 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 		MemberID: joinRoomResponse.JoinedMember.ID,
 	}); err != nil {
-		slog.Warn("JoinRoom failed to connect member", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
 	roomState, err := c.roomService.GetRoomState(r.Context(), roomID)
 	if err != nil {
-		slog.Warn("JoinRoom failed to get room state", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -131,7 +140,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 			"room_state": roomState,
 		},
 	}); err != nil {
-		slog.Warn("JoinRoom failed to write output", "error", err)
+		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -142,7 +151,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 			"member_list":   joinRoomResponse.MemberList,
 		},
 	}); err != nil {
-		slog.Warn("JoinRoom failed to broadcast", "error", err)
+		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
 
@@ -150,6 +159,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, memberIDCtxKey, joinRoomResponse.JoinedMember.ID)
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
-		slog.Info("Serving conn exited", "error", err)
+		slog.InfoContext(r.Context(), funcName, "error", err)
+		return
 	}
 }

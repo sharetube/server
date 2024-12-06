@@ -2,7 +2,6 @@ package room
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository"
@@ -25,7 +24,6 @@ type UpdatePlayerStateResponse struct {
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return UpdatePlayerStateResponse{}, err
 	}
 	if !isAdmin {
@@ -44,7 +42,6 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return UpdatePlayerStateResponse{}, err
 	}
 
@@ -74,7 +71,6 @@ type UpdatePlayerVideoResponse struct {
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 	if !isAdmin {
@@ -87,7 +83,6 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 

@@ -3,7 +3,6 @@ package room
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +17,7 @@ type CreateRoomParams struct {
 	InitialVideoURL string
 }
 
+// todo: also return room state
 type CreateRoomResponse struct {
 	AuthToken string
 	MemberID  string
@@ -25,7 +25,6 @@ type CreateRoomResponse struct {
 }
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (CreateRoomResponse, error) {
-	slog.Info("Service CreateRoom", "params", params)
 	roomID := s.generator.GenerateRandomString(8)
 
 	memberID := uuid.NewString()
@@ -128,16 +127,13 @@ func (s service) getMemberByAuthToken(ctx context.Context, roomID, authToken str
 }
 
 func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
-	slog.Info("Service JoinRoom", "params", params)
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return JoinRoomResponse{}, err
 	}
 
 	member, found, err := s.getMemberByAuthToken(ctx, params.RoomID, params.AuthToken)
 	if err != nil {
-		slog.Info("failed to get member by auth token", "err", err)
 		return JoinRoomResponse{}, err
 	}
 
@@ -206,7 +202,6 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	memberlist, err := s.getMemberList(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
 		return JoinRoomResponse{}, err
 	}
 
@@ -221,18 +216,16 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 func (s service) GetRoomState(ctx context.Context, roomID string) (RoomState, error) {
 	player, err := s.roomRepo.GetPlayer(ctx, roomID)
 	if err != nil {
-		slog.Info("failed to get player", "err", err)
 		return RoomState{}, err
 	}
 
 	memberlist, err := s.getMemberList(ctx, roomID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
 		return RoomState{}, err
 	}
+
 	playlist, err := s.getPlaylist(ctx, roomID)
 	if err != nil {
-		slog.Info("failed to get playlist", "err", err)
 		return RoomState{}, err
 	}
 

@@ -2,37 +2,42 @@ package room
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository"
 )
 
-var ()
-
-const videoPrefix = "video"
+func (r repo) getVideoKey(videoID string) string {
+	return "video:" + videoID
+}
 
 func (r repo) getPlaylistKey(roomID string) string {
-	return "room" + ":" + roomID + ":" + "playlist"
+	return "room:" + roomID + ":playlist"
 }
 
 func (r repo) getPlaylistVersionKey(roomID string) string {
-	return "room" + ":" + roomID + ":" + "playlist-version"
+	return "room:" + roomID + ":playlist-version"
 }
 
 func (r repo) GetPlaylistLength(ctx context.Context, roomID string) (int, error) {
+	funcName := "RedisRepo:GetPlaylistLength"
+	slog.DebugContext(ctx, funcName, "roomID", roomID)
 	playlistKey := r.getPlaylistKey(roomID)
-	res, err := r.rc.ZCard(ctx, playlistKey).Result()
-	if errors.Is(err, redis.Nil) {
-		return 0, nil
+	cmd := r.rc.ZCard(ctx, playlistKey)
+	if err := cmd.Err(); err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return 0, err
 	}
 
-	return int(res), err
+	res := int(cmd.Val())
+	slog.DebugContext(ctx, funcName, "length", res)
+	return res, nil
 }
 
 func (r repo) SetVideo(ctx context.Context, params *repository.SetVideoParams) error {
+	funcName := "RedisRepo:SetVideo"
+	slog.DebugContext(ctx, funcName, "params", params)
 	pipe := r.rc.TxPipeline()
 
 	// playlistVersionKey := r.getPlaylistVersionKey(params.RoomID)
@@ -48,58 +53,92 @@ func (r repo) SetVideo(ctx context.Context, params *repository.SetVideoParams) e
 		AddedByID: params.AddedByID,
 		RoomID:    params.RoomID,
 	}
-
-	videoKey := videoPrefix + ":" + params.VideoID
-	r.hSetIfNotExists(ctx, pipe, videoKey, video)
-	pipe.Expire(ctx, videoKey, 10*time.Minute)
+	videoKey := r.getVideoKey(params.VideoID)
+	hsetErr := r.hSetIfNotExists(ctx, pipe, videoKey, video)
+	expErr := pipe.Expire(ctx, videoKey, 10*time.Minute).Err()
 
 	playlistKey := r.getPlaylistKey(params.RoomID)
-
-	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoID)
-	pipe.Expire(ctx, playlistKey, 10*time.Minute)
+	addErr := r.addWithIncrement(ctx, pipe, playlistKey, params.VideoID)
+	exp2Err := pipe.Expire(ctx, playlistKey, 10*time.Minute).Err()
 
 	_, err := pipe.Exec(ctx)
-	return err
+	if err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return err
+	}
+
+	if hsetErr != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return hsetErr
+	}
+
+	if expErr != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return expErr
+	}
+
+	if addErr != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return addErr
+	}
+
+	if exp2Err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return exp2Err
+	}
+
+	return nil
 }
 
 func (r repo) GetVideo(ctx context.Context, videoID string) (repository.Video, error) {
-	videoKey := videoPrefix + ":" + videoID
+	funcName := "RedisRepo:GetVideo"
+	slog.DebugContext(ctx, funcName, "videoID", videoID)
 	video := repository.Video{}
-	if err := r.rc.HGetAll(ctx, videoKey).Scan(&video); err != nil {
+	if err := r.rc.HGetAll(ctx, r.getVideoKey(videoID)).Scan(&video); err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
 		return repository.Video{}, err
 	}
 
 	if video.URL == "" {
+		slog.DebugContext(ctx, funcName, "error", repository.ErrVideoNotFound)
 		return repository.Video{}, repository.ErrVideoNotFound
 	}
 
+	slog.DebugContext(ctx, funcName, "video", video)
 	return video, nil
 }
 
 func (r repo) GetVideosIDs(ctx context.Context, roomID string) ([]string, error) {
+	funcName := "RedisRepo:GetVideosIDs"
+	slog.DebugContext(ctx, funcName, "roomID", roomID)
 	playlistKey := r.getPlaylistKey(roomID)
-	res, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
+	videoIDs, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
 	if err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
 		return nil, err
 	}
 
-	return res, nil
+	slog.DebugContext(ctx, funcName, "videoIDs", videoIDs)
+	return videoIDs, nil
 }
 
 func (r repo) RemoveVideo(ctx context.Context, params *repository.RemoveVideoParams) error {
-	if err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomID), params.VideoID).Err(); err != nil {
-		slog.Info("failed to remove video from playlist", "err", err)
-		return err
-	}
-
-	res, err := r.rc.Del(ctx, videoPrefix+":"+params.VideoID).Result()
+	funcName := "RedisRepo:RemoveVideo"
+	slog.DebugContext(ctx, funcName, "params", params)
+	res, err := r.rc.Del(ctx, r.getVideoKey(params.VideoID)).Result()
 	if err != nil {
-		slog.Info("failed to delete video", "err", err)
+		slog.ErrorContext(ctx, funcName, "error", err)
 		return err
 	}
 
 	if res == 0 {
+		slog.DebugContext(ctx, funcName, "error", repository.ErrVideoNotFound)
 		return repository.ErrVideoNotFound
+	}
+
+	if err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomID), params.VideoID).Err(); err != nil {
+		slog.ErrorContext(ctx, funcName, "error", err)
+		return err
 	}
 
 	return nil

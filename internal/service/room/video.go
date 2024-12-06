@@ -2,7 +2,6 @@ package room
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -12,7 +11,6 @@ import (
 func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error) {
 	videosIDs, err := s.roomRepo.GetVideosIDs(ctx, roomID)
 	if err != nil {
-		slog.Info("failed to get memberlist", "err", err)
 		return []Video{}, err
 	}
 
@@ -20,7 +18,6 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 	for _, videoID := range videosIDs {
 		video, err := s.roomRepo.GetVideo(ctx, videoID)
 		if err != nil {
-			slog.Info("failed to get member", "err", err)
 			return []Video{}, err
 		}
 
@@ -49,7 +46,6 @@ type AddVideoResponse struct {
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.MemberID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return AddVideoResponse{}, err
 	}
 	if !isAdmin {
@@ -58,7 +54,6 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	playlistLength, err := s.roomRepo.GetPlaylistLength(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get playlist length", "err", err)
 		return AddVideoResponse{}, err
 	}
 
@@ -73,19 +68,16 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		URL:       params.VideoURL,
 		AddedByID: params.MemberID,
 	}); err != nil {
-		slog.Info("failed to create video", "err", err)
 		return AddVideoResponse{}, err
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return AddVideoResponse{}, err
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get playlist", "err", err)
 		return AddVideoResponse{}, err
 	}
 
@@ -115,7 +107,6 @@ type RemoveVideoResponse struct {
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
 	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
-		slog.Info("failed to check if member is admin", "err", err)
 		return RemoveVideoResponse{}, err
 	}
 	if !isAdmin {
@@ -126,19 +117,16 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		VideoID: params.VideoID,
 		RoomID:  params.RoomID,
 	}); err != nil {
-		slog.Info("failed to remove video", "err", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get conns", "err", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomID)
 	if err != nil {
-		slog.Info("failed to get playlist", "err", err)
 		return RemoveVideoResponse{}, err
 	}
 
