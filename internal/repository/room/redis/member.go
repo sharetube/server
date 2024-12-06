@@ -1,4 +1,4 @@
-package room
+package redis
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 func (r repo) getMemberKey(memberID string) string {
@@ -40,10 +40,10 @@ func (r repo) addMemberToList(ctx context.Context, roomID, memberID string) erro
 	return nil
 }
 
-func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams) error {
-	funcName := "RedisRepo:SetMember"
+func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error {
+	funcName := "room.redis.SetMember"
 	slog.DebugContext(ctx, funcName, "params", params)
-	member := repository.Member{
+	member := room.Member{
 		Username:  params.Username,
 		Color:     params.Color,
 		AvatarURL: params.AvatarURL,
@@ -71,8 +71,8 @@ func (r repo) SetMember(ctx context.Context, params *repository.SetMemberParams)
 	return nil
 }
 
-func (r repo) AddMemberToList(ctx context.Context, params *repository.AddMemberToListParams) error {
-	funcName := "RedisRepo:AddMemberToList"
+func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListParams) error {
+	funcName := "room.redis.AddMemberToList"
 	slog.DebugContext(ctx, funcName, "params", params)
 	if err := r.addMemberToList(ctx, params.RoomID, params.MemberID); err != nil {
 		slog.ErrorContext(ctx, funcName, "error", err)
@@ -82,8 +82,8 @@ func (r repo) AddMemberToList(ctx context.Context, params *repository.AddMemberT
 	return nil
 }
 
-func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberParams) error {
-	funcName := "RedisRepo:RemoveMember"
+func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams) error {
+	funcName := "room.redis.RemoveMember"
 	slog.DebugContext(ctx, funcName, "params", params)
 	if err := r.rc.ZRem(ctx, r.getMemberListKey(params.RoomID), params.MemberID).Err(); err != nil {
 		slog.ErrorContext(ctx, funcName, "error", err)
@@ -97,14 +97,14 @@ func (r repo) RemoveMember(ctx context.Context, params *repository.RemoveMemberP
 	// }
 
 	// if res == 0 {
-	// 	return repository.ErrMemberNotFound
+	// 	return room.ErrMemberNotFound
 	// }
 
 	return nil
 }
 
 func (r repo) GetMemberRoomID(ctx context.Context, memberID string) (string, error) {
-	funcName := "RedisRepo:GetMemberRoomID"
+	funcName := "room.redis.GetMemberRoomID"
 	slog.DebugContext(ctx, funcName, "memberID", memberID)
 	res, err := r.rc.HGet(ctx, r.getMemberKey(memberID), "room_id").Result()
 	if err != nil {
@@ -115,7 +115,7 @@ func (r repo) GetMemberRoomID(ctx context.Context, memberID string) (string, err
 	fmt.Printf("res: %s\n", res)
 	if res == "" {
 		slog.DebugContext(ctx, funcName, "roomID", res)
-		return "", repository.ErrMemberNotFound
+		return "", room.ErrMemberNotFound
 	}
 
 	slog.DebugContext(ctx, funcName, "roomID", res)
@@ -123,7 +123,7 @@ func (r repo) GetMemberRoomID(ctx context.Context, memberID string) (string, err
 }
 
 func (r repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) {
-	funcName := "RedisRepo:IsMemberAdmin"
+	funcName := "room.redis.IsMemberAdmin"
 	slog.DebugContext(ctx, funcName, "memberID", memberID)
 	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(memberID), "is_admin").Bool()
 	if err != nil {
@@ -135,8 +135,8 @@ func (r repo) IsMemberAdmin(ctx context.Context, memberID string) (bool, error) 
 	return isAdmin, nil
 }
 
-func (r repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error) {
-	funcName := "RedisRepo:GetMembersIDs"
+func (r repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error) {
+	funcName := "room.redis.GetMembersIDs"
 	slog.DebugContext(ctx, funcName, "roomID", roomID)
 	memberIDs, err := r.rc.ZRange(ctx, r.getMemberListKey(roomID), 0, -1).Result()
 	if err != nil {
@@ -148,19 +148,19 @@ func (r repo) GetMembersIDs(ctx context.Context, roomID string) ([]string, error
 	return memberIDs, nil
 }
 
-func (r repo) GetMember(ctx context.Context, memberID string) (repository.Member, error) {
-	funcName := "RedisRepo:GetMember"
+func (r repo) GetMember(ctx context.Context, memberID string) (room.Member, error) {
+	funcName := "room.redis.GetMember"
 	slog.DebugContext(ctx, funcName, "memberID", memberID)
-	var member repository.Member
+	var member room.Member
 	err := r.rc.HGetAll(ctx, r.getMemberKey(memberID)).Scan(&member)
 	if err != nil {
 		slog.ErrorContext(ctx, funcName, "error", err)
-		return repository.Member{}, err
+		return room.Member{}, err
 	}
 
 	if member.Username == "" {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.Member{}, repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.Member{}, room.ErrMemberNotFound
 	}
 
 	slog.DebugContext(ctx, funcName, "member", member)
@@ -168,7 +168,7 @@ func (r repo) GetMember(ctx context.Context, memberID string) (repository.Member
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error {
-	funcName := "RedisRepo:UpdateMemberIsAdmin"
+	funcName := "room.redis.UpdateMemberIsAdmin"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "isAdmin", isAdmin)
 	//? Maybe dont check existence because there is check on service layer that member in current room
 	key := r.getMemberKey(memberID)
@@ -179,8 +179,8 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin 
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_admin", isAdmin).Err(); err != nil {
@@ -192,7 +192,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin 
 }
 
 func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error {
-	funcName := "RedisRepo:UpdateMemberIsOnline"
+	funcName := "room.redis.UpdateMemberIsOnline"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "isOnline", isOnline)
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
@@ -202,8 +202,8 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnlin
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_online", isOnline).Err(); err != nil {
@@ -215,7 +215,7 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, memberID string, isOnlin
 }
 
 func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error {
-	funcName := "RedisRepo:UpdateMemberIsMuted"
+	funcName := "room.redis.UpdateMemberIsMuted"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "isMuted", isMuted)
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
@@ -225,8 +225,8 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted 
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_muted", isMuted).Err(); err != nil {
@@ -238,7 +238,7 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted 
 }
 
 func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) error {
-	funcName := "RedisRepo:UpdateMemberColor"
+	funcName := "room.redis.UpdateMemberColor"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "color", color)
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
@@ -248,8 +248,8 @@ func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) err
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "color", color).Err(); err != nil {
@@ -261,7 +261,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, memberID, color string) err
 }
 
 func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL string) error {
-	funcName := "RedisRepo:UpdateMemberAvatarURL"
+	funcName := "room.redis.UpdateMemberAvatarURL"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "avatarURL", avatarURL)
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
@@ -271,8 +271,8 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL str
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err(); err != nil {
@@ -284,7 +284,7 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, memberID, avatarURL str
 }
 
 func (r repo) UpdateMemberUsername(ctx context.Context, memberID, username string) error {
-	funcName := "RedisRepo:UpdateMemberUsername"
+	funcName := "room.redis.UpdateMemberUsername"
 	slog.DebugContext(ctx, funcName, "memberID", memberID, "username", username)
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
@@ -294,8 +294,8 @@ func (r repo) UpdateMemberUsername(ctx context.Context, memberID, username strin
 	}
 
 	if cmd.Val() == 0 {
-		slog.DebugContext(ctx, funcName, "error", repository.ErrMemberNotFound)
-		return repository.ErrMemberNotFound
+		slog.DebugContext(ctx, funcName, "error", room.ErrMemberNotFound)
+		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "username", username).Err(); err != nil {

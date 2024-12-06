@@ -5,11 +5,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error) {
-	videosIDs, err := s.roomRepo.GetVideosIDs(ctx, roomID)
+	videosIDs, err := s.roomRepo.GetVideoIDs(ctx, roomID)
 	if err != nil {
 		return []Video{}, err
 	}
@@ -62,7 +62,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	videoID := uuid.NewString()
-	if err := s.roomRepo.SetVideo(ctx, &repository.SetVideoParams{
+	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
 		VideoID:   videoID,
 		RoomID:    params.RoomID,
 		URL:       params.VideoURL,
@@ -113,7 +113,7 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		return RemoveVideoResponse{}, ErrPermissionDenied
 	}
 
-	if err := s.roomRepo.RemoveVideo(ctx, &repository.RemoveVideoParams{
+	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 		VideoID: params.VideoID,
 		RoomID:  params.RoomID,
 	}); err != nil {
