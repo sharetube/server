@@ -32,7 +32,7 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 }
 
 type AddVideoParams struct {
-	MemberID string
+	SenderID string
 	RoomID   string
 	VideoURL string
 }
@@ -44,7 +44,7 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.MemberID)
+	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
 	if err != nil {
 		return AddVideoResponse{}, err
 	}
@@ -66,7 +66,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		VideoID:   videoID,
 		RoomID:    params.RoomID,
 		URL:       params.VideoURL,
-		AddedByID: params.MemberID,
+		AddedByID: params.SenderID,
 	}); err != nil {
 		return AddVideoResponse{}, err
 	}
@@ -85,7 +85,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		AddedVideo: Video{
 			ID:        videoID,
 			URL:       params.VideoURL,
-			AddedByID: params.MemberID,
+			AddedByID: params.SenderID,
 		},
 		Conns:    conns,
 		Playlist: playlist,

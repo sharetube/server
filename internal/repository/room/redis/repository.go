@@ -2,9 +2,18 @@ package redis
 
 import (
 	"context"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+type iRedis interface {
+	Get(ctx context.Context, key string) *redis.StringCmd
+	HGet(ctx context.Context, key, field string) *redis.StringCmd
+	EvalSha(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
+	ScriptLoad(ctx context.Context, script string) *redis.Script
+}
 
 type repo struct {
 	rc                    *redis.Client

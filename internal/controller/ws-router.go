@@ -145,7 +145,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 	}
 
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
-		MemberID: memberID,
+		SenderID: memberID,
 		RoomID:   roomID,
 		VideoURL: data.VideoURL,
 	})

@@ -11,7 +11,7 @@ import (
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	funcName := "controller.createRoom"
-	slog.DebugContext(r.Context(), funcName, "called")
+	slog.DebugContext(r.Context(), funcName, "called", "")
 
 	user, err := c.getUser(r)
 	if err != nil {
@@ -81,7 +81,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	funcName := "controller.joinRoom"
-	slog.DebugContext(r.Context(), funcName, "called")
+	slog.DebugContext(r.Context(), funcName, "called", "")
 
 	roomID := chi.URLParam(r, "room-id")
 	if roomID == "" {
