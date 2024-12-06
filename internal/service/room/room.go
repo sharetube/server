@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 type CreateRoomParams struct {
@@ -28,7 +28,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 	roomID := s.generator.GenerateRandomString(8)
 
 	memberID := uuid.NewString()
-	if err := s.roomRepo.SetMember(ctx, &repository.SetMemberParams{
+	if err := s.roomRepo.SetMember(ctx, &room.SetMemberParams{
 		MemberID:  memberID,
 		Username:  params.Username,
 		Color:     params.Color,
@@ -41,7 +41,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 		return CreateRoomResponse{}, err
 	}
 
-	if err := s.roomRepo.SetPlayer(ctx, &repository.SetPlayerParams{
+	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
 		CurrentVideoURL: params.InitialVideoURL,
 		IsPlaying:       false,
 		CurrentTime:     0,
@@ -53,7 +53,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 	}
 
 	authToken := uuid.NewString()
-	if err := s.roomRepo.SetAuthToken(ctx, &repository.SetAuthTokenParams{
+	if err := s.roomRepo.SetAuthToken(ctx, &room.SetAuthTokenParams{
 		AuthToken: authToken,
 		MemberID:  memberID,
 	}); err != nil {
@@ -95,7 +95,7 @@ type JoinRoomResponse struct {
 func (s service) getMemberByAuthToken(ctx context.Context, roomID, authToken string) (Member, bool, error) {
 	memberID, err := s.roomRepo.GetMemberIDByAuthToken(ctx, authToken)
 	if err != nil {
-		if errors.Is(err, repository.ErrAuthTokenNotFound) {
+		if errors.Is(err, room.ErrAuthTokenNotFound) {
 			return Member{}, false, nil
 		}
 
@@ -104,7 +104,7 @@ func (s service) getMemberByAuthToken(ctx context.Context, roomID, authToken str
 
 	member, err := s.roomRepo.GetMember(ctx, memberID)
 	if err != nil {
-		if errors.Is(err, repository.ErrMemberNotFound) {
+		if errors.Is(err, room.ErrMemberNotFound) {
 			return Member{}, false, nil
 		}
 
@@ -140,7 +140,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	authToken := params.AuthToken
 
 	if found {
-		if err := s.roomRepo.AddMemberToList(ctx, &repository.AddMemberToListParams{
+		if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
 			RoomID:   params.RoomID,
 			MemberID: member.ID,
 		}); err != nil {
@@ -169,7 +169,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		}
 	} else {
 		memberID := uuid.NewString()
-		if err := s.roomRepo.SetMember(ctx, &repository.SetMemberParams{
+		if err := s.roomRepo.SetMember(ctx, &room.SetMemberParams{
 			MemberID:  memberID,
 			Username:  params.Username,
 			Color:     params.Color,
@@ -192,7 +192,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		}
 
 		authToken = uuid.NewString()
-		if err := s.roomRepo.SetAuthToken(ctx, &repository.SetAuthTokenParams{
+		if err := s.roomRepo.SetAuthToken(ctx, &room.SetAuthTokenParams{
 			AuthToken: authToken,
 			MemberID:  memberID,
 		}); err != nil {

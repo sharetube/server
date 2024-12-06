@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 func (s service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websocket.Conn, error) {
-	memberIDs, err := s.roomRepo.GetMembersIDs(ctx, roomID)
+	memberIDs, err := s.roomRepo.GetMemberIDs(ctx, roomID)
 	if err != nil {
 		return nil, err
 	}
@@ -28,13 +28,13 @@ func (s service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websoc
 
 func (s service) deleteRoom(ctx context.Context, roomID string) error {
 	s.roomRepo.RemovePlayer(ctx, roomID)
-	videosID, err := s.roomRepo.GetVideosIDs(ctx, roomID)
+	videosID, err := s.roomRepo.GetVideoIDs(ctx, roomID)
 	if err != nil {
 		return err
 	}
 
 	for _, videoID := range videosID {
-		if err := s.roomRepo.RemoveVideo(ctx, &repository.RemoveVideoParams{
+		if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 			VideoID: videoID,
 			RoomID:  roomID,
 		}); err != nil {

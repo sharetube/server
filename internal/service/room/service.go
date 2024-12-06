@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 	"github.com/sharetube/server/pkg/randstr"
 )
 
@@ -19,12 +19,12 @@ var (
 
 type iRoomRepo interface {
 	// member
-	SetMember(context.Context, *repository.SetMemberParams) error
-	AddMemberToList(context.Context, *repository.AddMemberToListParams) error
-	RemoveMember(context.Context, *repository.RemoveMemberParams) error
-	GetMember(context.Context, string) (repository.Member, error)
+	SetMember(context.Context, *room.SetMemberParams) error
+	AddMemberToList(context.Context, *room.AddMemberToListParams) error
+	RemoveMember(context.Context, *room.RemoveMemberParams) error
+	GetMember(context.Context, string) (room.Member, error)
 	GetMemberRoomID(context.Context, string) (string, error)
-	GetMembersIDs(context.Context, string) ([]string, error)
+	GetMemberIDs(context.Context, string) ([]string, error)
 	IsMemberAdmin(context.Context, string) (bool, error)
 	UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error
 	UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error
@@ -33,19 +33,19 @@ type iRoomRepo interface {
 	UpdateMemberColor(ctx context.Context, memberID string, color string) error
 	UpdateMemberAvatarURL(ctx context.Context, memberID string, avatarURL string) error
 	// video
-	SetVideo(context.Context, *repository.SetVideoParams) error
-	RemoveVideo(context.Context, *repository.RemoveVideoParams) error
-	GetVideosIDs(context.Context, string) ([]string, error)
-	GetVideo(context.Context, string) (repository.Video, error)
+	SetVideo(context.Context, *room.SetVideoParams) error
+	RemoveVideo(context.Context, *room.RemoveVideoParams) error
+	GetVideoIDs(context.Context, string) ([]string, error)
+	GetVideo(context.Context, string) (room.Video, error)
 	GetPlaylistLength(context.Context, string) (int, error)
 	// player
-	SetPlayer(context.Context, *repository.SetPlayerParams) error
-	GetPlayer(context.Context, string) (repository.Player, error)
+	SetPlayer(context.Context, *room.SetPlayerParams) error
+	GetPlayer(context.Context, string) (room.Player, error)
 	RemovePlayer(context.Context, string) error
-	UpdatePlayerState(context.Context, *repository.UpdatePlayerStateParams) error
+	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
 	UpdatePlayerVideo(ctx context.Context, roomID string, videoURL string) error
 	// auth token
-	SetAuthToken(context.Context, *repository.SetAuthTokenParams) error
+	SetAuthToken(context.Context, *room.SetAuthTokenParams) error
 	GetMemberIDByAuthToken(context.Context, string) (string, error)
 }
 

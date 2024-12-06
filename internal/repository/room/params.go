@@ -1,4 +1,4 @@
-package repository
+package room
 
 type SetCreateRoomSessionParams struct {
 	ID              string

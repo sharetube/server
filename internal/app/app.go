@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/sharetube/server/internal/controller"
-	"github.com/sharetube/server/internal/repository/inmemory/conn"
-	roomR "github.com/sharetube/server/internal/repository/redis/room"
+	"github.com/sharetube/server/internal/repository/connection/inmemory"
+	"github.com/sharetube/server/internal/repository/room/redis"
 	roomS "github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/redisclient"
 )
@@ -55,9 +55,9 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := roomR.NewRepo(rc)
-	wsRepo := conn.NewRepo()
-	roomService := roomS.NewService(roomRepo, wsRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
+	roomRepo := redis.NewRepo(rc)
+	connectionRepo := inmemory.NewRepo()
+	roomService := roomS.NewService(roomRepo, connectionRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 

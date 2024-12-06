@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 type UpdatePlayerStateParams struct {
@@ -30,7 +30,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, ErrPermissionDenied
 	}
 
-	if err := s.roomRepo.UpdatePlayerState(ctx, &repository.UpdatePlayerStateParams{
+	if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
 		IsPlaying:    params.IsPlaying,
 		CurrentTime:  params.CurrentTime,
 		PlaybackRate: params.PlaybackRate,

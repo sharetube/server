@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/repository"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
-	memberlistIDs, err := s.roomRepo.GetMembersIDs(ctx, roomID)
+	memberlistIDs, err := s.roomRepo.GetMemberIDs(ctx, roomID)
 	if err != nil {
 		return []Member{}, err
 	}
@@ -127,7 +127,7 @@ type DisconnectMemberResponse struct {
 }
 
 func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberParams) (DisconnectMemberResponse, error) {
-	s.roomRepo.RemoveMember(ctx, &repository.RemoveMemberParams{
+	s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
 		MemberID: params.MemberID,
 		RoomID:   params.RoomID,
 	})

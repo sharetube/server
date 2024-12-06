@@ -1,4 +1,4 @@
-package repository
+package room
 
 type Member struct {
 	Username  string `redis:"username"`
