@@ -23,7 +23,7 @@ type iRoomRepo interface {
 	AddMemberToList(context.Context, *repository.AddMemberToListParams) error
 	RemoveMember(context.Context, *repository.RemoveMemberParams) error
 	GetMember(context.Context, string) (repository.Member, error)
-	GetMemberRoomId(context.Context, string) (string, error)
+	GetMemberRoomID(context.Context, string) (string, error)
 	GetMembersIDs(context.Context, string) ([]string, error)
 	IsMemberAdmin(context.Context, string) (bool, error)
 	UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error
