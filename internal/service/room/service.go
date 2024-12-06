@@ -3,7 +3,6 @@ package room
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -62,21 +61,19 @@ type iGenerator interface {
 }
 
 type service struct {
-	roomRepo        iRoomRepo
-	connRepo        iConnRepo
-	generator       iGenerator
-	membersLimit    int
-	playlistLimit   int
-	updatesInterval time.Duration
+	roomRepo      iRoomRepo
+	connRepo      iConnRepo
+	generator     iGenerator
+	membersLimit  int
+	playlistLimit int
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, updatesInterval time.Duration, membersLimit, playlistLimit int) *service {
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int) *service {
 	s := service{
-		roomRepo:        redisRepo,
-		connRepo:        connRepo,
-		membersLimit:    membersLimit,
-		playlistLimit:   playlistLimit,
-		updatesInterval: updatesInterval,
+		roomRepo:      redisRepo,
+		connRepo:      connRepo,
+		membersLimit:  membersLimit,
+		playlistLimit: playlistLimit,
 	}
 
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

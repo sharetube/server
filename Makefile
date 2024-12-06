@@ -24,6 +24,9 @@ logs:
 
 run-logs: rund logs
 
+test:
+	go test -v ./...
+
 docker-clean:
 	docker compose down --remove-orphans
 	docker system prune -af

@@ -57,7 +57,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	roomRepo := redis.NewRepo(rc)
 	connectionRepo := inmemory.NewRepo()
-	roomService := roomS.NewService(roomRepo, connectionRepo, cfg.UpdatesInterval, cfg.MembersLimit, cfg.PlaylistLimit)
+	roomService := roomS.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit)
 	controller := controller.NewController(roomService)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 

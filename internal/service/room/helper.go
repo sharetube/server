@@ -28,12 +28,12 @@ func (s service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websoc
 
 func (s service) deleteRoom(ctx context.Context, roomID string) error {
 	s.roomRepo.RemovePlayer(ctx, roomID)
-	videosID, err := s.roomRepo.GetVideoIDs(ctx, roomID)
+	videoIDs, err := s.roomRepo.GetVideoIDs(ctx, roomID)
 	if err != nil {
 		return err
 	}
 
-	for _, videoID := range videosID {
+	for _, videoID := range videoIDs {
 		if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 			VideoID: videoID,
 			RoomID:  roomID,
