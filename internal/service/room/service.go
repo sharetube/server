@@ -50,8 +50,8 @@ type iRoomRepo interface {
 
 type iConnRepo interface {
 	Add(*websocket.Conn, string) error
-	RemoveByMemberID(string) error
-	RemoveByConn(*websocket.Conn) error
+	RemoveByMemberID(string) (*websocket.Conn, error)
+	RemoveByConn(*websocket.Conn) (string, error)
 	GetConn(string) (*websocket.Conn, error)
 	GetMemberID(*websocket.Conn) (string, error)
 }

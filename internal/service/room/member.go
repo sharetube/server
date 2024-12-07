@@ -115,6 +115,15 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	}, nil
 }
 
+type ConnectMemberParams struct {
+	Conn     *websocket.Conn
+	MemberID string
+}
+
+func (s service) ConnectMember(params *ConnectMemberParams) error {
+	return s.connRepo.Add(params.Conn, params.MemberID)
+}
+
 type DisconnectMemberParams struct {
 	MemberID string
 	RoomID   string
@@ -131,7 +140,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		MemberID: params.MemberID,
 		RoomID:   params.RoomID,
 	})
-	s.connRepo.RemoveByMemberID(params.MemberID)
+	// todo: dont ignore error
+	conn, _ := s.connRepo.RemoveByMemberID(params.MemberID)
+	//! for testing
+	if conn.NetConn() != nil {
+		conn.Close()
+	}
 
 	memberlist, err := s.getMemberList(ctx, params.RoomID)
 	if err != nil {
