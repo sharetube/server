@@ -1,4 +1,4 @@
-package room
+package app
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/connection/inmemory"
 	roomRedis "github.com/sharetube/server/internal/repository/room/redis"
+	"github.com/sharetube/server/internal/service/room"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,15 +23,15 @@ func TestCreateRoom(t *testing.T) {
 	})
 	roomRepo := roomRedis.NewRepo(r)
 	connRepo := inmemory.NewRepo()
-	service := NewService(roomRepo, connRepo, 9, 25)
+	service := room.NewService(roomRepo, connRepo, 9, 25)
 
 	ctx := context.Background()
 
-	createRoomParams := CreateRoomParams{
-		Username:        "usern",
+	createRoomParams := room.CreateRoomParams{
+		Username:        "user1",
 		Color:           "123",
-		AvatarURL:       "ava",
-		InitialVideoURL: "svosvo",
+		AvatarURL:       "some-avatar",
+		InitialVideoURL: "some-video-id",
 	}
 	createRoomResp, err := service.CreateRoom(ctx, &createRoomParams)
 	require.NoError(t, err)
@@ -38,14 +39,14 @@ func TestCreateRoom(t *testing.T) {
 	assert.NotEmpty(t, createRoomResp.AuthToken, "auth token is empty")
 	assert.NotEmpty(t, createRoomResp.MemberID, "member id is empty")
 
-	connectMember1Params := ConnectMemberParams{
+	connectMember1Params := room.ConnectMemberParams{
 		Conn:     &websocket.Conn{},
 		MemberID: createRoomResp.MemberID,
 	}
 	err = service.ConnectMember(&connectMember1Params)
 	require.NoError(t, err)
 
-	joinRoomParams := JoinRoomParams{
+	joinRoomParams := room.JoinRoomParams{
 		Username:  "user2",
 		Color:     "fff",
 		AvatarURL: "",
@@ -62,14 +63,14 @@ func TestCreateRoom(t *testing.T) {
 	assert.Equal(t, joinRoomResp.JoinedMember.IsMuted, false, "is muted must be false")
 	assert.Equal(t, len(joinRoomResp.MemberList), 2, "memberlist must contain 2 members")
 
-	connectMember2Params := ConnectMemberParams{
+	connectMember2Params := room.ConnectMemberParams{
 		Conn:     &websocket.Conn{},
 		MemberID: joinRoomResp.JoinedMember.ID,
 	}
 	err = service.ConnectMember(&connectMember2Params)
 	require.NoError(t, err)
 
-	addVideoParams := AddVideoParams{
+	addVideoParams := room.AddVideoParams{
 		SenderID: createRoomResp.MemberID,
 		RoomID:   createRoomResp.RoomID,
 		VideoURL: "asdasdasd",
@@ -80,4 +81,15 @@ func TestCreateRoom(t *testing.T) {
 	assert.Equal(t, len(addVideoResp.Conns), 2, "conns must contain 2 conns")
 	assert.Equal(t, addVideoResp.AddedVideo.URL, addVideoParams.VideoURL, "video url is not equal")
 	assert.Equal(t, addVideoResp.AddedVideo.AddedByID, createRoomResp.MemberID, "added by id is not equal")
+
+	disconnectMemberResp, err := service.DisconnectMember(ctx, &room.DisconnectMemberParams{
+		MemberID: joinRoomResp.JoinedMember.ID,
+		RoomID:   joinRoomParams.RoomID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, disconnectMemberResp.IsRoomDeleted, false, "room must be not deleted")
+	assert.Equal(t, len(disconnectMemberResp.Memberlist), 1, "memberlist must contain 1 member")
+	assert.Equal(t, disconnectMemberResp.Memberlist[0].ID, createRoomResp.MemberID, "member id is not equal")
+
+	t.Log(r.Keys(ctx, "*").Val())
 }

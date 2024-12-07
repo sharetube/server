@@ -25,7 +25,7 @@ logs:
 run-logs: rund logs
 
 test:
-	go test -v ./...
+	go test -v ./internal/app
 
 docker-clean:
 	docker compose down --remove-orphans

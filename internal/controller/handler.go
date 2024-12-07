@@ -117,6 +117,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(r.Context(), funcName, "error", err)
 		return
 	}
+	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(&room.ConnectMemberParams{
 		Conn:     conn,

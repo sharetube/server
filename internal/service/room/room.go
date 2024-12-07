@@ -67,15 +67,6 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (Crea
 	}, nil
 }
 
-type ConnectMemberParams struct {
-	Conn     *websocket.Conn
-	MemberID string
-}
-
-func (s service) ConnectMember(params *ConnectMemberParams) error {
-	return s.connRepo.Add(params.Conn, params.MemberID)
-}
-
 // todo: make RoomID optional if AuthToken is provided
 type JoinRoomParams struct {
 	Username  string

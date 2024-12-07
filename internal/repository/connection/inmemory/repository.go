@@ -39,7 +39,7 @@ func (r *repo) Add(conn *websocket.Conn, memberID string) error {
 	return nil
 }
 
-func (r *repo) RemoveByConn(conn *websocket.Conn) error {
+func (r *repo) RemoveByConn(conn *websocket.Conn) (string, error) {
 	funcName := "connection.inmemory.RemoveByConn"
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -48,18 +48,17 @@ func (r *repo) RemoveByConn(conn *websocket.Conn) error {
 	memberID, ok := r.connList[conn]
 	if !ok {
 		slog.Info(funcName, "error", connection.ErrNotFound)
-		return connection.ErrNotFound
+		return "", connection.ErrNotFound
 	}
-	conn.Close()
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)
 
 	slog.Debug(funcName, "result", memberID)
-	return nil
+	return memberID, nil
 }
 
-func (r *repo) RemoveByMemberID(memberID string) error {
+func (r *repo) RemoveByMemberID(memberID string) (*websocket.Conn, error) {
 	funcName := "connection.inmemory.RemoveByMemberID"
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -68,15 +67,14 @@ func (r *repo) RemoveByMemberID(memberID string) error {
 	conn, ok := r.idList[memberID]
 	if !ok {
 		slog.Info(funcName, "error", connection.ErrNotFound)
-		return connection.ErrNotFound
+		return nil, connection.ErrNotFound
 	}
-	conn.Close()
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)
 
 	slog.Debug(funcName, "result", "OK")
-	return nil
+	return conn, nil
 }
 
 func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
