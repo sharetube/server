@@ -23,7 +23,6 @@ type UpdatePlayerStateResponse struct {
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return UpdatePlayerStateResponse{}, err
 	}
 
@@ -69,7 +68,6 @@ type UpdatePlayerVideoResponse struct {
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 

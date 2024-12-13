@@ -12,7 +12,7 @@ import (
 
 func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux := wsrouter.New()
-	mux.Handle("GET_STATE", c.handleGetState)
+	mux.Handle("GET_ROOM", c.handleGetRoom)
 	// video
 	mux.Handle("ADD_VIDEO", c.handleAddVideo)
 	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
@@ -28,24 +28,27 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 }
 
 type Output struct {
-	Action string `json:"action"`
-	Data   any    `json:"data"`
+	Type    string `json:"type"`
+	Payload any    `json:"payload"`
 }
 
-func (c controller) handleGetState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+func (c controller) handleGetRoom(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	roomID := c.getRoomIDFromCtx(ctx)
-	roomState, err := c.roomService.GetRoomState(ctx, roomID)
+	roomState, err := c.roomService.GetRoom(ctx, roomID)
 	if err != nil {
+		c.logger.DebugContext(ctx, "failed to get room state", "error", err)
 		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
 
 		return
 	}
 
 	if err := conn.WriteJSON(&Output{
-		Action: "ROOM_STATE",
-		Data:   roomState,
+		Type:    "ROOM",
+		Payload: roomState,
 	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to write json", "error", err)
 		return
 	}
 }
@@ -80,8 +83,8 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 	}
 
 	if err := c.broadcast(updatePlayerStateResp.Conns, &Output{
-		Action: "PLAYER_UPDATED",
-		Data:   updatePlayerStateResp.PlayerState,
+		Type:    "PLAYER_UPDATED",
+		Payload: updatePlayerStateResp.PlayerState,
 	}); err != nil {
 		return
 	}
@@ -106,16 +109,19 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 		RoomID:    roomID,
 	})
 	if err != nil {
+		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
 		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
 
 		return
 	}
 
 	if err := c.broadcast(updatePlayerVideoResp.Conns, &Output{
-		Action: "PLAYER_VIDEO_UPDATED",
-		Data:   updatePlayerVideoResp.Player,
+		Type:    "PLAYER_VIDEO_UPDATED",
+		Payload: updatePlayerVideoResp.Player,
 	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
 		return
 	}
 }
@@ -137,19 +143,22 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 		VideoURL: data.VideoURL,
 	})
 	if err != nil {
+		c.logger.DebugContext(ctx, "failed to add video", "error", err)
 		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
 
 		return
 	}
 
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
-		Action: "VIDEO_ADDED",
-		Data: map[string]any{
+		Type: "VIDEO_ADDED",
+		Payload: map[string]any{
 			"added_video": addVideoResponse.AddedVideo,
 			"playlist":    addVideoResponse.Videos,
 		},
 	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
 		return
 	}
 }
@@ -168,7 +177,9 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 
 	if data.MemberID == uuid.Nil {
 		err := ErrValidationError
+		c.logger.DebugContext(ctx, "validation error", "error", err)
 		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
 
 		return
@@ -206,7 +217,7 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 
 	if data.MemberID == uuid.Nil {
 		err := ErrValidationError
-		c.logger.DebugContext(ctx, "failed to promote member", "error", err)
+		c.logger.DebugContext(ctx, "validation error", "error", err)
 		if err := c.writeError(conn, err); err != nil {
 			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
@@ -229,8 +240,8 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	}
 
 	if err := c.broadcast(promoteMemberResp.Conns, &Output{
-		Action: "MEMBER_PROMOTED",
-		Data: map[string]any{
+		Type: "MEMBER_PROMOTED",
+		Payload: map[string]any{
 			"promoted_member_id": data.MemberID,
 		},
 	}); err != nil {
@@ -266,8 +277,8 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 	}
 
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
-		Action: "VIDEO_REMOVED",
-		Data: map[string]any{
+		Type: "VIDEO_REMOVED",
+		Payload: map[string]any{
 			"removed_video": data.VideoID,
 			"playlist":      addVideoResponse.Playlist,
 		},

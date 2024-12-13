@@ -74,7 +74,6 @@ type AddVideoResponse struct {
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return AddVideoResponse{}, err
 	}
 
@@ -137,7 +136,6 @@ type RemoveVideoResponse struct {
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 

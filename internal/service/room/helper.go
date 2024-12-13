@@ -17,6 +17,7 @@ func (s service) getDefaultPlayerIsPlaying() bool {
 func (s service) checkIfMemberAdmin(ctx context.Context, roomID, memberID string) error {
 	isAdmin, err := s.roomRepo.GetMemberIsAdmin(ctx, roomID, memberID)
 	if err != nil {
+		s.logger.ErrorContext(ctx, "failed to get member is admin", "error", err)
 		return err
 	}
 

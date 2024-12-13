@@ -3,7 +3,7 @@
 ## Connection
 Create room: `/api/v1/room/create/ws?username=<required>&color=<required>&avatar-url=<required>&video-url=<required>`
 
-Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&avatar-url=<required>&auth-token=<opt>`
+Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&color=<required>&avatar-url=<required>`
 
 ## Messages
 
@@ -14,6 +14,21 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&
     <td>Payload</td>
 </tr>
 
+<tr>
+<td>UPDATE_PROFILE</td>
+<td>
+
+```json
+{
+  "username": "string",
+  "color": "string",
+  "avatar_url": "string",
+}
+```
+</td>
+</tr>
+
+<tr>
 <td>PROMOTE_MEMBER</td>
 <td>
 
@@ -23,6 +38,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>REMOVE_MEMBER</td>
@@ -34,6 +50,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>ADD_VIDEO</td>
@@ -45,6 +62,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>REMOVE_VIDEO</td>
@@ -56,15 +74,31 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&
 }
 ```
 </td>
+</tr>
 
 <tr>
-<td>READY</td>
+<td>UPDATE_READY</td>
 <td>
 
 ```json
-null
+{
+  "is_ready": "boolean"
+}
 ```
 </td>
+</tr>
+
+<tr>
+<td>UPDATE_MUTED</td>
+<td>
+
+```json
+{
+  "is_muted": "boolean"
+}
+```
+</td>
+</tr>
 
 <tr>
 <td>UPDATE_PLAYER_STATE</td>
@@ -79,6 +113,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>UPDATE_PLAYER_VIDEO</td>
@@ -91,17 +126,18 @@ null
 }
 ```
 </td>
+</tr>
 </table>
 
 ### Server -> Client
 <table>
 <tr>
     <td>Type</td>
-    <td>Data</td>
+    <td>Payload</td>
 </tr>
 
 <tr>
-<td>ROOM_STATE</td>
+<td>ROOM</td>
 <td>
 
 ```json
@@ -143,6 +179,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>JOINED_ROOM</td>
@@ -150,7 +187,7 @@ null
 
 ```json
 {
-  "auth_token": "string",
+  "jwt": "string",
   "room": {
     "room_id": "string",
     "player": {
@@ -188,6 +225,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>PLAYER_UPDATED</td>
@@ -204,6 +242,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>PLAYER_VIDEO_UPDATED</td>
@@ -235,6 +274,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>VIDEO_ADDED</td>
@@ -264,6 +304,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>MEMBER_JOINED</td>
@@ -294,6 +335,7 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
 <td>MEMBER_DISCONNECTED</td>
@@ -316,15 +358,23 @@ null
 }
 ```
 </td>
+</tr>
 
 <tr>
-<td>MEMBER_PROMOTED</td>
+<td>MEMBER_UPDATED</td>
 <td>
 
 ```json
 {
-  "promoted_member_id": "string"
+  "id": "string",
+  "username": "string",
+  "color": "string",
+  "avatar_url": "string",
+  "is_online": "boolean",
+  "is_admin": "boolean",
+  "is_muted": "boolean"
 }
 ```
 </td>
+</tr>
 </table>

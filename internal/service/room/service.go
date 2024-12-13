@@ -46,9 +46,6 @@ type iRoomRepo interface {
 	RemovePlayer(context.Context, string) error
 	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
-	// auth token
-	SetAuthToken(context.Context, *room.SetAuthTokenParams) error
-	GetMemberIDByAuthToken(context.Context, string) (string, error)
 }
 
 type iConnRepo interface {
@@ -69,15 +66,17 @@ type service struct {
 	generator     iGenerator
 	membersLimit  int
 	playlistLimit int
+	secret        []byte
 	logger        *slog.Logger
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, logger *slog.Logger) *service {
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string, logger *slog.Logger) *service {
 	s := service{
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
 		membersLimit:  membersLimit,
 		playlistLimit: playlistLimit,
+		secret:        []byte(secret),
 		logger:        logger,
 	}
 

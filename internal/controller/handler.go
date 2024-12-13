@@ -31,13 +31,11 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.DebugContext(r.Context(), "failed to create room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), createRoomResponse.MemberID, createRoomResponse.RoomID)
+	defer c.disconnect(r.Context(), createRoomResponse.RoomID, createRoomResponse.MemberID)
 
-	headers := http.Header{}
-	// headers.Add("Set-Cookie", cookieString)
-	conn, err := c.upgrader.Upgrade(w, r, headers)
+	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		c.logger.WarnContext(r.Context(), "failed to upgrade to websocket", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
 
@@ -45,28 +43,28 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 		MemberID: createRoomResponse.MemberID,
 	}); err != nil {
-		c.logger.WarnContext(r.Context(), "failed to connect member", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
 
-	roomState, err := c.roomService.GetRoomState(r.Context(), createRoomResponse.RoomID)
+	roomState, err := c.roomService.GetRoom(r.Context(), createRoomResponse.RoomID)
 	if err != nil {
-		c.logger.WarnContext(r.Context(), "failed to get room state", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to get room state", "error", err)
 		return
 	}
 
 	if err := conn.WriteJSON(&Output{
-		Action: "JOINED_ROOM",
-		Data: map[string]any{
-			"auth_token": createRoomResponse.AuthToken,
-			"room_state": roomState,
+		Type: "JOINED_ROOM",
+		Payload: map[string]any{
+			"jwt":  createRoomResponse.JWT,
+			"room": roomState,
 		},
 	}); err != nil {
-		c.logger.WarnContext(r.Context(), "failed to write json", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to write json", "error", err)
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
+	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse)
 	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
@@ -88,26 +86,24 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authToken := r.URL.Query().Get("auth-token")
+	userJWT, _ := c.getQueryParam(r, "jwt")
 
 	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
+		JWT:       userJWT,
 		Username:  user.username,
 		Color:     user.color,
 		AvatarURL: user.avatarURL,
-		AuthToken: authToken,
 		RoomID:    roomID,
 	})
 	if err != nil {
-		c.logger.DebugContext(r.Context(), "failed to join room", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to join room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), joinRoomResponse.JoinedMember.ID, roomID)
+	defer c.disconnect(r.Context(), roomID, joinRoomResponse.JoinedMember.ID)
 
-	headers := http.Header{}
-	// headers.Add("Set-Cookie", cookieString)
-	conn, err := c.upgrader.Upgrade(w, r, headers)
+	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		c.logger.WarnContext(r.Context(), "failed to upgrade to websocket", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
 	defer conn.Close()
@@ -116,31 +112,31 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		Conn:     conn,
 		MemberID: joinRoomResponse.JoinedMember.ID,
 	}); err != nil {
-		c.logger.WarnContext(r.Context(), "failed to connect member", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
 
-	roomState, err := c.roomService.GetRoomState(r.Context(), roomID)
+	roomState, err := c.roomService.GetRoom(r.Context(), roomID)
 	if err != nil {
-		c.logger.WarnContext(r.Context(), "failed to get room state", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to get room state", "error", err)
 		return
 	}
 
 	if err := conn.WriteJSON(&Output{
-		Action: "JOINED_ROOM",
+		Type: "JOINED_ROOM",
 		// todo: define output data structs
-		Data: map[string]any{
-			"auth_token": joinRoomResponse.AuthToken,
-			"room":       roomState,
+		Payload: map[string]any{
+			"jwt":  joinRoomResponse.JWT,
+			"room": roomState,
 		},
 	}); err != nil {
-		c.logger.WarnContext(r.Context(), "failed to write json", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to write json", "error", err)
 		return
 	}
 
 	if err := c.broadcast(joinRoomResponse.Conns, &Output{
-		Action: "MEMBER_JOINED",
-		Data: map[string]any{
+		Type: "MEMBER_JOINED",
+		Payload: map[string]any{
 			"joined_member": joinRoomResponse.JoinedMember,
 			"member_list":   joinRoomResponse.MemberList,
 		},
