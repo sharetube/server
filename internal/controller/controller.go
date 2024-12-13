@@ -12,10 +12,10 @@ import (
 )
 
 type iRoomService interface {
-	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
+	CreateRoom(context.Context, *room.CreateRoomParams) (*room.CreateRoomResponse, error)
 	ConnectMember(context.Context, *room.ConnectMemberParams) error
 	DisconnectMember(context.Context, *room.DisconnectMemberParams) (room.DisconnectMemberResponse, error)
-	GetRoomState(context.Context, string) (room.RoomState, error)
+	GetRoom(context.Context, string) (room.Room, error)
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) (room.UpdatePlayerStateResponse, error)
 	UpdatePlayerVideo(context.Context, *room.UpdatePlayerVideoParams) (room.UpdatePlayerVideoResponse, error)
 	JoinRoom(context.Context, *room.JoinRoomParams) (room.JoinRoomResponse, error)

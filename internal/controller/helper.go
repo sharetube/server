@@ -51,8 +51,8 @@ func (c controller) getUser(r *http.Request) (user, error) {
 
 func (c controller) writeError(conn *websocket.Conn, err error) error {
 	return conn.WriteJSON(Output{
-		Action: "error",
-		Data:   err.Error(),
+		Type:    "error",
+		Payload: err.Error(),
 	})
 }
 
@@ -77,7 +77,7 @@ func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMess
 	return nil
 }
 
-func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
+func (c controller) disconnect(ctx context.Context, roomID, memberID string) {
 	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
 		MemberID: memberID,
 		RoomID:   roomID,
@@ -88,8 +88,8 @@ func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
 
 	if !disconnectMemberResp.IsRoomDeleted {
 		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
-			Action: "MEMBER_DISCONNECTED",
-			Data: map[string]any{
+			Type: "MEMBER_DISCONNECTED",
+			Payload: map[string]any{
 				"disconnected_member_id": memberID,
 				"memberlist":             disconnectMemberResp.Memberlist,
 			},

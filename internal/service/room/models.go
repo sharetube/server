@@ -36,7 +36,7 @@ type PlayerState struct {
 	UpdatedAt    int     `json:"updated_at"`
 }
 
-type RoomState struct {
+type Room struct {
 	RoomID     string   `json:"room_id"`
 	Player     Player   `json:"player"`
 	MemberList []Member `json:"member_list"`

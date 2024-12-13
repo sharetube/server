@@ -20,6 +20,11 @@ type configVar[T any] struct {
 }
 
 var (
+	secret = configVar[string]{
+		envKey:       "SERVER_SECRET",
+		flagKey:      "server-secret",
+		defaultValue: "",
+	}
 	port = configVar[int]{
 		envKey:       "SERVER_PORT",
 		flagKey:      "server-port",
@@ -69,6 +74,7 @@ var (
 
 func loadAppConfig() *app.AppConfig {
 	// 1. Define flags
+	pflag.String(secret.flagKey, secret.defaultValue, "Server secret")
 	pflag.Int(port.flagKey, port.defaultValue, "Server port")
 	pflag.String(host.flagKey, host.defaultValue, "Server host")
 	pflag.String(logLevel.flagKey, logLevel.defaultValue, "Logging level")
@@ -87,6 +93,7 @@ func loadAppConfig() *app.AppConfig {
 	viper.AutomaticEnv()
 
 	// 4. Set defaults (lowest priority)
+	viper.SetDefault(secret.envKey, secret.defaultValue)
 	viper.SetDefault(port.envKey, port.defaultValue)
 	viper.SetDefault(host.envKey, host.defaultValue)
 	viper.SetDefault(logLevel.envKey, logLevel.defaultValue)
@@ -99,6 +106,7 @@ func loadAppConfig() *app.AppConfig {
 
 	// 5. Create config struct
 	config := &app.AppConfig{
+		Secret:          viper.GetString(secret.envKey),
 		Host:            viper.GetString(host.envKey),
 		Port:            viper.GetInt(port.envKey),
 		LogLevel:        viper.GetString(logLevel.envKey),

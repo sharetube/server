@@ -49,9 +49,6 @@ type RemoveMemberResponse struct {
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		if err != ErrPermissionDenied {
-			s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
-		}
 		return RemoveMemberResponse{}, err
 	}
 
@@ -86,7 +83,6 @@ type PromoteMemberResponse struct {
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
-		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return PromoteMemberResponse{}, err
 	}
 
@@ -132,7 +128,7 @@ type DisconnectMemberResponse struct {
 }
 
 func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberParams) (DisconnectMemberResponse, error) {
-	if err := s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
+	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
 		MemberID: params.MemberID,
 		RoomID:   params.RoomID,
 	}); err != nil {

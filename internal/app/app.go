@@ -20,6 +20,7 @@ import (
 )
 
 type AppConfig struct {
+	Secret          string        `json:"-"`
 	Host            string        `json:"host"`
 	Port            int           `json:"port"`
 	MembersLimit    int           `json:"members_limit"`
@@ -68,7 +69,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	roomRepo := redis.NewRepo(rc, logger)
 	connectionRepo := inmemory.NewRepo(logger)
-	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, logger)
+	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret, logger)
 	controller := controller.NewController(roomService, logger)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 

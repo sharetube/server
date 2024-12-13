@@ -8,8 +8,8 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (r repo) getMemberKey(roomID, memberID string) string {
-	return "room:" + roomID + ":member:" + memberID
+func (r repo) getMemberKey(memberID string) string {
+	return "member:" + memberID
 }
 
 func (r repo) getMemberListKey(roomID string) string {
@@ -17,6 +17,10 @@ func (r repo) getMemberListKey(roomID string) string {
 }
 
 func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomID, memberID string) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+	})
 	memberListKey := r.getMemberListKey(roomID)
 
 	r.addWithIncrement(ctx, pipe, memberListKey, memberID)
@@ -24,6 +28,7 @@ func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomID,
 }
 
 func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	pipe := r.rc.TxPipeline()
 
 	member := room.Member{
@@ -35,42 +40,43 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 		IsOnline:  params.IsOnline,
 		RoomID:    params.RoomID,
 	}
-	memberKey := r.getMemberKey(params.RoomID, params.MemberID)
-	r.hSetIfNotExists(ctx, pipe, memberKey, member)
+	memberKey := r.getMemberKey(params.MemberID)
+	//? replace with hsetifnotexists
+	pipe.HSet(ctx, memberKey, member)
 	pipe.Expire(ctx, memberKey, 10*time.Minute)
 
 	r.addMemberToList(ctx, pipe, params.RoomID, params.MemberID)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
-
 	return nil
 }
 
 func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	pipe := r.rc.TxPipeline()
 
-	res, err := pipe.Get(ctx, r.getMemberKey(params.RoomID, params.MemberID)).Result()
-	if err != nil {
-		return err
-	}
+	// todo: execute in transaction
+	exists := r.rc.Exists(ctx, r.getMemberKey(params.MemberID)).Val()
 
-	if res != "" {
-		return nil
+	if exists == 0 {
+		return room.ErrMemberNotFound
 	}
 
 	r.addMemberToList(ctx, pipe, params.RoomID, params.MemberID)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	return nil
 }
 
-func (r repo) removeMember(ctx context.Context, roomID, memberID string) error {
-	res, err := r.rc.Del(ctx, r.getMemberKey(roomID, memberID)).Result()
+func (r repo) removeMember(ctx context.Context, memberID string) error {
+	res, err := r.rc.Del(ctx, r.getMemberKey(memberID)).Result()
 	if err != nil {
 		return err
 	}
@@ -99,7 +105,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 		return err
 	}
 
-	if err := r.removeMember(ctx, params.RoomID, params.MemberID); err != nil {
+	if err := r.removeMember(ctx, params.MemberID); err != nil {
 		return err
 	}
 
@@ -107,7 +113,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 }
 
 func (r repo) GetMemberIsAdmin(ctx context.Context, roomID, memberID string) (bool, error) {
-	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(roomID, memberID), "is_admin").Bool()
+	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(memberID), "is_admin").Bool()
 	if err != nil {
 		return false, err
 	}
@@ -126,7 +132,7 @@ func (r repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error)
 
 func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room.Member, error) {
 	var member room.Member
-	err := r.rc.HGetAll(ctx, r.getMemberKey(params.RoomID, params.MemberID)).Scan(&member)
+	err := r.rc.HGetAll(ctx, r.getMemberKey(params.MemberID)).Scan(&member)
 	if err != nil {
 		return room.Member{}, err
 	}
@@ -140,7 +146,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, isAdmin bool) error {
 	//? Maybe dont check existence because there is check on service layer that member in current room
-	key := r.getMemberKey(roomID, memberID)
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -158,7 +164,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, 
 }
 
 func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string, isOnline bool) error {
-	key := r.getMemberKey(roomID, memberID)
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -176,7 +182,7 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string,
 }
 
 func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, isMuted bool) error {
-	key := r.getMemberKey(roomID, memberID)
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -194,7 +200,7 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, 
 }
 
 func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color string) error {
-	key := r.getMemberKey(roomID, memberID)
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -212,7 +218,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color str
 }
 
 func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID, avatarURL string) error {
-	key := r.getMemberKey(roomID, memberID)
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -230,17 +236,25 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID, avata
 }
 
 func (r repo) UpdateMemberUsername(ctx context.Context, roomID, memberID, username string) error {
-	key := r.getMemberKey(roomID, memberID)
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+		"username": username,
+	})
+	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.ErrorContext(ctx, "failed to check member existence", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "member not found", "memberID", memberID)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "username", username).Err(); err != nil {
+		r.logger.ErrorContext(ctx, "failed to update member username", "error", err)
 		return err
 	}
 

@@ -9,8 +9,7 @@ import (
 )
 
 func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
-	_, err := c.EvalSha(ctx, r.maxScoreScript, []string{key}, value).Result()
-	return err
+	return c.EvalSha(ctx, r.maxScoreScript, []string{key}, value).Err()
 }
 
 // Same as HSet, but returns error if key already exists (implemented with lua script)
