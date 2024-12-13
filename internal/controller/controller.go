@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -12,10 +13,11 @@ import (
 
 type iRoomService interface {
 	CreateRoom(context.Context, *room.CreateRoomParams) (room.CreateRoomResponse, error)
-	ConnectMember(*room.ConnectMemberParams) error
+	ConnectMember(context.Context, *room.ConnectMemberParams) error
 	DisconnectMember(context.Context, *room.DisconnectMemberParams) (room.DisconnectMemberResponse, error)
-	GetRoomState(ctx context.Context, roomID string) (room.RoomState, error)
+	GetRoomState(context.Context, string) (room.RoomState, error)
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) (room.UpdatePlayerStateResponse, error)
+	UpdatePlayerVideo(context.Context, *room.UpdatePlayerVideoParams) (room.UpdatePlayerVideoResponse, error)
 	JoinRoom(context.Context, *room.JoinRoomParams) (room.JoinRoomResponse, error)
 	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
 	RemoveVideo(context.Context, *room.RemoveVideoParams) (room.RemoveVideoResponse, error)
@@ -28,9 +30,10 @@ type controller struct {
 	upgrader    websocket.Upgrader
 	wsmux       *wsrouter.WSRouter
 	validate    *validator.Validator
+	logger      *slog.Logger
 }
 
-func NewController(roomService iRoomService) *controller {
+func NewController(roomService iRoomService, logger *slog.Logger) *controller {
 	c := controller{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -39,6 +42,7 @@ func NewController(roomService iRoomService) *controller {
 		},
 		roomService: roomService,
 		validate:    validator.NewValidator(),
+		logger:      logger,
 	}
 	c.wsmux = c.getWSRouter()
 

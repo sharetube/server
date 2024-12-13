@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
-	"log/slog"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -120,18 +118,9 @@ func main() {
 
 	appConfig := loadAppConfig()
 
-	logLevel := slog.LevelDebug
-	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(appConfig.LogLevel))); err != nil {
-		log.Fatal(err)
-	}
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: logLevel,
-	}))
-	slog.SetDefault(logger)
-
 	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
-	slog.InfoContext(ctx, "starting app with config", "config", string(jsonConfig))
+	// slog.InfoContext(ctx, "starting app with config", "config", string(jsonConfig))
+	fmt.Printf("starting app with config: %s\n", jsonConfig)
 
 	log.Fatal(app.Run(ctx, appConfig))
 }

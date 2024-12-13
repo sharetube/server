@@ -8,26 +8,27 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/sharetube/server/internal/controller"
 	"github.com/sharetube/server/internal/repository/connection/inmemory"
 	"github.com/sharetube/server/internal/repository/room/redis"
-	roomS "github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/redisclient"
 )
 
 type AppConfig struct {
-	Host            string
-	Port            int
-	MembersLimit    int
-	PlaylistLimit   int
-	UpdatesInterval time.Duration
-	LogLevel        string
-	RedisPort       int
-	RedisHost       string
-	RedisPassword   string `json:"-"`
+	Host            string        `json:"host"`
+	Port            int           `json:"port"`
+	MembersLimit    int           `json:"members_limit"`
+	PlaylistLimit   int           `json:"playlist_limit"`
+	UpdatesInterval time.Duration `json:"updates_interval"`
+	LogLevel        string        `json:"log_level"`
+	RedisPort       int           `json:"redis_port"`
+	RedisHost       string        `json:"redis_host"`
+	RedisPassword   string        `json:"-"`
 }
 
 // todo: add validation
@@ -45,6 +46,16 @@ func (cfg *AppConfig) Validate() error {
 }
 
 func Run(ctx context.Context, cfg *AppConfig) error {
+	logLevel := slog.LevelDebug
+	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(cfg.LogLevel))); err != nil {
+		log.Fatal(err)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     logLevel,
+		AddSource: true,
+	}))
+
 	rc, err := redisclient.NewRedisClient(&redisclient.Config{
 		Port:     cfg.RedisPort,
 		Host:     cfg.RedisHost,
@@ -55,10 +66,10 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc)
-	connectionRepo := inmemory.NewRepo()
-	roomService := roomS.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit)
-	controller := controller.NewController(roomService)
+	roomRepo := redis.NewRepo(rc, logger)
+	connectionRepo := inmemory.NewRepo(logger)
+	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, logger)
+	controller := controller.NewController(roomService, logger)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 
 	// graceful shutdown

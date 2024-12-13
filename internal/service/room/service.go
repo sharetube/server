@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -21,28 +22,30 @@ type iRoomRepo interface {
 	SetMember(context.Context, *room.SetMemberParams) error
 	AddMemberToList(context.Context, *room.AddMemberToListParams) error
 	RemoveMember(context.Context, *room.RemoveMemberParams) error
-	GetMember(context.Context, string) (room.Member, error)
-	GetMemberRoomID(context.Context, string) (string, error)
+	RemoveMemberFromList(context.Context, *room.RemoveMemberFromListParams) error
+	GetMember(context.Context, *room.GetMemberParams) (room.Member, error)
 	GetMemberIDs(context.Context, string) ([]string, error)
-	IsMemberAdmin(context.Context, string) (bool, error)
-	UpdateMemberIsAdmin(ctx context.Context, memberID string, isAdmin bool) error
-	UpdateMemberIsMuted(ctx context.Context, memberID string, isMuted bool) error
-	UpdateMemberIsOnline(ctx context.Context, memberID string, isOnline bool) error
-	UpdateMemberUsername(ctx context.Context, memberID string, username string) error
-	UpdateMemberColor(ctx context.Context, memberID string, color string) error
-	UpdateMemberAvatarURL(ctx context.Context, memberID string, avatarURL string) error
+	GetMemberIsAdmin(ctx context.Context, roomID string, memberID string) (bool, error)
+	UpdateMemberIsAdmin(ctx context.Context, roomID string, memberID string, isAdmin bool) error
+	UpdateMemberIsMuted(ctx context.Context, roomID string, memberID string, isMuted bool) error
+	UpdateMemberIsOnline(ctx context.Context, roomID string, memberID string, isOnline bool) error
+	UpdateMemberUsername(ctx context.Context, roomID string, memberID string, username string) error
+	UpdateMemberColor(ctx context.Context, roomID string, memberID string, color string) error
+	UpdateMemberAvatarURL(ctx context.Context, roomID string, memberID string, avatarURL string) error
 	// video
 	SetVideo(context.Context, *room.SetVideoParams) error
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
 	GetVideoIDs(context.Context, string) ([]string, error)
-	GetVideo(context.Context, string) (room.Video, error)
-	GetPlaylistLength(context.Context, string) (int, error)
+	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
+	GetVideosLength(context.Context, string) (int, error)
+	GetPreviousVideoID(context.Context, string) (string, error)
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
+	IsPlayerExists(context.Context, string) (bool, error)
 	RemovePlayer(context.Context, string) error
+	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
-	UpdatePlayerVideo(ctx context.Context, roomID string, videoURL string) error
 	// auth token
 	SetAuthToken(context.Context, *room.SetAuthTokenParams) error
 	GetMemberIDByAuthToken(context.Context, string) (string, error)
@@ -66,14 +69,16 @@ type service struct {
 	generator     iGenerator
 	membersLimit  int
 	playlistLimit int
+	logger        *slog.Logger
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int) *service {
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, logger *slog.Logger) *service {
 	s := service{
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
 		membersLimit:  membersLimit,
 		playlistLimit: playlistLimit,
+		logger:        logger,
 	}
 
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

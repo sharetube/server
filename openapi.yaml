@@ -54,7 +54,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Member'
-        playlist:
+        videos:
           type: array
           items:
             $ref: '#/components/schemas/Video'

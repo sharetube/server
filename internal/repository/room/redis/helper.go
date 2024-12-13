@@ -60,3 +60,17 @@ func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string,
 
 	return nil
 }
+
+func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
+	cmds, err := pipe.Exec(ctx)
+	if err != nil {
+		return err
+	}
+	for _, cmd := range cmds {
+		if err := cmd.Err(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
