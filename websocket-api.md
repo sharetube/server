@@ -1,9 +1,9 @@
 # WebSocket API Reference
 
 ## Connection
-Create room: `/api/v1/room/create/ws?username=&color=&avatar-url=&video-url=`
+Create room: `/api/v1/room/create/ws?username=<required>&color=<required>&avatar-url=<required>&video-url=<required>`
 
-Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-token=`
+Join room: `/api/v1/room/{room-id}/join/ws?username=<required>&color=<required>&avatar-url=<required>&auth-token=<opt>`
 
 ## Messages
 
@@ -19,7 +19,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "member_id": "string"
+  "member_id": "string"
 }
 ```
 </td>
@@ -30,7 +30,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "member_id": "string"
+  "member_id": "string"
 }
 ```
 </td>
@@ -41,11 +41,10 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "video_url": "string"
+  "video_url": "string"
 }
 ```
 </td>
-
 
 <tr>
 <td>REMOVE_VIDEO</td>
@@ -53,7 +52,42 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "video_id": "string"
+  "video_id": "string"
+}
+```
+</td>
+
+<tr>
+<td>READY</td>
+<td>
+
+```json
+null
+```
+</td>
+
+<tr>
+<td>UPDATE_PLAYER_STATE</td>
+<td>
+
+```json
+{
+  "playback_rate": "number",
+  "is_playing": "boolean",
+  "current_time": "number",
+  "updated_at": "number"
+}
+```
+</td>
+
+<tr>
+<td>UPDATE_PLAYER_VIDEO</td>
+<td>
+
+```json
+{
+  "video_id": "string",
+  "updated_at": "number"
 }
 ```
 </td>
@@ -67,17 +101,137 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 </tr>
 
 <tr>
+<td>ROOM_STATE</td>
+<td>
+
+```json
+{
+  "room": {
+    "room_id": "string",
+    "player": {
+      "playback_rate": "number",
+      "is_playing": "boolean",
+      "current_time": "number",
+      "updated_at": "number"
+    },
+    "playlist":{
+      "videos": [
+        {
+          "id": "string",
+          "url": "string",
+          "added_by": "string"
+        }
+      ],
+      "previous_video_id": {
+        "id": "string",
+        "url": "string",
+        "added_by": "string"
+      }
+    },
+    "members": [
+      {
+        "id": "string",
+        "username": "string",
+        "color": "string",
+        "avatar_url": "string",
+        "is_online": "boolean",
+        "is_admin": "boolean",
+        "is_muted": "boolean"
+      }
+    ]
+  }
+}
+```
+</td>
+
+<tr>
+<td>JOINED_ROOM</td>
+<td>
+
+```json
+{
+  "auth_token": "string",
+  "room": {
+    "room_id": "string",
+    "player": {
+      "playback_rate": "number",
+      "is_playing": "boolean",
+      "current_time": "number",
+      "updated_at": "number"
+    },
+    "playlist":{
+      "videos": [
+        {
+          "id": "string",
+          "url": "string",
+          "added_by": "string"
+        }
+      ],
+      "previous_video_id": {
+        "id": "string",
+        "url": "string",
+        "added_by": "string"
+      }
+    },
+    "members": [
+      {
+        "id": "string",
+        "username": "string",
+        "color": "string",
+        "avatar_url": "string",
+        "is_online": "boolean",
+        "is_admin": "boolean",
+        "is_muted": "boolean"
+      }
+    ]
+  }
+}
+```
+</td>
+
+<tr>
 <td>PLAYER_UPDATED</td>
 <td>
 
 ```json
 {
-    "player": {
-        "playback_rate": "number",
-        "is_playing": "boolean",
-        "current_time": "number",
-        "updated_at": "number"
+  "player": {
+    "playback_rate": "number",
+    "is_playing": "boolean",
+    "current_time": "number",
+    "updated_at": "number"
+  }
+}
+```
+</td>
+
+<tr>
+<td>PLAYER_VIDEO_UPDATED</td>
+<td>
+
+```json
+{
+  "player": {
+    "video_url": "string",
+    "playback_rate": "number",
+    "is_playing": "boolean",
+    "current_time": "number",
+    "updated_at": "number"
+  },
+  "playlist":{
+    "videos": [
+      {
+        "id": "string",
+        "url": "string",
+        "added_by": "string"
+      }
+    ],
+    "previous_video_id": {
+      "id": "string",
+      "url": "string",
+      "added_by": "string"
     }
+  }
 }
 ```
 </td>
@@ -88,18 +242,25 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "added_video": {
+  "added_video": {
+    "id": "string",
+    "url": "string",
+    "added_by": "string"
+  },
+  "playlist":{
+    "videos": [
+      {
         "id": "string",
         "url": "string",
         "added_by": "string"
-    },
-    "playlist": [
-        {
-            "id": "string",
-            "url": "string",
-            "added_by": "string"
-        }
-    ]
+      }
+    ],
+    "previous_video_id": {
+      "id": "string",
+      "url": "string",
+      "added_by": "string"
+    }
+  }
 }
 ```
 </td>
@@ -110,26 +271,26 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "joined_member": {
-        "id": "string",
-        "username": "string",
-        "color": "string",
-        "avatar_url": "string",
-        "is_online": "boolean",
-        "is_admin": "boolean",
-        "is_muted": "boolean"
-    },
-    "members": [
-        {
-            "id": "string",
-            "username": "string",
-            "color": "string",
-            "avatar_url": "string",
-            "is_online": "boolean",
-            "is_admin": "boolean",
-            "is_muted": "boolean"
-        }
-    ]
+  "joined_member": {
+    "id": "string",
+    "username": "string",
+    "color": "string",
+    "avatar_url": "string",
+    "is_online": "boolean",
+    "is_admin": "boolean",
+    "is_muted": "boolean"
+  },
+  "members": [
+    {
+      "id": "string",
+      "username": "string",
+      "color": "string",
+      "avatar_url": "string",
+      "is_online": "boolean",
+      "is_admin": "boolean",
+      "is_muted": "boolean"
+    }
+  ]
 }
 ```
 </td>
@@ -140,18 +301,18 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "disconnected_member_id": "string",
-    "members": [
-        {
-            "id": "string",
-            "username": "string",
-            "color": "string",
-            "avatar_url": "string",
-            "is_online": "boolean",
-            "is_admin": "boolean",
-            "is_muted": "boolean"
-        }
-    ]
+  "disconnected_member_id": "string",
+  "members": [
+    {
+      "id": "string",
+      "username": "string",
+      "color": "string",
+      "avatar_url": "string",
+      "is_online": "boolean",
+      "is_admin": "boolean",
+      "is_muted": "boolean"
+    }
+  ]
 }
 ```
 </td>
@@ -162,7 +323,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?username=&color=&avatar-url=&auth-tok
 
 ```json
 {
-    "promoted_member_id": "string"
+  "promoted_member_id": "string"
 }
 ```
 </td>

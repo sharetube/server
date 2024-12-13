@@ -7,5 +7,6 @@ var (
 	ErrAuthTokenAlreadyExists = errors.New("auth token already exists")
 	ErrPlayerNotFound         = errors.New("player not found")
 	ErrVideoNotFound          = errors.New("video not found")
+	ErrNoPreviousVideo        = errors.New("no previous video")
 	ErrAuthTokenNotFound      = errors.New("auth token not found")
 )

@@ -68,9 +68,7 @@ func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 
 func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMessage, v any) error {
 	if err := json.Unmarshal(data, &v); err != nil {
-		slog.Warn("failed to unmarshal data", "error", err)
 		if err := c.writeError(conn, err); err != nil {
-			slog.Warn("failed to write error", "error", err)
 			return err
 		}
 		return err
@@ -85,18 +83,18 @@ func (c controller) disconnect(ctx context.Context, memberID, roomID string) {
 		RoomID:   roomID,
 	})
 	if err != nil {
-		slog.Warn("JoinRoom failed to disconnect member", "error", err)
+		c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
 	}
 
 	if !disconnectMemberResp.IsRoomDeleted {
 		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
-			Action: "member_disconnected",
+			Action: "MEMBER_DISCONNECTED",
 			Data: map[string]any{
 				"disconnected_member_id": memberID,
 				"memberlist":             disconnectMemberResp.Memberlist,
 			},
 		}); err != nil {
-			slog.Warn("JoinRoom failed to broadcast", "error", err)
+			c.logger.WarnContext(ctx, "failed to broadcast", "error", err)
 		}
 	}
 }

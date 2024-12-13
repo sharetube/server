@@ -12,99 +12,81 @@ type repo struct {
 	connList map[*websocket.Conn]string
 	idList   map[string]*websocket.Conn
 	mu       sync.RWMutex
+	logger   *slog.Logger
 }
 
-func NewRepo() *repo {
+func NewRepo(logger *slog.Logger) *repo {
 	return &repo{
 		connList: make(map[*websocket.Conn]string),
 		idList:   make(map[string]*websocket.Conn),
+		logger:   logger,
 	}
 }
 
 func (r *repo) Add(conn *websocket.Conn, memberID string) error {
-	funcName := "connection.inmemory.Add"
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug(funcName, "memberID", memberID)
 	if r.connList[conn] != "" || r.idList[memberID] != nil {
-		slog.Info(funcName, "error", connection.ErrAlreadyExists)
 		return connection.ErrAlreadyExists
 	}
 
 	r.connList[conn] = memberID
 	r.idList[memberID] = conn
 
-	slog.Debug(funcName, "result", "OK")
 	return nil
 }
 
 func (r *repo) RemoveByConn(conn *websocket.Conn) (string, error) {
-	funcName := "connection.inmemory.RemoveByConn"
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug(funcName)
 	memberID, ok := r.connList[conn]
 	if !ok {
-		slog.Info(funcName, "error", connection.ErrNotFound)
 		return "", connection.ErrNotFound
 	}
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)
 
-	slog.Debug(funcName, "result", memberID)
 	return memberID, nil
 }
 
 func (r *repo) RemoveByMemberID(memberID string) (*websocket.Conn, error) {
-	funcName := "connection.inmemory.RemoveByMemberID"
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug(funcName, "memberID", memberID)
 	conn, ok := r.idList[memberID]
 	if !ok {
-		slog.Info(funcName, "error", connection.ErrNotFound)
 		return nil, connection.ErrNotFound
 	}
 
 	delete(r.connList, conn)
 	delete(r.idList, memberID)
 
-	slog.Debug(funcName, "result", "OK")
 	return conn, nil
 }
 
 func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
-	funcName := "connection.inmemory.GetMemberID"
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	slog.Debug(funcName)
 	memberID, ok := r.connList[conn]
 	if !ok {
-		slog.Info(funcName, "error", connection.ErrNotFound)
 		return "", connection.ErrNotFound
 	}
 
-	slog.Debug(funcName, "result", memberID)
 	return memberID, nil
 }
 
 func (r *repo) GetConn(memberID string) (*websocket.Conn, error) {
-	funcName := "connection.inmemory.GetConn"
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	slog.Debug(funcName, "memberID", memberID)
 	conn, ok := r.idList[memberID]
 	if !ok {
-		slog.Info(funcName, "error", connection.ErrNotFound)
 		return nil, connection.ErrNotFound
 	}
 
-	slog.Debug(funcName, "result", "OK")
 	return conn, nil
 }

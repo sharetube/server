@@ -18,7 +18,7 @@ func (c *controller) GetMux() http.Handler {
 		r.Route("/room", func(r chi.Router) {
 			// r.Get("/{room-id}", c.GetRoom)
 			r.Route("/create", func(r chi.Router) {
-				// r.Post("/validate", c.validateCreateRoom)
+				// r.Post"/validate", c.validateCreateRoom)
 				r.Get("/ws", c.createRoom)
 			})
 			r.Route("/{room-id}", func(r chi.Router) {

@@ -8,7 +8,7 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error) {
+func (s service) getVideos(ctx context.Context, roomID string) ([]Video, error) {
 	videosIDs, err := s.roomRepo.GetVideoIDs(ctx, roomID)
 	if err != nil {
 		return []Video{}, err
@@ -16,7 +16,10 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 
 	playlist := make([]Video, 0, len(videosIDs))
 	for _, videoID := range videosIDs {
-		video, err := s.roomRepo.GetVideo(ctx, videoID)
+		video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+			RoomID:  roomID,
+			VideoID: videoID,
+		})
 		if err != nil {
 			return []Video{}, err
 		}
@@ -31,6 +34,32 @@ func (s service) getPlaylist(ctx context.Context, roomID string) ([]Video, error
 	return playlist, nil
 }
 
+func (s service) getPreviousVideo(ctx context.Context, roomID string) (*Video, error) {
+	previousVideoID, err := s.roomRepo.GetPreviousVideoID(ctx, roomID)
+	if err != nil {
+		switch err {
+		case room.ErrNoPreviousVideo:
+			return nil, nil
+		default:
+			return nil, err
+		}
+	}
+
+	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+		RoomID:  roomID,
+		VideoID: previousVideoID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Video{
+		ID:        previousVideoID,
+		URL:       video.URL,
+		AddedByID: video.AddedByID,
+	}, nil
+}
+
 type AddVideoParams struct {
 	SenderID string
 	RoomID   string
@@ -40,24 +69,23 @@ type AddVideoParams struct {
 type AddVideoResponse struct {
 	AddedVideo Video
 	Conns      []*websocket.Conn
-	Playlist   []Video
+	Videos     []Video
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
-	if err != nil {
-		return AddVideoResponse{}, err
-	}
-	if !isAdmin {
-		return AddVideoResponse{}, ErrPermissionDenied
-	}
-
-	playlistLength, err := s.roomRepo.GetPlaylistLength(ctx, params.RoomID)
-	if err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return AddVideoResponse{}, err
 	}
 
-	if playlistLength >= s.playlistLimit {
+	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomID)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get videos length", "error", err)
+		return AddVideoResponse{}, err
+	}
+
+	if videosLength >= s.playlistLimit {
+		s.logger.InfoContext(ctx, "playlist limit reached", "limit", s.playlistLimit)
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
@@ -68,16 +96,19 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		URL:       params.VideoURL,
 		AddedByID: params.SenderID,
 	}); err != nil {
+		s.logger.InfoContext(ctx, "failed to set video", "error", err)
 		return AddVideoResponse{}, err
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return AddVideoResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomID)
+	playlist, err := s.getVideos(ctx, params.RoomID)
 	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
 		return AddVideoResponse{}, err
 	}
 
@@ -87,8 +118,8 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 			URL:       params.VideoURL,
 			AddedByID: params.SenderID,
 		},
-		Conns:    conns,
-		Playlist: playlist,
+		Conns:  conns,
+		Videos: playlist,
 	}, nil
 }
 
@@ -100,39 +131,48 @@ type RemoveVideoParams struct {
 
 type RemoveVideoResponse struct {
 	Conns          []*websocket.Conn
-	Playlist       []Video
+	Playlist       Playlist
 	RemovedVideoID string
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
-	isAdmin, err := s.roomRepo.IsMemberAdmin(ctx, params.SenderID)
-	if err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+		s.logger.InfoContext(ctx, "failed to check if member is admin", "error", err)
 		return RemoveVideoResponse{}, err
-	}
-	if !isAdmin {
-		return RemoveVideoResponse{}, ErrPermissionDenied
 	}
 
 	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 		VideoID: params.VideoID,
 		RoomID:  params.RoomID,
 	}); err != nil {
+		s.logger.InfoContext(ctx, "failed to remove video", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomID)
+	videos, err := s.getVideos(ctx, params.RoomID)
 	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
+		return RemoveVideoResponse{}, err
+	}
+
+	previousVideo, err := s.getPreviousVideo(ctx, params.RoomID)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get previous video", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	return RemoveVideoResponse{
-		Conns:          conns,
-		Playlist:       playlist,
+		Conns: conns,
+		Playlist: Playlist{
+			Videos:        videos,
+			PreviousVideo: previousVideo,
+		},
 		RemovedVideoID: params.VideoID,
 	}, nil
 }
