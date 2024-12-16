@@ -23,6 +23,7 @@ type iRoomService interface {
 	RemoveVideo(context.Context, *room.RemoveVideoParams) (room.RemoveVideoResponse, error)
 	RemoveMember(context.Context, *room.RemoveMemberParams) (room.RemoveMemberResponse, error)
 	PromoteMember(context.Context, *room.PromoteMemberParams) (room.PromoteMemberResponse, error)
+	UpdateProfile(context.Context, *room.UpdateProfileParams) (room.UpdateProfileResponse, error)
 }
 
 type controller struct {

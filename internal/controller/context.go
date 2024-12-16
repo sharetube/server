@@ -10,9 +10,19 @@ const (
 )
 
 func (c controller) getRoomIDFromCtx(ctx context.Context) string {
-	return ctx.Value(roomIDCtxKey).(string)
+	roomID, ok := ctx.Value(roomIDCtxKey).(string)
+	if !ok {
+		return ""
+	}
+
+	return roomID
 }
 
 func (c controller) getMemberIDFromCtx(ctx context.Context) string {
-	return ctx.Value(memberIDCtxKey).(string)
+	memberID, ok := ctx.Value(memberIDCtxKey).(string)
+	if !ok {
+		return ""
+	}
+
+	return memberID
 }

@@ -77,6 +77,24 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
 </tr>
 
 <tr>
+<td>REORDER_PLAYLIST</td>
+<td>
+
+```json
+{
+  "videos": [
+    {
+      "id": "string",
+      "url": "string",
+      "added_by": "string"
+    }
+  ],
+}
+```
+</td>
+</tr>
+
+<tr>
 <td>UPDATE_READY</td>
 <td>
 
@@ -134,51 +152,6 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
 <tr>
     <td>Type</td>
     <td>Payload</td>
-</tr>
-
-<tr>
-<td>ROOM</td>
-<td>
-
-```json
-{
-  "room": {
-    "room_id": "string",
-    "player": {
-      "playback_rate": "number",
-      "is_playing": "boolean",
-      "current_time": "number",
-      "updated_at": "number"
-    },
-    "playlist":{
-      "videos": [
-        {
-          "id": "string",
-          "url": "string",
-          "added_by": "string"
-        }
-      ],
-      "previous_video_id": {
-        "id": "string",
-        "url": "string",
-        "added_by": "string"
-      }
-    },
-    "members": [
-      {
-        "id": "string",
-        "username": "string",
-        "color": "string",
-        "avatar_url": "string",
-        "is_online": "boolean",
-        "is_admin": "boolean",
-        "is_muted": "boolean"
-      }
-    ]
-  }
-}
-```
-</td>
 </tr>
 
 <tr>
@@ -307,6 +280,55 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
 </tr>
 
 <tr>
+<td>VIDEO_REMOVED</td>
+<td>
+
+```json
+{
+  "removed_video_id": "string",
+  "playlist":{
+    "videos": [
+      {
+        "id": "string",
+        "url": "string",
+        "added_by": "string"
+      }
+    ],
+    "previous_video_id": {
+      "id": "string",
+      "url": "string",
+      "added_by": "string"
+    }
+  }
+}
+```
+</td>
+</tr>
+
+<tr>
+<td>PLAYLIST_REORDERED</td>
+<td>
+
+```json
+{
+  "videos": [
+    {
+      "id": "string",
+      "url": "string",
+      "added_by": "string"
+    }
+  ],
+  "previous_video_id": {
+    "id": "string",
+    "url": "string",
+    "added_by": "string"
+  }
+}
+```
+</td>
+</tr>
+
+<tr>
 <td>MEMBER_JOINED</td>
 <td>
 
@@ -366,13 +388,38 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
 
 ```json
 {
-  "id": "string",
-  "username": "string",
-  "color": "string",
-  "avatar_url": "string",
-  "is_online": "boolean",
-  "is_admin": "boolean",
-  "is_muted": "boolean"
+  "updated_member": {
+    "id": "string",
+    "username": "string",
+    "color": "string",
+    "avatar_url": "string",
+    "is_online": "boolean",
+    "is_admin": "boolean",
+    "is_muted": "boolean"
+  },
+  "members": [
+    {
+      "id": "string",
+      "username": "string",
+      "color": "string",
+      "avatar_url": "string",
+      "is_online": "boolean",
+      "is_admin": "boolean",
+      "is_muted": "boolean"
+    }
+  ]
+}
+```
+</td>
+</tr>
+
+<tr>
+<td>IS_ADMIN_CHANGED</td>
+<td>
+
+```json
+{
+  "is_admin": "boolean"
 }
 ```
 </td>

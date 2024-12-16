@@ -17,10 +17,6 @@ func (r repo) getMemberListKey(roomID string) string {
 }
 
 func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomID, memberID string) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-	})
 	memberListKey := r.getMemberListKey(roomID)
 
 	r.addWithIncrement(ctx, pipe, memberListKey, memberID)
@@ -62,6 +58,7 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 	exists := r.rc.Exists(ctx, r.getMemberKey(params.MemberID)).Val()
 
 	if exists == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
@@ -93,7 +90,9 @@ func (r repo) removeMemberFromList(ctx context.Context, roomID, memberID string)
 }
 
 func (r repo) RemoveMemberFromList(ctx context.Context, params *room.RemoveMemberFromListParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	if err := r.removeMemberFromList(ctx, params.RoomID, params.MemberID); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -101,11 +100,14 @@ func (r repo) RemoveMemberFromList(ctx context.Context, params *room.RemoveMembe
 }
 
 func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	if err := r.removeMemberFromList(ctx, params.RoomID, params.MemberID); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if err := r.removeMember(ctx, params.MemberID); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -113,8 +115,13 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 }
 
 func (r repo) GetMemberIsAdmin(ctx context.Context, roomID, memberID string) (bool, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+	})
 	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(memberID), "is_admin").Bool()
 	if err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return false, err
 	}
 
@@ -122,8 +129,12 @@ func (r repo) GetMemberIsAdmin(ctx context.Context, roomID, memberID string) (bo
 }
 
 func (r repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID": roomID,
+	})
 	memberIDs, err := r.rc.ZRange(ctx, r.getMemberListKey(roomID), 0, -1).Result()
 	if err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
 
@@ -131,13 +142,16 @@ func (r repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error)
 }
 
 func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room.Member, error) {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	var member room.Member
 	err := r.rc.HGetAll(ctx, r.getMemberKey(params.MemberID)).Scan(&member)
 	if err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return room.Member{}, err
 	}
 
 	if member.Username == "" {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.Member{}, room.ErrMemberNotFound
 	}
 
@@ -145,18 +159,26 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, isAdmin bool) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+		"isAdmin":  isAdmin,
+	})
 	//? Maybe dont check existence because there is check on service layer that member in current room
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_admin", isAdmin).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -164,17 +186,25 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, 
 }
 
 func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string, isOnline bool) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+		"isOnline": isOnline,
+	})
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_online", isOnline).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -182,17 +212,25 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string,
 }
 
 func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, isMuted bool) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+		"isMuted":  isMuted,
+	})
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "is_muted", isMuted).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -200,17 +238,25 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, 
 }
 
 func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color string) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":   roomID,
+		"memberID": memberID,
+		"color":    color,
+	})
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "color", color).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -218,17 +264,25 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color str
 }
 
 func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID, avatarURL string) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]any{
+		"roomID":    roomID,
+		"memberID":  memberID,
+		"avatarURL": avatarURL,
+	})
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -244,17 +298,17 @@ func (r repo) UpdateMemberUsername(ctx context.Context, roomID, memberID, userna
 	key := r.getMemberKey(memberID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
-		r.logger.ErrorContext(ctx, "failed to check member existence", "error", err)
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
-		r.logger.DebugContext(ctx, "member not found", "memberID", memberID)
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
 	if err := r.rc.HSet(ctx, key, "username", username).Err(); err != nil {
-		r.logger.ErrorContext(ctx, "failed to update member username", "error", err)
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
