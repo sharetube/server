@@ -13,6 +13,7 @@ func (r repo) getPlayerKey(roomID string) string {
 }
 
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	pipe := r.rc.TxPipeline()
 
 	player := room.Player{
@@ -23,28 +24,22 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 		UpdatedAt:    params.UpdatedAt,
 	}
 	playerKey := r.getPlayerKey(params.RoomID)
-	hsetErr := r.hSetIfNotExists(ctx, pipe, playerKey, player)
-	expErr := pipe.Expire(ctx, playerKey, 10*time.Minute).Err()
+	r.hSetIfNotExists(ctx, pipe, playerKey, player)
+	pipe.Expire(ctx, playerKey, 10*time.Minute)
 
-	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err := r.executePipe(ctx, pipe); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return fmt.Errorf("failed to set player: %w", err)
-	}
-
-	if hsetErr != nil {
-		return fmt.Errorf("failed to set player: %w", hsetErr)
-	}
-
-	if expErr != nil {
-		return fmt.Errorf("failed to set player: %w", expErr)
 	}
 
 	return nil
 }
 
 func (r repo) IsPlayerExists(ctx context.Context, roomID string) (bool, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
 	res, err := r.rc.Exists(ctx, r.getPlayerKey(roomID)).Result()
 	if err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return false, fmt.Errorf("failed to check if player exists: %w", err)
 	}
 
@@ -54,8 +49,10 @@ func (r repo) IsPlayerExists(ctx context.Context, roomID string) (bool, error) {
 }
 
 func (r repo) GetPlayer(ctx context.Context, roomID string) (room.Player, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
 	var player room.Player
 	if err := r.rc.HGetAll(ctx, r.getPlayerKey(roomID)).Scan(&player); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return room.Player{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
@@ -63,8 +60,10 @@ func (r repo) GetPlayer(ctx context.Context, roomID string) (room.Player, error)
 }
 
 func (r repo) GetPlayerVideoURL(ctx context.Context, roomID string) (string, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
 	videoURL, err := r.rc.HGet(ctx, r.getPlayerKey(roomID), "video_url").Result()
 	if err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return "", fmt.Errorf("failed to get player: %w", err)
 	}
 
@@ -72,12 +71,14 @@ func (r repo) GetPlayerVideoURL(ctx context.Context, roomID string) (string, err
 }
 
 func (r repo) RemovePlayer(ctx context.Context, roomID string) error {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
 	res, err := r.rc.Del(ctx, r.getPlayerKey(roomID)).Result()
 	if err != nil {
 		return fmt.Errorf("failed to remove player: %w", err)
 	}
 
 	if res == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrPlayerNotFound)
 		return room.ErrPlayerNotFound
 	}
 
@@ -85,13 +86,16 @@ func (r repo) RemovePlayer(ctx context.Context, roomID string) error {
 }
 
 func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	key := r.getPlayerKey(params.RoomID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrPlayerNotFound)
 		return room.ErrPlayerNotFound
 	}
 
@@ -103,6 +107,7 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 		UpdatedAt:    params.UpdatedAt,
 	}
 	if err := r.rc.HSet(ctx, key, player).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -110,13 +115,16 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 }
 
 func (r repo) UpdatePlayerState(ctx context.Context, params *room.UpdatePlayerStateParams) error {
+	r.logger.DebugContext(ctx, "called", "params", params)
 	key := r.getPlayerKey(params.RoomID)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if cmd.Val() == 0 {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrPlayerNotFound)
 		return room.ErrPlayerNotFound
 	}
 
@@ -126,6 +134,7 @@ func (r repo) UpdatePlayerState(ctx context.Context, params *room.UpdatePlayerSt
 		"playback_rate", params.PlaybackRate,
 		"updated_at", params.UpdatedAt,
 	).Err(); err != nil {
+		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 

@@ -2,6 +2,7 @@ package room
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -78,7 +79,9 @@ type PromoteMemberParams struct {
 }
 
 type PromoteMemberResponse struct {
-	Conns []*websocket.Conn
+	PromotedMember Member
+	Members        []Member
+	Conns          []*websocket.Conn
 }
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
@@ -86,9 +89,18 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, err
 	}
 
-	if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.RoomID, params.PromotedMemberID, true); err != nil {
-		s.logger.InfoContext(ctx, "failed to promote member", "error", err)
+	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
+		MemberID: params.PromotedMemberID,
+		RoomID:   params.RoomID,
+	})
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member", "error", err)
 		return PromoteMemberResponse{}, err
+	}
+
+	if member.IsAdmin {
+		s.logger.InfoContext(ctx, "member is already admin", "member_id", params.PromotedMemberID)
+		return PromoteMemberResponse{}, errors.New("member is already admin")
 	}
 
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
@@ -97,8 +109,24 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, err
 	}
 
+	members, err := s.getMemberList(ctx, params.RoomID)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
+		return PromoteMemberResponse{}, err
+	}
+
 	return PromoteMemberResponse{
 		Conns: conns,
+		PromotedMember: Member{
+			ID:        params.PromotedMemberID,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   member.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsOnline:  member.IsOnline,
+		},
+		Members: members,
 	}, nil
 }
 
@@ -150,6 +178,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		return DisconnectMemberResponse{}, err
 	}
 
+	// delete room if no member left
 	if len(memberlist) == 0 {
 		if err := s.deleteRoom(ctx, params.RoomID); err != nil {
 			s.logger.InfoContext(ctx, "failed to delete room", "error", err)
@@ -171,5 +200,81 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		Conns:         conns,
 		Memberlist:    memberlist,
 		IsRoomDeleted: false,
+	}, nil
+}
+
+type UpdateProfileParams struct {
+	Username  string
+	Color     string
+	AvatarURL string
+	SenderID  string
+	RoomID    string
+}
+
+type UpdateProfileResponse struct {
+	Conns         []*websocket.Conn
+	UpdatedMember Member
+	Members       []Member
+}
+
+func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams) (UpdateProfileResponse, error) {
+	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
+		MemberID: params.SenderID,
+		RoomID:   params.RoomID,
+	})
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member", "error", err)
+		return UpdateProfileResponse{}, err
+	}
+
+	// todo: wrap in transaction
+	if member.Username != params.Username {
+		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomID, params.SenderID, params.Username); err != nil {
+			s.logger.InfoContext(ctx, "failed to update member username", "error", err)
+			return UpdateProfileResponse{}, err
+		}
+		member.Username = params.Username
+	}
+
+	if member.Color != params.Color {
+		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomID, params.SenderID, params.Color); err != nil {
+			s.logger.InfoContext(ctx, "failed to update member color", "error", err)
+			return UpdateProfileResponse{}, err
+		}
+		member.Color = params.Color
+	}
+
+	if member.AvatarURL != params.AvatarURL {
+		if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomID, params.SenderID, params.AvatarURL); err != nil {
+			s.logger.InfoContext(ctx, "failed to update member avatar url", "error", err)
+			return UpdateProfileResponse{}, err
+		}
+		member.AvatarURL = params.AvatarURL
+	}
+
+	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
+		return UpdateProfileResponse{}, err
+	}
+
+	members, err := s.getMemberList(ctx, params.RoomID)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
+		return UpdateProfileResponse{}, err
+	}
+
+	return UpdateProfileResponse{
+		Conns: conns,
+		UpdatedMember: Member{
+			ID:        params.SenderID,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   member.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsOnline:  member.IsOnline,
+		},
+		Members: members,
 	}, nil
 }

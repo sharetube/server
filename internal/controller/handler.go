@@ -64,7 +64,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse)
+	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
 	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {

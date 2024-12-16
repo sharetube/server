@@ -12,17 +12,21 @@ import (
 
 func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux := wsrouter.New()
-	mux.Handle("GET_ROOM", c.handleGetRoom)
+
 	// video
 	mux.Handle("ADD_VIDEO", c.handleAddVideo)
 	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
+	// mux.Handle("REORDER_PLAYLIST", c.handleRemoveVideo)
 	// member
 	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
 	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
-
 	// player
 	mux.Handle("UPDATE_PLAYER_STATE", c.handleUpdatePlayerState)
 	mux.Handle("UPDATE_PLAYER_VIDEO", c.handleUpdatePlayerVideo)
+	// profile
+	mux.Handle("UPDATE_PROFILE", c.handleUpdateProfile)
+	// mux.Handle("UPDATE_MUTED", c.handleUpdateMuted)
+	// mux.Handle("UPDATE_READY", c.handleUpdateReady)
 
 	return mux
 }
@@ -32,28 +36,8 @@ type Output struct {
 	Payload any    `json:"payload"`
 }
 
-func (c controller) handleGetRoom(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	roomID := c.getRoomIDFromCtx(ctx)
-	roomState, err := c.roomService.GetRoom(ctx, roomID)
-	if err != nil {
-		c.logger.DebugContext(ctx, "failed to get room state", "error", err)
-		if err := c.writeError(conn, err); err != nil {
-			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
-		}
-
-		return
-	}
-
-	if err := conn.WriteJSON(&Output{
-		Type:    "ROOM",
-		Payload: roomState,
-	}); err != nil {
-		c.logger.ErrorContext(ctx, "failed to write json", "error", err)
-		return
-	}
-}
-
 func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "update player state")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -91,6 +75,7 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 }
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "update player video")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -127,6 +112,7 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 }
 
 func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "add video")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -164,6 +150,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 }
 
 func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "remove member")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -204,6 +191,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 }
 
 func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "promote member")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -240,9 +228,10 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	}
 
 	if err := c.broadcast(promoteMemberResp.Conns, &Output{
-		Type: "MEMBER_PROMOTED",
+		Type: "MEMBER_UPDATED",
 		Payload: map[string]any{
-			"promoted_member_id": data.MemberID,
+			"updated_member": promoteMemberResp.PromotedMember,
+			"members":        promoteMemberResp.Members,
 		},
 	}); err != nil {
 		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
@@ -251,6 +240,7 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 }
 
 func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "remove video")
 	roomID := c.getRoomIDFromCtx(ctx)
 	memberID := c.getMemberIDFromCtx(ctx)
 
@@ -279,8 +269,50 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
 		Type: "VIDEO_REMOVED",
 		Payload: map[string]any{
-			"removed_video": data.VideoID,
-			"playlist":      addVideoResponse.Playlist,
+			"removed_video_id": data.VideoID,
+			"playlist":         addVideoResponse.Playlist,
+		},
+	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
+		return
+	}
+}
+
+func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "update profile")
+	roomID := c.getRoomIDFromCtx(ctx)
+	memberID := c.getMemberIDFromCtx(ctx)
+
+	var data struct {
+		Username  string `json:"username"`
+		Color     string `json:"color"`
+		AvatarURL string `json:"avatar_url"`
+	}
+	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		return
+	}
+
+	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &room.UpdateProfileParams{
+		Username:  data.Username,
+		Color:     data.Color,
+		AvatarURL: data.AvatarURL,
+		SenderID:  memberID,
+		RoomID:    roomID,
+	})
+	if err != nil {
+		c.logger.DebugContext(ctx, "failed to update member", "error", err)
+		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
+		}
+
+		return
+	}
+
+	if err := c.broadcast(updateProfileResp.Conns, &Output{
+		Type: "MEMBER_UPDATED",
+		Payload: map[string]any{
+			"updated_member": updateProfileResp.UpdatedMember,
+			"members":        updateProfileResp.Members,
 		},
 	}); err != nil {
 		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)

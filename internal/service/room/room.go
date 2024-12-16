@@ -36,7 +36,10 @@ func (s service) getConnsByRoomID(ctx context.Context, roomID string) ([]*websoc
 }
 
 func (s service) deleteRoom(ctx context.Context, roomID string) error {
-	s.roomRepo.RemovePlayer(ctx, roomID)
+	if err := s.roomRepo.RemovePlayer(ctx, roomID); err != nil {
+		s.logger.InfoContext(ctx, "failed to remove player", "error", err)
+	}
+
 	videoIDs, err := s.roomRepo.GetVideoIDs(ctx, roomID)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get video ids", "error", err)
@@ -171,7 +174,6 @@ func (s service) getMemberByJWT(ctx context.Context, jwt string) (string, *room.
 	return claims.MemberID, &member, nil
 }
 
-// todo: replace structs to pointers
 func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
