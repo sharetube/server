@@ -9,24 +9,24 @@ import (
 	o "github.com/skewb1k/optional"
 )
 
-func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
-	memberlistIDs, err := s.roomRepo.GetMemberIDs(ctx, roomID)
+func (s service) getMemberList(ctx context.Context, roomId string) ([]Member, error) {
+	memberlistIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
 		return []Member{}, err
 	}
 
-	memberlist := make([]Member, 0, len(memberlistIDs))
-	for _, memberID := range memberlistIDs {
+	memberlist := make([]Member, 0, len(memberlistIds))
+	for _, memberId := range memberlistIds {
 		member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
-			MemberID: memberID,
-			RoomID:   roomID,
+			MemberId: memberId,
+			RoomId:   roomId,
 		})
 		if err != nil {
 			return []Member{}, err
 		}
 
 		memberlist = append(memberlist, Member{
-			ID:        memberID,
+			Id:        memberId,
 			Username:  member.Username,
 			Color:     member.Color,
 			AvatarURL: member.AvatarURL,
@@ -40,9 +40,9 @@ func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, er
 }
 
 type RemoveMemberParams struct {
-	RemovedMemberID string
-	SenderID        string
-	RoomID          string
+	RemovedMemberId string
+	SenderId        string
+	RoomId          string
 }
 
 type RemoveMemberResponse struct {
@@ -50,19 +50,19 @@ type RemoveMemberResponse struct {
 }
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveMemberResponse{}, err
 	}
 
 	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
-		MemberID: params.RemovedMemberID,
-		RoomID:   params.RoomID,
+		MemberId: params.RemovedMemberId,
+		RoomId:   params.RoomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to remove member", "error", err)
 		return RemoveMemberResponse{}, err
 	}
 
-	conn, err := s.connRepo.GetConn(params.RemovedMemberID)
+	conn, err := s.connRepo.GetConn(params.RemovedMemberId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conn", "error", err)
 		return RemoveMemberResponse{}, err
@@ -74,9 +74,9 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 }
 
 type PromoteMemberParams struct {
-	PromotedMemberID string
-	SenderID         string
-	RoomID           string
+	PromotedMemberId string
+	SenderId         string
+	RoomId           string
 }
 
 type PromoteMemberResponse struct {
@@ -86,13 +86,13 @@ type PromoteMemberResponse struct {
 }
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return PromoteMemberResponse{}, err
 	}
 
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
-		MemberID: params.PromotedMemberID,
-		RoomID:   params.RoomID,
+		MemberId: params.PromotedMemberId,
+		RoomId:   params.RoomId,
 	})
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member", "error", err)
@@ -100,17 +100,17 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	}
 
 	if member.IsAdmin {
-		s.logger.InfoContext(ctx, "member is already admin", "member_id", params.PromotedMemberID)
+		s.logger.InfoContext(ctx, "member is already admin", "member_id", params.PromotedMemberId)
 		return PromoteMemberResponse{}, errors.New("member is already admin")
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return PromoteMemberResponse{}, err
 	}
 
-	members, err := s.getMemberList(ctx, params.RoomID)
+	members, err := s.getMemberList(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return PromoteMemberResponse{}, err
@@ -119,7 +119,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	return PromoteMemberResponse{
 		Conns: conns,
 		PromotedMember: Member{
-			ID:        params.PromotedMemberID,
+			Id:        params.PromotedMemberId,
 			Username:  member.Username,
 			Color:     member.Color,
 			AvatarURL: member.AvatarURL,
@@ -133,11 +133,11 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 
 type ConnectMemberParams struct {
 	Conn     *websocket.Conn
-	MemberID string
+	MemberId string
 }
 
 func (s service) ConnectMember(ctx context.Context, params *ConnectMemberParams) error {
-	if err := s.connRepo.Add(params.Conn, params.MemberID); err != nil {
+	if err := s.connRepo.Add(params.Conn, params.MemberId); err != nil {
 		s.logger.InfoContext(ctx, "failed to connect member", "error", err)
 		return err
 	}
@@ -146,8 +146,8 @@ func (s service) ConnectMember(ctx context.Context, params *ConnectMemberParams)
 }
 
 type DisconnectMemberParams struct {
-	MemberID string
-	RoomID   string
+	MemberId string
+	RoomId   string
 }
 
 type DisconnectMemberResponse struct {
@@ -158,13 +158,13 @@ type DisconnectMemberResponse struct {
 
 func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberParams) (DisconnectMemberResponse, error) {
 	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
-		MemberID: params.MemberID,
-		RoomID:   params.RoomID,
+		MemberId: params.MemberId,
+		RoomId:   params.RoomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to remove member", "error", err)
 	}
 
-	conn, err := s.connRepo.RemoveByMemberID(params.MemberID)
+	conn, err := s.connRepo.RemoveByMemberId(params.MemberId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to remove conn", "error", err)
 	}
@@ -173,7 +173,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		conn.Close()
 	}
 
-	memberlist, err := s.getMemberList(ctx, params.RoomID)
+	memberlist, err := s.getMemberList(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return DisconnectMemberResponse{}, err
@@ -181,7 +181,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	// delete room if no member left
 	if len(memberlist) == 0 {
-		if err := s.deleteRoom(ctx, params.RoomID); err != nil {
+		if err := s.deleteRoom(ctx, params.RoomId); err != nil {
 			s.logger.InfoContext(ctx, "failed to delete room", "error", err)
 			return DisconnectMemberResponse{}, err
 		}
@@ -191,7 +191,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		}, nil
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return DisconnectMemberResponse{}, err
@@ -208,8 +208,8 @@ type UpdateProfileParams struct {
 	Username  *string
 	Color     *string
 	AvatarURL o.Field[string]
-	SenderID  string
-	RoomID    string
+	SenderId  string
+	RoomId    string
 }
 
 type UpdateProfileResponse struct {
@@ -220,8 +220,8 @@ type UpdateProfileResponse struct {
 
 func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams) (UpdateProfileResponse, error) {
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
-		MemberID: params.SenderID,
-		RoomID:   params.RoomID,
+		MemberId: params.SenderId,
+		RoomId:   params.RoomId,
 	})
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member", "error", err)
@@ -230,7 +230,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 
 	// todo: wrap in transaction
 	if params.Username != nil && member.Username != *params.Username {
-		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomID, params.SenderID, *params.Username); err != nil {
+		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, params.SenderId, *params.Username); err != nil {
 			s.logger.InfoContext(ctx, "failed to update member username", "error", err)
 			return UpdateProfileResponse{}, err
 		}
@@ -238,7 +238,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	}
 
 	if params.Color != nil && member.Color != *params.Color {
-		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomID, params.SenderID, *params.Color); err != nil {
+		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, params.SenderId, *params.Color); err != nil {
 			s.logger.InfoContext(ctx, "failed to update member color", "error", err)
 			return UpdateProfileResponse{}, err
 		}
@@ -247,7 +247,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 
 	if params.AvatarURL.Defined {
 		if member.AvatarURL != params.AvatarURL.Value {
-			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomID, params.SenderID, params.AvatarURL.Value); err != nil {
+			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, params.SenderId, params.AvatarURL.Value); err != nil {
 				s.logger.InfoContext(ctx, "failed to update member avatar url", "error", err)
 				return UpdateProfileResponse{}, err
 			}
@@ -256,13 +256,13 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	}
 
 	// todo: fix double get ids
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return UpdateProfileResponse{}, err
 	}
 
-	members, err := s.getMemberList(ctx, params.RoomID)
+	members, err := s.getMemberList(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return UpdateProfileResponse{}, err
@@ -271,7 +271,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	return UpdateProfileResponse{
 		Conns: conns,
 		UpdatedMember: Member{
-			ID:        params.SenderID,
+			Id:        params.SenderId,
 			Username:  member.Username,
 			Color:     member.Color,
 			AvatarURL: member.AvatarURL,

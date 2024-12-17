@@ -7,12 +7,12 @@ import (
 )
 
 type Claims struct {
-	MemberID string `json:"member_id"`
+	MemberId string `json:"member_id"`
 }
 
-func (s service) generateJWT(memberID string) (string, error) {
+func (s service) generateJWT(memberId string) (string, error) {
 	claims := jwt.MapClaims{
-		"member_id": memberID,
+		"member_id": memberId,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -37,6 +37,6 @@ func (s service) parseJWT(tokenString string) (*Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 	return &Claims{
-		MemberID: claims["member_id"].(string),
+		MemberId: claims["member_id"].(string),
 	}, nil
 }

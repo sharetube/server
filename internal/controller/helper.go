@@ -83,10 +83,10 @@ func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMess
 	return nil
 }
 
-func (c controller) disconnect(ctx context.Context, roomID, memberID string) {
+func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
-		MemberID: memberID,
-		RoomID:   roomID,
+		MemberId: memberId,
+		RoomId:   roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
@@ -96,7 +96,7 @@ func (c controller) disconnect(ctx context.Context, roomID, memberID string) {
 		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
 			Type: "MEMBER_DISCONNECTED",
 			Payload: map[string]any{
-				"disconnected_member_id": memberID,
+				"disconnected_member_id": memberId,
 				"memberlist":             disconnectMemberResp.Memberlist,
 			},
 		}); err != nil {

@@ -8,34 +8,34 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (s service) getVideos(ctx context.Context, roomID string) ([]Video, error) {
-	videosIDs, err := s.roomRepo.GetVideoIDs(ctx, roomID)
+func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) {
+	videosIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
 	if err != nil {
 		return []Video{}, err
 	}
 
-	playlist := make([]Video, 0, len(videosIDs))
-	for _, videoID := range videosIDs {
+	playlist := make([]Video, 0, len(videosIds))
+	for _, videoId := range videosIds {
 		video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-			RoomID:  roomID,
-			VideoID: videoID,
+			RoomId:  roomId,
+			VideoId: videoId,
 		})
 		if err != nil {
 			return []Video{}, err
 		}
 
 		playlist = append(playlist, Video{
-			ID:        videoID,
+			Id:        videoId,
 			URL:       video.URL,
-			AddedByID: video.AddedByID,
+			AddedById: video.AddedById,
 		})
 	}
 
 	return playlist, nil
 }
 
-func (s service) getPreviousVideo(ctx context.Context, roomID string) (*Video, error) {
-	previousVideoID, err := s.roomRepo.GetPreviousVideoID(ctx, roomID)
+func (s service) getPreviousVideo(ctx context.Context, roomId string) (*Video, error) {
+	previousVideoId, err := s.roomRepo.GetPreviousVideoId(ctx, roomId)
 	if err != nil {
 		switch err {
 		case room.ErrNoPreviousVideo:
@@ -46,23 +46,23 @@ func (s service) getPreviousVideo(ctx context.Context, roomID string) (*Video, e
 	}
 
 	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		RoomID:  roomID,
-		VideoID: previousVideoID,
+		RoomId:  roomId,
+		VideoId: previousVideoId,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &Video{
-		ID:        previousVideoID,
+		Id:        previousVideoId,
 		URL:       video.URL,
-		AddedByID: video.AddedByID,
+		AddedById: video.AddedById,
 	}, nil
 }
 
 type AddVideoParams struct {
-	SenderID string
-	RoomID   string
+	SenderId string
+	RoomId   string
 	VideoURL string
 }
 
@@ -73,11 +73,11 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return AddVideoResponse{}, err
 	}
 
-	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomID)
+	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get videos length", "error", err)
 		return AddVideoResponse{}, err
@@ -88,24 +88,24 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
-	videoID := uuid.NewString()
+	videoId := uuid.NewString()
 	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		VideoID:   videoID,
-		RoomID:    params.RoomID,
+		VideoId:   videoId,
+		RoomId:    params.RoomId,
 		URL:       params.VideoURL,
-		AddedByID: params.SenderID,
+		AddedById: params.SenderId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to set video", "error", err)
 		return AddVideoResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return AddVideoResponse{}, err
 	}
 
-	playlist, err := s.getVideos(ctx, params.RoomID)
+	playlist, err := s.getVideos(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
 		return AddVideoResponse{}, err
@@ -113,9 +113,9 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	return AddVideoResponse{
 		AddedVideo: Video{
-			ID:        videoID,
+			Id:        videoId,
 			URL:       params.VideoURL,
-			AddedByID: params.SenderID,
+			AddedById: params.SenderId,
 		},
 		Conns:  conns,
 		Videos: playlist,
@@ -123,43 +123,43 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 }
 
 type RemoveVideoParams struct {
-	SenderID string
-	VideoID  string
-	RoomID   string
+	SenderId string
+	VideoId  string
+	RoomId   string
 }
 
 type RemoveVideoResponse struct {
 	Conns          []*websocket.Conn
 	Playlist       Playlist
-	RemovedVideoID string
+	RemovedVideoId string
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveVideoResponse{}, err
 	}
 
 	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
-		VideoID: params.VideoID,
-		RoomID:  params.RoomID,
+		VideoId: params.VideoId,
+		RoomId:  params.RoomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to remove video", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
-	videos, err := s.getVideos(ctx, params.RoomID)
+	videos, err := s.getVideos(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
-	previousVideo, err := s.getPreviousVideo(ctx, params.RoomID)
+	previousVideo, err := s.getPreviousVideo(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get previous video", "error", err)
 		return RemoveVideoResponse{}, err
@@ -171,6 +171,6 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 			Videos:        videos,
 			PreviousVideo: previousVideo,
 		},
-		RemovedVideoID: params.VideoID,
+		RemovedVideoId: params.VideoId,
 	}, nil
 }

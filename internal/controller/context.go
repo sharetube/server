@@ -5,24 +5,24 @@ import "context"
 type contextKey int
 
 const (
-	roomIDCtxKey contextKey = iota
-	memberIDCtxKey
+	roomIdCtxKey contextKey = iota
+	memberIdCtxKey
 )
 
-func (c controller) getRoomIDFromCtx(ctx context.Context) string {
-	roomID, ok := ctx.Value(roomIDCtxKey).(string)
+func (c controller) getRoomIdFromCtx(ctx context.Context) string {
+	roomId, ok := ctx.Value(roomIdCtxKey).(string)
 	if !ok {
 		return ""
 	}
 
-	return roomID
+	return roomId
 }
 
-func (c controller) getMemberIDFromCtx(ctx context.Context) string {
-	memberID, ok := ctx.Value(memberIDCtxKey).(string)
+func (c controller) getMemberIdFromCtx(ctx context.Context) string {
+	memberId, ok := ctx.Value(memberIdCtxKey).(string)
 	if !ok {
 		return ""
 	}
 
-	return memberID
+	return memberId
 }

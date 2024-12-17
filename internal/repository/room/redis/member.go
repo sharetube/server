@@ -8,18 +8,18 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (r repo) getMemberKey(memberID string) string {
-	return "member:" + memberID
+func (r repo) getMemberKey(memberId string) string {
+	return "member:" + memberId
 }
 
-func (r repo) getMemberListKey(roomID string) string {
-	return "room:" + roomID + ":memberlist"
+func (r repo) getMemberListKey(roomId string) string {
+	return "room:" + roomId + ":memberlist"
 }
 
-func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomID, memberID string) {
-	memberListKey := r.getMemberListKey(roomID)
+func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomId, memberId string) {
+	memberListKey := r.getMemberListKey(roomId)
 
-	r.addWithIncrement(ctx, pipe, memberListKey, memberID)
+	r.addWithIncrement(ctx, pipe, memberListKey, memberId)
 	pipe.Expire(ctx, memberListKey, 10*time.Minute)
 }
 
@@ -34,14 +34,14 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 		IsMuted:   params.IsMuted,
 		IsAdmin:   params.IsAdmin,
 		IsOnline:  params.IsOnline,
-		RoomID:    params.RoomID,
+		RoomId:    params.RoomId,
 	}
-	memberKey := r.getMemberKey(params.MemberID)
+	memberKey := r.getMemberKey(params.MemberId)
 	//? replace with hsetifnotexists
 	pipe.HSet(ctx, memberKey, member)
 	pipe.Expire(ctx, memberKey, 10*time.Minute)
 
-	r.addMemberToList(ctx, pipe, params.RoomID, params.MemberID)
+	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -55,14 +55,14 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 	pipe := r.rc.TxPipeline()
 
 	// todo: execute in transaction
-	exists := r.rc.Exists(ctx, r.getMemberKey(params.MemberID)).Val()
+	exists := r.rc.Exists(ctx, r.getMemberKey(params.MemberId)).Val()
 
 	if exists == 0 {
 		r.logger.DebugContext(ctx, "returned", "error", room.ErrMemberNotFound)
 		return room.ErrMemberNotFound
 	}
 
-	r.addMemberToList(ctx, pipe, params.RoomID, params.MemberID)
+	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -72,8 +72,8 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 	return nil
 }
 
-func (r repo) removeMember(ctx context.Context, memberID string) error {
-	res, err := r.rc.Del(ctx, r.getMemberKey(memberID)).Result()
+func (r repo) removeMember(ctx context.Context, memberId string) error {
+	res, err := r.rc.Del(ctx, r.getMemberKey(memberId)).Result()
 	if err != nil {
 		return err
 	}
@@ -85,13 +85,13 @@ func (r repo) removeMember(ctx context.Context, memberID string) error {
 	return nil
 }
 
-func (r repo) removeMemberFromList(ctx context.Context, roomID, memberID string) error {
-	return r.rc.ZRem(ctx, r.getMemberListKey(roomID), memberID).Err()
+func (r repo) removeMemberFromList(ctx context.Context, roomId, memberId string) error {
+	return r.rc.ZRem(ctx, r.getMemberListKey(roomId), memberId).Err()
 }
 
 func (r repo) RemoveMemberFromList(ctx context.Context, params *room.RemoveMemberFromListParams) error {
 	r.logger.DebugContext(ctx, "called", "params", params)
-	if err := r.removeMemberFromList(ctx, params.RoomID, params.MemberID); err != nil {
+	if err := r.removeMemberFromList(ctx, params.RoomId, params.MemberId); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
@@ -101,12 +101,12 @@ func (r repo) RemoveMemberFromList(ctx context.Context, params *room.RemoveMembe
 
 func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams) error {
 	r.logger.DebugContext(ctx, "called", "params", params)
-	if err := r.removeMemberFromList(ctx, params.RoomID, params.MemberID); err != nil {
+	if err := r.removeMemberFromList(ctx, params.RoomId, params.MemberId); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
-	if err := r.removeMember(ctx, params.MemberID); err != nil {
+	if err := r.removeMember(ctx, params.MemberId); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
@@ -114,12 +114,12 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 	return nil
 }
 
-func (r repo) GetMemberIsAdmin(ctx context.Context, roomID, memberID string) (bool, error) {
+func (r repo) GetMemberIsAdmin(ctx context.Context, roomId, memberId string) (bool, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
+		"room_id":   roomId,
+		"member_id": memberId,
 	})
-	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(memberID), "is_admin").Bool()
+	isAdmin, err := r.rc.HGet(ctx, r.getMemberKey(memberId), "is_admin").Bool()
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return false, err
@@ -128,23 +128,23 @@ func (r repo) GetMemberIsAdmin(ctx context.Context, roomID, memberID string) (bo
 	return isAdmin, nil
 }
 
-func (r repo) GetMemberIDs(ctx context.Context, roomID string) ([]string, error) {
+func (r repo) GetMemberIds(ctx context.Context, roomId string) ([]string, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID": roomID,
+		"room_id": roomId,
 	})
-	memberIDs, err := r.rc.ZRange(ctx, r.getMemberListKey(roomID), 0, -1).Result()
+	memberIds, err := r.rc.ZRange(ctx, r.getMemberListKey(roomId), 0, -1).Result()
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
 
-	return memberIDs, nil
+	return memberIds, nil
 }
 
 func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room.Member, error) {
 	r.logger.DebugContext(ctx, "called", "params", params)
 	var member room.Member
-	err := r.rc.HGetAll(ctx, r.getMemberKey(params.MemberID)).Scan(&member)
+	err := r.rc.HGetAll(ctx, r.getMemberKey(params.MemberId)).Scan(&member)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return room.Member{}, err
@@ -158,14 +158,14 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 	return member, nil
 }
 
-func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, isAdmin bool) error {
+func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, isAdmin bool) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-		"isAdmin":  isAdmin,
+		"room_id":   roomId,
+		"member_id": memberId,
+		"is_admin":  isAdmin,
 	})
 	//? Maybe dont check existence because there is check on service layer that member in current room
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -185,13 +185,13 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomID, memberID string, 
 	return nil
 }
 
-func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string, isOnline bool) error {
+func (r repo) UpdateMemberIsOnline(ctx context.Context, roomId, memberId string, isOnline bool) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-		"isOnline": isOnline,
+		"room_id":   roomId,
+		"member_id": memberId,
+		"is_online": isOnline,
 	})
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -211,13 +211,13 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, roomID, memberID string,
 	return nil
 }
 
-func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, isMuted bool) error {
+func (r repo) UpdateMemberIsMuted(ctx context.Context, roomId, memberId string, isMuted bool) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-		"isMuted":  isMuted,
+		"room_id":   roomId,
+		"member_id": memberId,
+		"is_muted":  isMuted,
 	})
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -237,13 +237,13 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, roomID, memberID string, 
 	return nil
 }
 
-func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color string) error {
+func (r repo) UpdateMemberColor(ctx context.Context, roomId, memberId, color string) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-		"color":    color,
+		"room_id":   roomId,
+		"member_id": memberId,
+		"color":     color,
 	})
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -263,13 +263,13 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color str
 	return nil
 }
 
-func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID string, avatarURL *string) error {
+func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomId, memberId string, avatarURL *string) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":    roomID,
-		"memberID":  memberID,
-		"avatarURL": avatarURL,
+		"room_id":    roomId,
+		"member_id":  memberId,
+		"avatar_url": avatarURL,
 	})
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -296,13 +296,13 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID string
 	return nil
 }
 
-func (r repo) UpdateMemberUsername(ctx context.Context, roomID, memberID, username string) error {
+func (r repo) UpdateMemberUsername(ctx context.Context, roomId, memberId, username string) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
-		"roomID":   roomID,
-		"memberID": memberID,
-		"username": username,
+		"room_id":   roomId,
+		"member_id": memberId,
+		"username":  username,
 	})
-	key := r.getMemberKey(memberID)
+	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)

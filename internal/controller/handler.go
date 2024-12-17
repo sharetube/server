@@ -31,7 +31,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.DebugContext(r.Context(), "failed to create room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), createRoomResponse.RoomID, createRoomResponse.MemberID)
+	defer c.disconnect(r.Context(), createRoomResponse.RoomId, createRoomResponse.MemberId)
 
 	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -41,13 +41,13 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
 		Conn:     conn,
-		MemberID: createRoomResponse.MemberID,
+		MemberId: createRoomResponse.MemberId,
 	}); err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
 
-	roomState, err := c.roomService.GetRoom(r.Context(), createRoomResponse.RoomID)
+	roomState, err := c.roomService.GetRoom(r.Context(), createRoomResponse.RoomId)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to get room state", "error", err)
 		return
@@ -64,8 +64,8 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), roomIDCtxKey, createRoomResponse.RoomID)
-	ctx = context.WithValue(ctx, memberIDCtxKey, createRoomResponse.MemberID)
+	ctx := context.WithValue(r.Context(), roomIdCtxKey, createRoomResponse.RoomId)
+	ctx = context.WithValue(ctx, memberIdCtxKey, createRoomResponse.MemberId)
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
@@ -74,8 +74,8 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
-	roomID := chi.URLParam(r, "room-id")
-	if roomID == "" {
+	roomId := chi.URLParam(r, "room-id")
+	if roomId == "" {
 		c.logger.DebugContext(r.Context(), "empty room id")
 		return
 	}
@@ -93,13 +93,13 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		Username:  user.username,
 		Color:     user.color,
 		AvatarURL: user.avatarURL,
-		RoomID:    roomID,
+		RoomId:    roomId,
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to join room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), roomID, joinRoomResponse.JoinedMember.ID)
+	defer c.disconnect(r.Context(), roomId, joinRoomResponse.JoinedMember.Id)
 
 	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -110,13 +110,13 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
 		Conn:     conn,
-		MemberID: joinRoomResponse.JoinedMember.ID,
+		MemberId: joinRoomResponse.JoinedMember.Id,
 	}); err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
 
-	roomState, err := c.roomService.GetRoom(r.Context(), roomID)
+	roomState, err := c.roomService.GetRoom(r.Context(), roomId)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to get room state", "error", err)
 		return
@@ -145,8 +145,8 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), roomIDCtxKey, roomID)
-	ctx = context.WithValue(ctx, memberIDCtxKey, joinRoomResponse.JoinedMember.ID)
+	ctx := context.WithValue(r.Context(), roomIdCtxKey, roomId)
+	ctx = context.WithValue(ctx, memberIdCtxKey, joinRoomResponse.JoinedMember.Id)
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
