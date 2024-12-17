@@ -39,8 +39,8 @@ type Output struct {
 
 func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "update player state")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
 		IsPlaying    bool    `json:"is_playing"`
@@ -57,8 +57,8 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 		CurrentTime:  data.CurrentTime,
 		PlaybackRate: data.PlaybackRate,
 		UpdatedAt:    data.UpdatedAt,
-		SenderID:     memberID,
-		RoomID:       roomID,
+		SenderId:     memberId,
+		RoomId:       roomId,
 	})
 	if err != nil {
 		if err := c.writeError(conn, err); err != nil {
@@ -77,11 +77,11 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "update player video")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
-		VideoID   string `json:"video_id"`
+		VideoId   string `json:"video_id"`
 		UpdatedAt int    `json:"updated_at"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
@@ -89,10 +89,10 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 	}
 
 	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &room.UpdatePlayerVideoParams{
-		VideoID:   data.VideoID,
+		VideoId:   data.VideoId,
 		UpdatedAt: data.UpdatedAt,
-		SenderID:  memberID,
-		RoomID:    roomID,
+		SenderId:  memberId,
+		RoomId:    roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
@@ -114,8 +114,8 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 
 func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "add video")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
 		VideoURL string `json:"video_url"`
@@ -125,8 +125,8 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 	}
 
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
-		SenderID: memberID,
-		RoomID:   roomID,
+		SenderId: memberId,
+		RoomId:   roomId,
 		VideoURL: data.VideoURL,
 	})
 	if err != nil {
@@ -152,18 +152,18 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 
 func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "remove member")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
-		MemberID uuid.UUID `json:"member_id"`
+		MemberId uuid.UUID `json:"member_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
 		c.logger.DebugContext(ctx, "failed to join room", "error", err)
 		return
 	}
 
-	if data.MemberID == uuid.Nil {
+	if data.MemberId == uuid.Nil {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
 		if err := c.writeError(conn, err); err != nil {
@@ -174,9 +174,9 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 	}
 
 	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
-		RemovedMemberID: data.MemberID.String(),
-		SenderID:        memberID,
-		RoomID:          roomID,
+		RemovedMemberId: data.MemberId.String(),
+		SenderId:        memberId,
+		RoomId:          roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to remove member", "error", err)
@@ -193,18 +193,18 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 
 func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "promote member")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
-		MemberID uuid.UUID `json:"member_id"`
+		MemberId uuid.UUID `json:"member_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
 		c.logger.DebugContext(ctx, "failed to unmarshal json", "error", err)
 		return
 	}
 
-	if data.MemberID == uuid.Nil {
+	if data.MemberId == uuid.Nil {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
 		if err := c.writeError(conn, err); err != nil {
@@ -215,9 +215,9 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	}
 
 	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &room.PromoteMemberParams{
-		PromotedMemberID: data.MemberID.String(),
-		SenderID:         memberID,
-		RoomID:           roomID,
+		PromotedMemberId: data.MemberId.String(),
+		SenderId:         memberId,
+		RoomId:           roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to promote member", "error", err)
@@ -242,11 +242,11 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 
 func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "remove video")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
-		VideoID string `json:"video_id"`
+		VideoId string `json:"video_id"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
 		c.logger.DebugContext(ctx, "failed to unmarshal json", "error", err)
@@ -254,9 +254,9 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 	}
 
 	addVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
-		VideoID:  data.VideoID,
-		SenderID: memberID,
-		RoomID:   roomID,
+		VideoId:  data.VideoId,
+		SenderId: memberId,
+		RoomId:   roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to remove video", "error", err)
@@ -270,7 +270,7 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
 		Type: "VIDEO_REMOVED",
 		Payload: map[string]any{
-			"removed_video_id": data.VideoID,
+			"removed_video_id": data.VideoId,
 			"playlist":         addVideoResponse.Playlist,
 		},
 	}); err != nil {
@@ -281,8 +281,8 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 
 func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	c.logger.InfoContext(ctx, "update profile")
-	roomID := c.getRoomIDFromCtx(ctx)
-	memberID := c.getMemberIDFromCtx(ctx)
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
 	var data struct {
 		Username  *string         `json:"username"`
@@ -308,8 +308,8 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 		Username:  data.Username,
 		Color:     data.Color,
 		AvatarURL: data.AvatarURL,
-		SenderID:  memberID,
-		RoomID:    roomID,
+		SenderId:  memberId,
+		RoomId:    roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update member", "error", err)

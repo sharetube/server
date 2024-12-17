@@ -24,21 +24,21 @@ type iRoomRepo interface {
 	RemoveMember(context.Context, *room.RemoveMemberParams) error
 	RemoveMemberFromList(context.Context, *room.RemoveMemberFromListParams) error
 	GetMember(context.Context, *room.GetMemberParams) (room.Member, error)
-	GetMemberIDs(context.Context, string) ([]string, error)
-	GetMemberIsAdmin(ctx context.Context, roomID string, memberID string) (bool, error)
-	UpdateMemberIsAdmin(ctx context.Context, roomID string, memberID string, isAdmin bool) error
-	UpdateMemberIsMuted(ctx context.Context, roomID string, memberID string, isMuted bool) error
-	UpdateMemberIsOnline(ctx context.Context, roomID string, memberID string, isOnline bool) error
-	UpdateMemberUsername(ctx context.Context, roomID string, memberID string, username string) error
-	UpdateMemberColor(ctx context.Context, roomID string, memberID string, color string) error
-	UpdateMemberAvatarURL(ctx context.Context, roomID string, memberID string, avatarURL *string) error
+	GetMemberIds(context.Context, string) ([]string, error)
+	GetMemberIsAdmin(ctx context.Context, roomId string, memberId string) (bool, error)
+	UpdateMemberIsAdmin(ctx context.Context, roomId string, memberId string, isAdmin bool) error
+	UpdateMemberIsMuted(ctx context.Context, roomId string, memberId string, isMuted bool) error
+	UpdateMemberIsOnline(ctx context.Context, roomId string, memberId string, isOnline bool) error
+	UpdateMemberUsername(ctx context.Context, roomId string, memberId string, username string) error
+	UpdateMemberColor(ctx context.Context, roomId string, memberId string, color string) error
+	UpdateMemberAvatarURL(ctx context.Context, roomId string, memberId string, avatarURL *string) error
 	// video
 	SetVideo(context.Context, *room.SetVideoParams) error
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
-	GetVideoIDs(context.Context, string) ([]string, error)
+	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
-	GetPreviousVideoID(context.Context, string) (string, error)
+	GetPreviousVideoId(context.Context, string) (string, error)
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
@@ -50,10 +50,10 @@ type iRoomRepo interface {
 
 type iConnRepo interface {
 	Add(*websocket.Conn, string) error
-	RemoveByMemberID(string) (*websocket.Conn, error)
+	RemoveByMemberId(string) (*websocket.Conn, error)
 	RemoveByConn(*websocket.Conn) (string, error)
 	GetConn(string) (*websocket.Conn, error)
-	GetMemberID(*websocket.Conn) (string, error)
+	GetMemberId(*websocket.Conn) (string, error)
 }
 
 type iGenerator interface {

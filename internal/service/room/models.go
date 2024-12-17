@@ -1,13 +1,13 @@
 package room
 
 type Video struct {
-	ID        string `json:"id"`
+	Id        string `json:"id"`
 	URL       string `json:"url"`
-	AddedByID string `json:"added_by_id"`
+	AddedById string `json:"added_by_id"`
 }
 
 type Member struct {
-	ID        string  `json:"id"`
+	Id        string  `json:"id"`
 	Username  string  `json:"username"`
 	Color     string  `json:"color"`
 	AvatarURL *string `json:"avatar_url"`
@@ -37,7 +37,7 @@ type PlayerState struct {
 }
 
 type Room struct {
-	RoomID     string   `json:"room_id"`
+	RoomId     string   `json:"room_id"`
 	Player     Player   `json:"player"`
 	MemberList []Member `json:"member_list"`
 	Playlist   Playlist `json:"playlist"`

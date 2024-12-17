@@ -7,36 +7,36 @@ type Member struct {
 	IsMuted   bool    `redis:"is_muted"`
 	IsAdmin   bool    `redis:"is_admin"`
 	IsOnline  bool    `redis:"is_online"`
-	RoomID    string  `redis:"room_id"`
+	RoomId    string  `redis:"room_id"`
 }
 
 type AddMemberToListParams struct {
-	MemberID string
-	RoomID   string
+	MemberId string
+	RoomId   string
 }
 
 type GetMemberParams struct {
-	MemberID string
-	RoomID   string
+	MemberId string
+	RoomId   string
 }
 
 type SetMemberParams struct {
-	MemberID  string
+	MemberId  string
 	Username  string
 	Color     string
 	AvatarURL *string
 	IsMuted   bool
 	IsAdmin   bool
 	IsOnline  bool
-	RoomID    string
+	RoomId    string
 }
 
 type RemoveMemberParams struct {
-	MemberID string
-	RoomID   string
+	MemberId string
+	RoomId   string
 }
 
 type RemoveMemberFromListParams struct {
-	MemberID string
-	RoomID   string
+	MemberId string
+	RoomId   string
 }

@@ -2,24 +2,24 @@ package room
 
 type Video struct {
 	URL       string `redis:"url"`
-	AddedByID string `redis:"added_by"`
-	RoomID    string `redis:"room_id"`
+	AddedById string `redis:"added_by"`
+	RoomId    string `redis:"room_id"`
 }
 
 type RemoveVideoParams struct {
-	VideoID string
-	RoomID  string
+	VideoId string
+	RoomId  string
 }
 
 type SetVideoParams struct {
-	VideoID   string
-	RoomID    string
+	VideoId   string
+	RoomId    string
 	URL       string
-	AddedByID string
+	AddedById string
 	Version   int
 }
 
 type GetVideoParams struct {
-	VideoID string
-	RoomID  string
+	VideoId string
+	RoomId  string
 }

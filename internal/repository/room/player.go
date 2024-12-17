@@ -14,7 +14,7 @@ type SetPlayerParams struct {
 	CurrentTime     int
 	PlaybackRate    float64
 	UpdatedAt       int
-	RoomID          string
+	RoomId          string
 }
 
 type UpdatePlayerParams struct {
@@ -23,7 +23,7 @@ type UpdatePlayerParams struct {
 	CurrentTime  int
 	PlaybackRate float64
 	UpdatedAt    int
-	RoomID       string
+	RoomId       string
 }
 
 type UpdatePlayerStateParams struct {
@@ -31,5 +31,5 @@ type UpdatePlayerStateParams struct {
 	CurrentTime  int
 	PlaybackRate float64
 	UpdatedAt    int
-	RoomID       string
+	RoomId       string
 }

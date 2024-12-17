@@ -12,8 +12,8 @@ type UpdatePlayerStateParams struct {
 	CurrentTime  int
 	PlaybackRate float64
 	UpdatedAt    int
-	SenderID     string
-	RoomID       string
+	SenderId     string
+	RoomId       string
 }
 
 type UpdatePlayerStateResponse struct {
@@ -22,7 +22,7 @@ type UpdatePlayerStateResponse struct {
 }
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return UpdatePlayerStateResponse{}, err
 	}
 
@@ -31,13 +31,13 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		CurrentTime:  params.CurrentTime,
 		PlaybackRate: params.PlaybackRate,
 		UpdatedAt:    params.UpdatedAt,
-		RoomID:       params.RoomID,
+		RoomId:       params.RoomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to update player state", "error", err)
 		return UpdatePlayerStateResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return UpdatePlayerStateResponse{}, err
@@ -55,10 +55,10 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoID   string
+	VideoId   string
 	UpdatedAt int
-	SenderID  string
-	RoomID    string
+	SenderId  string
+	RoomId    string
 }
 
 type UpdatePlayerVideoResponse struct {
@@ -67,32 +67,32 @@ type UpdatePlayerVideoResponse struct {
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
-	if err := s.checkIfMemberAdmin(ctx, params.RoomID, params.SenderID); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
 
 	if _, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		VideoID: params.VideoID,
-		RoomID:  params.RoomID,
+		VideoId: params.VideoId,
+		RoomId:  params.RoomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to get video", "error", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 
 	updatePlayerParams := room.UpdatePlayerParams{
-		VideoURL:     params.VideoID,
+		VideoURL:     params.VideoId,
 		IsPlaying:    s.getDefaultPlayerIsPlaying(),
 		CurrentTime:  s.getDefaultPlayerCurrentTime(),
 		PlaybackRate: s.getDefaultPlayerPlaybackRate(),
 		UpdatedAt:    params.UpdatedAt,
-		RoomID:       params.RoomID,
+		RoomId:       params.RoomId,
 	}
 	if err := s.roomRepo.UpdatePlayer(ctx, &updatePlayerParams); err != nil {
 		s.logger.InfoContext(ctx, "failed to update player", "error", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
 		return UpdatePlayerVideoResponse{}, err
@@ -103,7 +103,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			IsPlaying:    updatePlayerParams.IsPlaying,
 			CurrentTime:  updatePlayerParams.CurrentTime,
 			PlaybackRate: updatePlayerParams.PlaybackRate,
-			VideoURL:     params.VideoID,
+			VideoURL:     params.VideoId,
 			UpdatedAt:    params.UpdatedAt,
 		},
 		Conns: conns,

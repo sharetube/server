@@ -23,16 +23,16 @@ func NewRepo(logger *slog.Logger) *repo {
 	}
 }
 
-func (r *repo) Add(conn *websocket.Conn, memberID string) error {
+func (r *repo) Add(conn *websocket.Conn, memberId string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.connList[conn] != "" || r.idList[memberID] != nil {
+	if r.connList[conn] != "" || r.idList[memberId] != nil {
 		return connection.ErrAlreadyExists
 	}
 
-	r.connList[conn] = memberID
-	r.idList[memberID] = conn
+	r.connList[conn] = memberId
+	r.idList[memberId] = conn
 
 	return nil
 }
@@ -41,49 +41,49 @@ func (r *repo) RemoveByConn(conn *websocket.Conn) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	memberID, ok := r.connList[conn]
+	memberId, ok := r.connList[conn]
 	if !ok {
 		return "", connection.ErrNotFound
 	}
 
 	delete(r.connList, conn)
-	delete(r.idList, memberID)
+	delete(r.idList, memberId)
 
-	return memberID, nil
+	return memberId, nil
 }
 
-func (r *repo) RemoveByMemberID(memberID string) (*websocket.Conn, error) {
+func (r *repo) RemoveByMemberId(memberId string) (*websocket.Conn, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	conn, ok := r.idList[memberID]
+	conn, ok := r.idList[memberId]
 	if !ok {
 		return nil, connection.ErrNotFound
 	}
 
 	delete(r.connList, conn)
-	delete(r.idList, memberID)
+	delete(r.idList, memberId)
 
 	return conn, nil
 }
 
-func (r *repo) GetMemberID(conn *websocket.Conn) (string, error) {
+func (r *repo) GetMemberId(conn *websocket.Conn) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	memberID, ok := r.connList[conn]
+	memberId, ok := r.connList[conn]
 	if !ok {
 		return "", connection.ErrNotFound
 	}
 
-	return memberID, nil
+	return memberId, nil
 }
 
-func (r *repo) GetConn(memberID string) (*websocket.Conn, error) {
+func (r *repo) GetConn(memberId string) (*websocket.Conn, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	conn, ok := r.idList[memberID]
+	conn, ok := r.idList[memberId]
 	if !ok {
 		return nil, connection.ErrNotFound
 	}

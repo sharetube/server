@@ -7,25 +7,25 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (r repo) getVideoKey(roomID, videoID string) string {
-	return "room:" + roomID + ":video:" + videoID
+func (r repo) getVideoKey(roomId, videoId string) string {
+	return "room:" + roomId + ":video:" + videoId
 }
 
-func (r repo) getPlaylistKey(roomID string) string {
-	return "room:" + roomID + ":playlist"
+func (r repo) getPlaylistKey(roomId string) string {
+	return "room:" + roomId + ":playlist"
 }
 
-func (r repo) getPreviousVideoKey(roomID string) string {
-	return "room:" + roomID + ":previous-video"
+func (r repo) getPreviousVideoKey(roomId string) string {
+	return "room:" + roomId + ":previous-video"
 }
 
-func (r repo) getPlaylistVersionKey(roomID string) string {
-	return "room:" + roomID + ":playlist-version"
+func (r repo) getPlaylistVersionKey(roomId string) string {
+	return "room:" + roomId + ":playlist-version"
 }
 
-func (r repo) GetVideosLength(ctx context.Context, roomID string) (int, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
-	playlistKey := r.getPlaylistKey(roomID)
+func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
+	playlistKey := r.getPlaylistKey(roomId)
 	cmd := r.rc.ZCard(ctx, playlistKey)
 	if err := cmd.Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -50,15 +50,15 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 
 	video := room.Video{
 		URL:       params.URL,
-		AddedByID: params.AddedByID,
-		RoomID:    params.RoomID,
+		AddedById: params.AddedById,
+		RoomId:    params.RoomId,
 	}
-	videoKey := r.getVideoKey(params.RoomID, params.VideoID)
+	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
 	r.hSetIfNotExists(ctx, pipe, videoKey, video)
 	pipe.Expire(ctx, videoKey, 10*time.Minute)
 
-	playlistKey := r.getPlaylistKey(params.RoomID)
-	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoID)
+	playlistKey := r.getPlaylistKey(params.RoomId)
+	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoId)
 	pipe.Expire(ctx, playlistKey, 10*time.Minute)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
@@ -71,7 +71,7 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 
 func (r repo) getVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
 	video := room.Video{}
-	if err := r.rc.HGetAll(ctx, r.getVideoKey(params.RoomID, params.VideoID)).Scan(&video); err != nil {
+	if err := r.rc.HGetAll(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Scan(&video); err != nil {
 		return room.Video{}, err
 	}
 
@@ -93,24 +93,24 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 	return video, nil
 }
 
-func (r repo) getVideoIDs(ctx context.Context, roomID string) ([]string, error) {
-	return r.rc.ZRange(ctx, r.getPlaylistKey(roomID), 0, -1).Result()
+func (r repo) getVideoIds(ctx context.Context, roomId string) ([]string, error) {
+	return r.rc.ZRange(ctx, r.getPlaylistKey(roomId), 0, -1).Result()
 }
 
-func (r repo) GetVideoIDs(ctx context.Context, roomID string) ([]string, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
-	videoIDs, err := r.getVideoIDs(ctx, roomID)
+func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
+	videoIds, err := r.getVideoIds(ctx, roomId)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
 
-	return videoIDs, nil
+	return videoIds, nil
 }
 
 func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) error {
 	r.logger.DebugContext(ctx, "called", "params", params)
-	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomID), params.VideoID).Result()
+	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomId), params.VideoId).Result()
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
@@ -121,13 +121,13 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 		return room.ErrVideoNotFound
 	}
 
-	previousVideoID, err := r.getPreviousVideoID(ctx, params.RoomID)
+	previousVideoId, err := r.getPreviousVideoId(ctx, params.RoomId)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
-	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomID, previousVideoID)).Err(); err != nil {
+	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, previousVideoId)).Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
@@ -135,22 +135,22 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 	return nil
 }
 
-func (r repo) getPreviousVideoID(ctx context.Context, roomID string) (string, error) {
-	return r.rc.Get(ctx, r.getPreviousVideoKey(roomID)).Result()
+func (r repo) getPreviousVideoId(ctx context.Context, roomId string) (string, error) {
+	return r.rc.Get(ctx, r.getPreviousVideoKey(roomId)).Result()
 }
 
-func (r repo) GetPreviousVideoID(ctx context.Context, roomID string) (string, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"roomID": roomID})
-	previousVideoID, err := r.getPreviousVideoID(ctx, roomID)
+func (r repo) GetPreviousVideoId(ctx context.Context, roomId string) (string, error) {
+	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
+	previousVideoId, err := r.getPreviousVideoId(ctx, roomId)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return "", err
 	}
 
-	if previousVideoID == "" {
+	if previousVideoId == "" {
 		r.logger.DebugContext(ctx, "returned", "error", room.ErrNoPreviousVideo)
 		return "", room.ErrNoPreviousVideo
 	}
 
-	return previousVideoID, nil
+	return previousVideoId, nil
 }
