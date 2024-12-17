@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
+	o "github.com/skewb1k/optional"
 )
 
 func (s service) getMemberList(ctx context.Context, roomID string) ([]Member, error) {
@@ -204,9 +205,9 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 }
 
 type UpdateProfileParams struct {
-	Username  string
-	Color     string
-	AvatarURL string
+	Username  *string
+	Color     *string
+	AvatarURL o.Field[string]
 	SenderID  string
 	RoomID    string
 }
@@ -228,30 +229,33 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	}
 
 	// todo: wrap in transaction
-	if member.Username != params.Username {
-		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomID, params.SenderID, params.Username); err != nil {
+	if params.Username != nil && member.Username != *params.Username {
+		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomID, params.SenderID, *params.Username); err != nil {
 			s.logger.InfoContext(ctx, "failed to update member username", "error", err)
 			return UpdateProfileResponse{}, err
 		}
-		member.Username = params.Username
+		member.Username = *params.Username
 	}
 
-	if member.Color != params.Color {
-		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomID, params.SenderID, params.Color); err != nil {
+	if params.Color != nil && member.Color != *params.Color {
+		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomID, params.SenderID, *params.Color); err != nil {
 			s.logger.InfoContext(ctx, "failed to update member color", "error", err)
 			return UpdateProfileResponse{}, err
 		}
-		member.Color = params.Color
+		member.Color = *params.Color
 	}
 
-	if member.AvatarURL != params.AvatarURL {
-		if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomID, params.SenderID, params.AvatarURL); err != nil {
-			s.logger.InfoContext(ctx, "failed to update member avatar url", "error", err)
-			return UpdateProfileResponse{}, err
+	if params.AvatarURL.Defined {
+		if member.AvatarURL != params.AvatarURL.Value {
+			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomID, params.SenderID, params.AvatarURL.Value); err != nil {
+				s.logger.InfoContext(ctx, "failed to update member avatar url", "error", err)
+				return UpdateProfileResponse{}, err
+			}
+			member.AvatarURL = params.AvatarURL.Value
 		}
-		member.AvatarURL = params.AvatarURL
 	}
 
+	// todo: fix double get ids
 	conns, err := s.getConnsByRoomID(ctx, params.RoomID)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)

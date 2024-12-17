@@ -62,7 +62,7 @@ func (s service) deleteRoom(ctx context.Context, roomID string) error {
 type CreateRoomParams struct {
 	Username        string
 	Color           string
-	AvatarURL       string
+	AvatarURL       *string
 	InitialVideoURL string
 }
 
@@ -74,24 +74,6 @@ type CreateRoomResponse struct {
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*CreateRoomResponse, error) {
 	roomID := s.generator.GenerateRandomString(8)
-
-	// todo: check if member already exists in room and update if exists instead of creating new one
-	// member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
-	// 	MemberID: params.MemberID,
-	// 	RoomID:   roomID,
-	// })
-	// if err != nil {
-	// 	if errors.Is(err, room.ErrMemberNotFound) {
-
-	// 	}
-	// 	s.logger.InfoContext(ctx, "failed to get member", "error", err)
-	// 	return CreateRoomResponse{}, err
-	// } else {
-	// 	if err := s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
-	// 		MemberID: params.MemberID,
-	// 		RoomID:   roomID,
-	// 	});
-	// }
 
 	memberID := uuid.NewString()
 	if err := s.roomRepo.SetMember(ctx, &room.SetMemberParams{
@@ -132,21 +114,6 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}, nil
 }
 
-type JoinRoomParams struct {
-	JWT       string
-	Username  string
-	Color     string
-	AvatarURL string
-	RoomID    string
-}
-
-type JoinRoomResponse struct {
-	JWT          string
-	JoinedMember Member
-	MemberList   []Member
-	Conns        []*websocket.Conn
-}
-
 func (s service) getMemberByJWT(ctx context.Context, jwt string) (string, *room.Member, error) {
 	if jwt == "" {
 		return "", nil, nil
@@ -172,6 +139,21 @@ func (s service) getMemberByJWT(ctx context.Context, jwt string) (string, *room.
 	}
 
 	return claims.MemberID, &member, nil
+}
+
+type JoinRoomParams struct {
+	JWT       string
+	Username  string
+	Color     string
+	AvatarURL *string
+	RoomID    string
+}
+
+type JoinRoomResponse struct {
+	JWT          string
+	JoinedMember Member
+	MemberList   []Member
+	Conns        []*websocket.Conn
 }
 
 func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {

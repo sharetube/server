@@ -7,13 +7,13 @@ type Video struct {
 }
 
 type Member struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	Color     string `json:"color"`
-	AvatarURL string `json:"avatar_url"`
-	IsMuted   bool   `json:"is_muted"`
-	IsAdmin   bool   `json:"is_admin"`
-	IsOnline  bool   `json:"is_online"`
+	ID        string  `json:"id"`
+	Username  string  `json:"username"`
+	Color     string  `json:"color"`
+	AvatarURL *string `json:"avatar_url"`
+	IsMuted   bool    `json:"is_muted"`
+	IsAdmin   bool    `json:"is_admin"`
+	IsOnline  bool    `json:"is_online"`
 }
 
 type Playlist struct {

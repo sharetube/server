@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/wsrouter"
+	o "github.com/skewb1k/optional"
 )
 
 func (c controller) getWSRouter() *wsrouter.WSRouter {
@@ -284,13 +285,24 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 	memberID := c.getMemberIDFromCtx(ctx)
 
 	var data struct {
-		Username  string `json:"username"`
-		Color     string `json:"color"`
-		AvatarURL string `json:"avatar_url"`
+		Username  *string         `json:"username"`
+		Color     *string         `json:"color"`
+		AvatarURL o.Field[string] `json:"avatar_url"`
 	}
 	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
 		return
 	}
+
+	if data.Username == nil && data.Color == nil && !data.AvatarURL.Defined {
+		err := ErrValidationError
+		c.logger.DebugContext(ctx, "validation error", "error", err)
+		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
+		}
+
+		return
+	}
+	// todo: add validation
 
 	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &room.UpdateProfileParams{
 		Username:  data.Username,
