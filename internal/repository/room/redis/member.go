@@ -263,7 +263,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomID, memberID, color str
 	return nil
 }
 
-func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID, avatarURL string) error {
+func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID string, avatarURL *string) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
 		"roomID":    roomID,
 		"memberID":  memberID,
@@ -281,9 +281,16 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomID, memberID, avata
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err(); err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
-		return err
+	if avatarURL == nil {
+		if err := r.rc.HDel(ctx, key, "avatar_url").Err(); err != nil {
+			r.logger.DebugContext(ctx, "returned", "error", err)
+			return err
+		}
+	} else {
+		if err := r.rc.HSet(ctx, key, "avatar_url", avatarURL).Err(); err != nil {
+			r.logger.DebugContext(ctx, "returned", "error", err)
+			return err
+		}
 	}
 
 	return nil

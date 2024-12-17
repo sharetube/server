@@ -11,6 +11,15 @@ import (
 	"github.com/sharetube/server/internal/service/room"
 )
 
+func (c controller) getOptQueryParam(r *http.Request, key string) *string {
+	value := r.URL.Query().Get(key)
+	if value == "" {
+		return nil
+	}
+
+	return &value
+}
+
 func (c controller) getQueryParam(r *http.Request, key string) (string, error) {
 	value := r.URL.Query().Get(key)
 	if value == "" {
@@ -23,7 +32,7 @@ func (c controller) getQueryParam(r *http.Request, key string) (string, error) {
 type user struct {
 	username  string
 	color     string
-	avatarURL string
+	avatarURL *string
 }
 
 func (c controller) getUser(r *http.Request) (user, error) {
@@ -37,10 +46,7 @@ func (c controller) getUser(r *http.Request) (user, error) {
 		return user{}, err
 	}
 
-	avatarURL, err := c.getQueryParam(r, "avatar-url")
-	if err != nil {
-		return user{}, err
-	}
+	avatarURL := c.getOptQueryParam(r, "avatar-url")
 
 	return user{
 		username:  username,

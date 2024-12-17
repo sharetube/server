@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.7.0
+	github.com/skewb1k/optional v0.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 )

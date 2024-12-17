@@ -1,5 +1,9 @@
 FROM golang:1.23.4-alpine3.20 AS build
 
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache git
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
