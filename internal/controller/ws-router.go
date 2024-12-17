@@ -18,12 +18,15 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux.Handle("ADD_VIDEO", c.handleAddVideo)
 	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
 	// mux.Handle("REORDER_PLAYLIST", c.handleRemoveVideo)
+
 	// member
 	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
 	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
+
 	// player
 	mux.Handle("UPDATE_PLAYER_STATE", c.handleUpdatePlayerState)
 	mux.Handle("UPDATE_PLAYER_VIDEO", c.handleUpdatePlayerVideo)
+
 	// profile
 	mux.Handle("UPDATE_PROFILE", c.handleUpdateProfile)
 	// mux.Handle("UPDATE_MUTED", c.handleUpdateMuted)
@@ -61,7 +64,9 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 		RoomId:       roomId,
 	})
 	if err != nil {
+		c.logger.DebugContext(ctx, "failed to update player state", "error", err)
 		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
 		}
 
 		return

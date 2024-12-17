@@ -15,8 +15,8 @@ func (r repo) getPlaylistKey(roomId string) string {
 	return "room:" + roomId + ":playlist"
 }
 
-func (r repo) getPreviousVideoKey(roomId string) string {
-	return "room:" + roomId + ":previous-video"
+func (r repo) geLastVideoKey(roomId string) string {
+	return "room:" + roomId + ":last-video"
 }
 
 func (r repo) getPlaylistVersionKey(roomId string) string {
@@ -121,13 +121,13 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 		return room.ErrVideoNotFound
 	}
 
-	previousVideoId, err := r.getPreviousVideoId(ctx, params.RoomId)
+	lastVideoId, err := r.getLastVideoId(ctx, params.RoomId)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
-	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, previousVideoId)).Err(); err != nil {
+	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, lastVideoId)).Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
@@ -135,22 +135,22 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 	return nil
 }
 
-func (r repo) getPreviousVideoId(ctx context.Context, roomId string) (string, error) {
-	return r.rc.Get(ctx, r.getPreviousVideoKey(roomId)).Result()
+func (r repo) getLastVideoId(ctx context.Context, roomId string) (string, error) {
+	return r.rc.Get(ctx, r.geLastVideoKey(roomId)).Result()
 }
 
-func (r repo) GetPreviousVideoId(ctx context.Context, roomId string) (string, error) {
+func (r repo) GetLastVideoId(ctx context.Context, roomId string) (string, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
-	previousVideoId, err := r.getPreviousVideoId(ctx, roomId)
+	lastVideoId, err := r.getLastVideoId(ctx, roomId)
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return "", err
 	}
 
-	if previousVideoId == "" {
-		r.logger.DebugContext(ctx, "returned", "error", room.ErrNoPreviousVideo)
-		return "", room.ErrNoPreviousVideo
+	if lastVideoId == "" {
+		r.logger.DebugContext(ctx, "returned", "error", room.ErrLastVideoNotFound)
+		return "", room.ErrLastVideoNotFound
 	}
 
-	return previousVideoId, nil
+	return lastVideoId, nil
 }

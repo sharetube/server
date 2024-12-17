@@ -17,8 +17,8 @@ type Member struct {
 }
 
 type Playlist struct {
-	Videos        []Video `json:"videos"`
-	PreviousVideo *Video  `json:"previous_video"`
+	Videos    []Video `json:"videos"`
+	LastVideo *Video  `json:"last_video"`
 }
 
 type Player struct {

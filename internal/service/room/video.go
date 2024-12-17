@@ -34,11 +34,11 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 	return playlist, nil
 }
 
-func (s service) getPreviousVideo(ctx context.Context, roomId string) (*Video, error) {
-	previousVideoId, err := s.roomRepo.GetPreviousVideoId(ctx, roomId)
+func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error) {
+	lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, roomId)
 	if err != nil {
 		switch err {
-		case room.ErrNoPreviousVideo:
+		case room.ErrLastVideoNotFound:
 			return nil, nil
 		default:
 			return nil, err
@@ -47,14 +47,14 @@ func (s service) getPreviousVideo(ctx context.Context, roomId string) (*Video, e
 
 	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
 		RoomId:  roomId,
-		VideoId: previousVideoId,
+		VideoId: lastVideoId,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &Video{
-		Id:        previousVideoId,
+		Id:        lastVideoId,
 		URL:       video.URL,
 		AddedById: video.AddedById,
 	}, nil
@@ -159,17 +159,17 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		return RemoveVideoResponse{}, err
 	}
 
-	previousVideo, err := s.getPreviousVideo(ctx, params.RoomId)
+	lastVideo, err := s.getLastVideo(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get previous video", "error", err)
+		s.logger.InfoContext(ctx, "failed to get last video", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	return RemoveVideoResponse{
 		Conns: conns,
 		Playlist: Playlist{
-			Videos:        videos,
-			PreviousVideo: previousVideo,
+			Videos:    videos,
+			LastVideo: lastVideo,
 		},
 		RemovedVideoId: params.VideoId,
 	}, nil
