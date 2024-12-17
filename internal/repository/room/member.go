@@ -6,7 +6,7 @@ type Member struct {
 	AvatarURL *string `redis:"avatar_url"`
 	IsMuted   bool    `redis:"is_muted"`
 	IsAdmin   bool    `redis:"is_admin"`
-	IsOnline  bool    `redis:"is_online"`
+	IsReady   bool    `redis:"is_ready"`
 	RoomId    string  `redis:"room_id"`
 }
 
@@ -27,7 +27,7 @@ type SetMemberParams struct {
 	AvatarURL *string
 	IsMuted   bool
 	IsAdmin   bool
-	IsOnline  bool
+	IsReady   bool
 	RoomId    string
 }
 

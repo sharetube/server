@@ -13,7 +13,7 @@ type Member struct {
 	AvatarURL *string `json:"avatar_url"`
 	IsMuted   bool    `json:"is_muted"`
 	IsAdmin   bool    `json:"is_admin"`
-	IsOnline  bool    `json:"is_online"`
+	IsReady   bool    `json:"is_ready"`
 }
 
 type Playlist struct {
@@ -37,8 +37,8 @@ type PlayerState struct {
 }
 
 type Room struct {
-	RoomId     string   `json:"room_id"`
-	Player     Player   `json:"player"`
-	MemberList []Member `json:"member_list"`
-	Playlist   Playlist `json:"playlist"`
+	RoomId   string   `json:"room_id"`
+	Player   Player   `json:"player"`
+	Members  []Member `json:"members"`
+	Playlist Playlist `json:"playlist"`
 }

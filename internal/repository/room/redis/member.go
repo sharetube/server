@@ -33,7 +33,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 		AvatarURL: params.AvatarURL,
 		IsMuted:   params.IsMuted,
 		IsAdmin:   params.IsAdmin,
-		IsOnline:  params.IsOnline,
+		IsReady:   params.IsReady,
 		RoomId:    params.RoomId,
 	}
 	memberKey := r.getMemberKey(params.MemberId)
@@ -185,11 +185,11 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, 
 	return nil
 }
 
-func (r repo) UpdateMemberIsOnline(ctx context.Context, roomId, memberId string, isOnline bool) error {
+func (r repo) UpdateMemberIsReady(ctx context.Context, roomId, memberId string, isReady bool) error {
 	r.logger.DebugContext(ctx, "called", "params", map[string]any{
 		"room_id":   roomId,
 		"member_id": memberId,
-		"is_online": isOnline,
+		"is_ready":  isReady,
 	})
 	key := r.getMemberKey(memberId)
 	cmd := r.rc.Exists(ctx, key)
@@ -203,7 +203,7 @@ func (r repo) UpdateMemberIsOnline(ctx context.Context, roomId, memberId string,
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, key, "is_online", isOnline).Err(); err != nil {
+	if err := r.rc.HSet(ctx, key, "is_ready", isReady).Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}

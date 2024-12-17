@@ -83,7 +83,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		AvatarURL: params.AvatarURL,
 		IsMuted:   false,
 		IsAdmin:   true,
-		IsOnline:  false,
+		IsReady:   false,
 		RoomId:    roomId,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to set member", "error", err)
@@ -152,7 +152,7 @@ type JoinRoomParams struct {
 type JoinRoomResponse struct {
 	JWT          string
 	JoinedMember Member
-	MemberList   []Member
+	Members      []Member
 	Conns        []*websocket.Conn
 }
 
@@ -179,7 +179,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			AvatarURL: params.AvatarURL,
 			IsMuted:   false,
 			IsAdmin:   false,
-			IsOnline:  false,
+			IsReady:   false,
 			RoomId:    params.RoomId,
 		}
 		if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
@@ -193,7 +193,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			AvatarURL: params.AvatarURL,
 			IsMuted:   false,
 			IsAdmin:   false,
-			IsOnline:  false,
+			IsReady:   false,
 			RoomId:    params.RoomId,
 		}
 		jwt, err = s.generateJWT(memberId)
@@ -236,16 +236,16 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		}
 	}
 
-	memberlist, err := s.getMemberList(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return JoinRoomResponse{}, err
 	}
 
 	return JoinRoomResponse{
-		JWT:        jwt,
-		Conns:      conns,
-		MemberList: memberlist,
+		JWT:     jwt,
+		Conns:   conns,
+		Members: members,
 		JoinedMember: Member{
 			Id:        memberId,
 			Username:  member.Username,
@@ -253,7 +253,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			AvatarURL: member.AvatarURL,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
-			IsOnline:  member.IsOnline,
+			IsReady:   member.IsReady,
 		},
 	}, nil
 }
@@ -265,7 +265,7 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		return Room{}, err
 	}
 
-	memberlist, err := s.getMemberList(ctx, roomId)
+	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return Room{}, err
@@ -278,9 +278,9 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	}
 
 	return Room{
-		RoomId:     roomId,
-		Player:     Player(player),
-		MemberList: memberlist,
+		RoomId:  roomId,
+		Player:  Player(player),
+		Members: members,
 		Playlist: Playlist{
 			Videos: videos,
 		},

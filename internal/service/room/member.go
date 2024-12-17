@@ -9,14 +9,14 @@ import (
 	o "github.com/skewb1k/optional"
 )
 
-func (s service) getMemberList(ctx context.Context, roomId string) ([]Member, error) {
-	memberlistIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
+func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error) {
+	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
 		return []Member{}, err
 	}
 
-	memberlist := make([]Member, 0, len(memberlistIds))
-	for _, memberId := range memberlistIds {
+	members := make([]Member, 0, len(memberIds))
+	for _, memberId := range memberIds {
 		member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
 			MemberId: memberId,
 			RoomId:   roomId,
@@ -25,18 +25,18 @@ func (s service) getMemberList(ctx context.Context, roomId string) ([]Member, er
 			return []Member{}, err
 		}
 
-		memberlist = append(memberlist, Member{
+		members = append(members, Member{
 			Id:        memberId,
 			Username:  member.Username,
 			Color:     member.Color,
 			AvatarURL: member.AvatarURL,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
-			IsOnline:  member.IsOnline,
+			IsReady:   member.IsReady,
 		})
 	}
 
-	return memberlist, nil
+	return members, nil
 }
 
 type RemoveMemberParams struct {
@@ -110,7 +110,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, err
 	}
 
-	members, err := s.getMemberList(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return PromoteMemberResponse{}, err
@@ -125,7 +125,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 			AvatarURL: member.AvatarURL,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
-			IsOnline:  member.IsOnline,
+			IsReady:   member.IsReady,
 		},
 		Members: members,
 	}, nil
@@ -152,7 +152,7 @@ type DisconnectMemberParams struct {
 
 type DisconnectMemberResponse struct {
 	Conns         []*websocket.Conn
-	Memberlist    []Member
+	Members       []Member
 	IsRoomDeleted bool
 }
 
@@ -173,14 +173,14 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		conn.Close()
 	}
 
-	memberlist, err := s.getMemberList(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return DisconnectMemberResponse{}, err
 	}
 
 	// delete room if no member left
-	if len(memberlist) == 0 {
+	if len(members) == 0 {
 		if err := s.deleteRoom(ctx, params.RoomId); err != nil {
 			s.logger.InfoContext(ctx, "failed to delete room", "error", err)
 			return DisconnectMemberResponse{}, err
@@ -199,7 +199,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	return DisconnectMemberResponse{
 		Conns:         conns,
-		Memberlist:    memberlist,
+		Members:       members,
 		IsRoomDeleted: false,
 	}, nil
 }
@@ -262,7 +262,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 		return UpdateProfileResponse{}, err
 	}
 
-	members, err := s.getMemberList(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
 		return UpdateProfileResponse{}, err
@@ -277,7 +277,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 			AvatarURL: member.AvatarURL,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
-			IsOnline:  member.IsOnline,
+			IsReady:   member.IsReady,
 		},
 		Members: members,
 	}, nil

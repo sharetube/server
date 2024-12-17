@@ -97,7 +97,7 @@ func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 			Type: "MEMBER_DISCONNECTED",
 			Payload: map[string]any{
 				"disconnected_member_id": memberId,
-				"memberlist":             disconnectMemberResp.Memberlist,
+				"members":                disconnectMemberResp.Members,
 			},
 		}); err != nil {
 			c.logger.WarnContext(ctx, "failed to broadcast", "error", err)

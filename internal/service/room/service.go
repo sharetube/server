@@ -28,7 +28,7 @@ type iRoomRepo interface {
 	GetMemberIsAdmin(ctx context.Context, roomId string, memberId string) (bool, error)
 	UpdateMemberIsAdmin(ctx context.Context, roomId string, memberId string, isAdmin bool) error
 	UpdateMemberIsMuted(ctx context.Context, roomId string, memberId string, isMuted bool) error
-	UpdateMemberIsOnline(ctx context.Context, roomId string, memberId string, isOnline bool) error
+	UpdateMemberIsReady(ctx context.Context, roomId string, memberId string, isReady bool) error
 	UpdateMemberUsername(ctx context.Context, roomId string, memberId string, username string) error
 	UpdateMemberColor(ctx context.Context, roomId string, memberId string, color string) error
 	UpdateMemberAvatarURL(ctx context.Context, roomId string, memberId string, avatarURL *string) error

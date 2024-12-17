@@ -189,7 +189,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
         "username": "string",
         "color": "string",
         "avatar_url": "string",
-        "is_online": "boolean",
+        "is_ready": "boolean",
         "is_admin": "boolean",
         "is_muted": "boolean"
       }
@@ -339,7 +339,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
     "username": "string",
     "color": "string",
     "avatar_url": "string",
-    "is_online": "boolean",
+    "is_ready": "boolean",
     "is_admin": "boolean",
     "is_muted": "boolean"
   },
@@ -349,7 +349,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
       "username": "string",
       "color": "string",
       "avatar_url": "string",
-      "is_online": "boolean",
+      "is_ready": "boolean",
       "is_admin": "boolean",
       "is_muted": "boolean"
     }
@@ -372,7 +372,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
       "username": "string",
       "color": "string",
       "avatar_url": "string",
-      "is_online": "boolean",
+      "is_ready": "boolean",
       "is_admin": "boolean",
       "is_muted": "boolean"
     }
@@ -393,7 +393,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
     "username": "string",
     "color": "string",
     "avatar_url": "string",
-    "is_online": "boolean",
+    "is_ready": "boolean",
     "is_admin": "boolean",
     "is_muted": "boolean"
   },
@@ -403,7 +403,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
       "username": "string",
       "color": "string",
       "avatar_url": "string",
-      "is_online": "boolean",
+      "is_ready": "boolean",
       "is_admin": "boolean",
       "is_muted": "boolean"
     }

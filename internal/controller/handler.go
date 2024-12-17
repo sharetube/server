@@ -138,7 +138,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		Type: "MEMBER_JOINED",
 		Payload: map[string]any{
 			"joined_member": joinRoomResponse.JoinedMember,
-			"member_list":   joinRoomResponse.MemberList,
+			"members":       joinRoomResponse.Members,
 		},
 	}); err != nil {
 		c.logger.WarnContext(r.Context(), "failed to broadcast", "error", err)
