@@ -34,27 +34,43 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 	return playlist, nil
 }
 
+func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, error) {
+	videos, err := s.getVideos(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	lastVideo, err := s.getLastVideo(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Playlist{
+		Videos:    videos,
+		LastVideo: lastVideo,
+	}, nil
+}
+
 func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error) {
 	lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, roomId)
 	if err != nil {
-		switch err {
-		case room.ErrLastVideoNotFound:
-			return nil, nil
-		default:
-			return nil, err
-		}
+		return nil, err
+	}
+
+	if lastVideoId == nil {
+		return nil, nil
 	}
 
 	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
 		RoomId:  roomId,
-		VideoId: lastVideoId,
+		VideoId: *lastVideoId,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &Video{
-		Id:        lastVideoId,
+		Id:        *lastVideoId,
 		URL:       video.URL,
 		AddedById: video.AddedById,
 	}, nil
@@ -69,7 +85,7 @@ type AddVideoParams struct {
 type AddVideoResponse struct {
 	AddedVideo Video
 	Conns      []*websocket.Conn
-	Videos     []Video
+	Playlist   *Playlist
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
@@ -105,7 +121,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, err
 	}
 
-	playlist, err := s.getVideos(ctx, params.RoomId)
+	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
 		return AddVideoResponse{}, err
@@ -117,8 +133,8 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 			URL:       params.VideoURL,
 			AddedById: params.SenderId,
 		},
-		Conns:  conns,
-		Videos: playlist,
+		Conns:    conns,
+		Playlist: playlist,
 	}, nil
 }
 
@@ -130,8 +146,8 @@ type RemoveVideoParams struct {
 
 type RemoveVideoResponse struct {
 	Conns          []*websocket.Conn
-	Playlist       Playlist
 	RemovedVideoId string
+	Playlist       *Playlist
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
@@ -153,24 +169,15 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		return RemoveVideoResponse{}, err
 	}
 
-	videos, err := s.getVideos(ctx, params.RoomId)
+	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
-		return RemoveVideoResponse{}, err
-	}
-
-	lastVideo, err := s.getLastVideo(ctx, params.RoomId)
-	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get last video", "error", err)
+		s.logger.InfoContext(ctx, "failed to get playlist", "error", err)
 		return RemoveVideoResponse{}, err
 	}
 
 	return RemoveVideoResponse{
-		Conns: conns,
-		Playlist: Playlist{
-			Videos:    videos,
-			LastVideo: lastVideo,
-		},
+		Conns:          conns,
+		Playlist:       playlist,
 		RemovedVideoId: params.VideoId,
 	}, nil
 }

@@ -71,16 +71,17 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, err
 	}
 
-	if _, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
-	}); err != nil {
+	})
+	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get video", "error", err)
 		return UpdatePlayerVideoResponse{}, err
 	}
 
 	updatePlayerParams := room.UpdatePlayerParams{
-		VideoURL:     params.VideoId,
+		VideoURL:     video.URL,
 		IsPlaying:    s.getDefaultPlayerIsPlaying(),
 		CurrentTime:  s.getDefaultPlayerCurrentTime(),
 		PlaybackRate: s.getDefaultPlayerPlaybackRate(),
@@ -103,8 +104,8 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			IsPlaying:    updatePlayerParams.IsPlaying,
 			CurrentTime:  updatePlayerParams.CurrentTime,
 			PlaybackRate: updatePlayerParams.PlaybackRate,
-			VideoURL:     params.VideoId,
-			UpdatedAt:    params.UpdatedAt,
+			VideoURL:     updatePlayerParams.VideoURL,
+			UpdatedAt:    updatePlayerParams.UpdatedAt,
 		},
 		Conns: conns,
 	}, nil

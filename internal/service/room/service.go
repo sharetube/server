@@ -38,7 +38,7 @@ type iRoomRepo interface {
 	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
-	GetLastVideoId(context.Context, string) (string, error)
+	GetLastVideoId(context.Context, string) (*string, error)
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)

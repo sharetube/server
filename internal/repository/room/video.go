@@ -3,7 +3,6 @@ package room
 type Video struct {
 	URL       string `redis:"url"`
 	AddedById string `redis:"added_by"`
-	RoomId    string `redis:"room_id"`
 }
 
 type RemoveVideoParams struct {
