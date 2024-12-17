@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
 )
 
@@ -51,7 +52,6 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	video := room.Video{
 		URL:       params.URL,
 		AddedById: params.AddedById,
-		RoomId:    params.RoomId,
 	}
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
 	r.hSetIfNotExists(ctx, pipe, videoKey, video)
@@ -139,18 +139,17 @@ func (r repo) getLastVideoId(ctx context.Context, roomId string) (string, error)
 	return r.rc.Get(ctx, r.geLastVideoKey(roomId)).Result()
 }
 
-func (r repo) GetLastVideoId(ctx context.Context, roomId string) (string, error) {
+func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*string, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
 	lastVideoId, err := r.getLastVideoId(ctx, roomId)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
-		return "", err
+		return nil, err
 	}
 
 	if lastVideoId == "" {
-		r.logger.DebugContext(ctx, "returned", "error", room.ErrLastVideoNotFound)
-		return "", room.ErrLastVideoNotFound
+		return nil, nil
 	}
 
-	return lastVideoId, nil
+	return &lastVideoId, nil
 }

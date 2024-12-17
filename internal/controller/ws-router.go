@@ -147,7 +147,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 		Type: "VIDEO_ADDED",
 		Payload: map[string]any{
 			"added_video": addVideoResponse.AddedVideo,
-			"playlist":    addVideoResponse.Videos,
+			"playlist":    addVideoResponse.Playlist,
 		},
 	}); err != nil {
 		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
