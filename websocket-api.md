@@ -177,7 +177,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
           "added_by": "string"
         }
       ],
-      "previous_video_id": {
+      "last_video_id": {
         "id": "string",
         "url": "string",
         "added_by": "string"
@@ -201,7 +201,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
 </tr>
 
 <tr>
-<td>PLAYER_UPDATED</td>
+<td>PLAYER_STATE_UPDATED</td>
 <td>
 
 ```json
@@ -238,7 +238,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
         "added_by": "string"
       }
     ],
-    "previous_video_id": {
+    "last_video_id": {
       "id": "string",
       "url": "string",
       "added_by": "string"
@@ -268,7 +268,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
         "added_by": "string"
       }
     ],
-    "previous_video_id": {
+    "last_video_id": {
       "id": "string",
       "url": "string",
       "added_by": "string"
@@ -294,7 +294,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
         "added_by": "string"
       }
     ],
-    "previous_video_id": {
+    "last_video_id": {
       "id": "string",
       "url": "string",
       "added_by": "string"
@@ -318,7 +318,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&co
       "added_by": "string"
     }
   ],
-  "previous_video_id": {
+  "last_video_id": {
     "id": "string",
     "url": "string",
     "added_by": "string"
