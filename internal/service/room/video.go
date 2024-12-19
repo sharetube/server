@@ -25,9 +25,8 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 		}
 
 		playlist = append(playlist, Video{
-			Id:        videoId,
-			URL:       video.URL,
-			AddedById: video.AddedById,
+			Id:  videoId,
+			URL: video.URL,
 		})
 	}
 
@@ -70,9 +69,8 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 	}
 
 	return &Video{
-		Id:        *lastVideoId,
-		URL:       video.URL,
-		AddedById: video.AddedById,
+		Id:  *lastVideoId,
+		URL: video.URL,
 	}, nil
 }
 
@@ -106,10 +104,9 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	videoId := uuid.NewString()
 	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		VideoId:   videoId,
-		RoomId:    params.RoomId,
-		URL:       params.VideoURL,
-		AddedById: params.SenderId,
+		VideoId: videoId,
+		RoomId:  params.RoomId,
+		URL:     params.VideoURL,
 	}); err != nil {
 		s.logger.InfoContext(ctx, "failed to set video", "error", err)
 		return AddVideoResponse{}, err
@@ -129,9 +126,8 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	return AddVideoResponse{
 		AddedVideo: Video{
-			Id:        videoId,
-			URL:       params.VideoURL,
-			AddedById: params.SenderId,
+			Id:  videoId,
+			URL: params.VideoURL,
 		},
 		Conns:    conns,
 		Playlist: playlist,

@@ -93,8 +93,7 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
   "videos": [
     {
       "id": "string",
-      "url": "string",
-      "added_by": "string"
+      "url": "string"
     }
   ],
 }
@@ -191,14 +190,12 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
       "videos": [
         {
           "id": "string",
-          "url": "string",
-          "added_by": "string"
+          "url": "string"
         }
       ],
       "last_video_id": {
         "id": "string",
-        "url": "string",
-        "added_by": "string"
+        "url": "string"
       }
     },
     "members": [
@@ -252,14 +249,12 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
     "videos": [
       {
         "id": "string",
-        "url": "string",
-        "added_by": "string"
+        "url": "string"
       }
     ],
     "last_video_id": {
       "id": "string",
-      "url": "string",
-      "added_by": "string"
+      "url": "string"
     }
   }
 }
@@ -275,21 +270,18 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
 {
   "added_video": {
     "id": "string",
-    "url": "string",
-    "added_by": "string"
+    "url": "string"
   },
   "playlist":{
     "videos": [
       {
         "id": "string",
-        "url": "string",
-        "added_by": "string"
+        "url": "string"
       }
     ],
     "last_video_id": {
       "id": "string",
-      "url": "string",
-      "added_by": "string"
+      "url": "string"
     }
   }
 }
@@ -308,14 +300,12 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
     "videos": [
       {
         "id": "string",
-        "url": "string",
-        "added_by": "string"
+        "url": "string"
       }
     ],
     "last_video_id": {
       "id": "string",
-      "url": "string",
-      "added_by": "string"
+      "url": "string"
     }
   }
 }
@@ -332,14 +322,12 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
   "videos": [
     {
       "id": "string",
-      "url": "string",
-      "added_by": "string"
+      "url": "string"
     }
   ],
   "last_video_id": {
     "id": "string",
-    "url": "string",
-    "added_by": "string"
+    "url": "string"
   }
 }
 ```

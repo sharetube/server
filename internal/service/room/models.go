@@ -1,9 +1,8 @@
 package room
 
 type Video struct {
-	Id        string `json:"id"`
-	URL       string `json:"url"`
-	AddedById string `json:"added_by_id"`
+	Id  string `json:"id"`
+	URL string `json:"url"`
 }
 
 type Member struct {
