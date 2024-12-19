@@ -6,13 +6,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const memberIdKey = "member_id"
+
 type Claims struct {
 	MemberId string `json:"member_id"`
 }
 
 func (s service) generateJWT(memberId string) (string, error) {
 	claims := jwt.MapClaims{
-		"member_id": memberId,
+		memberIdKey: memberId,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -36,7 +38,13 @@ func (s service) parseJWT(tokenString string) (*Claims, error) {
 	if !ok {
 		return nil, errors.New("invalid token")
 	}
+
+	memberId, ok := claims[memberIdKey].(string)
+	if !ok {
+		return nil, errors.New("invalid token")
+	}
+
 	return &Claims{
-		MemberId: claims["member_id"].(string),
+		MemberId: memberId,
 	}, nil
 }

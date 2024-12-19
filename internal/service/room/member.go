@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -168,9 +169,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to remove conn", "error", err)
 	}
-	//! for testing
-	if conn.NetConn() != nil {
-		conn.Close()
+
+	if conn.NetConn() != nil { //! for testing
+		if err := conn.Close(); err != nil {
+			s.logger.InfoContext(ctx, "failed to close conn", "error", err)
+			return DisconnectMemberResponse{}, err
+		}
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
@@ -280,5 +284,125 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 			IsReady:   member.IsReady,
 		},
 		Members: members,
+	}, nil
+}
+
+type UpdateIsReadyParams struct {
+	SenderConn *websocket.Conn
+	IsReady    bool
+	SenderId   string
+	RoomId     string
+}
+
+type UpdateIsReadyResponse struct {
+	Conns         []*websocket.Conn
+	UpdatedMember Member
+	Members       []Member
+	PlayerState   *PlayerState
+}
+
+func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams) (UpdateIsReadyResponse, error) {
+	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
+		MemberId: params.SenderId,
+		RoomId:   params.RoomId,
+	})
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member", "error", err)
+		return UpdateIsReadyResponse{}, err
+	}
+
+	if member.IsReady == params.IsReady {
+		member1 := Member{
+			Id:        params.SenderId,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   member.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsReady:   member.IsReady,
+		}
+
+		return UpdateIsReadyResponse{
+			UpdatedMember: member1,
+			Members:       []Member{member1},
+			Conns:         []*websocket.Conn{params.SenderConn},
+		}, nil
+	}
+
+	if err := s.roomRepo.UpdateMemberIsReady(ctx, params.RoomId, params.SenderId, params.IsReady); err != nil {
+		s.logger.InfoContext(ctx, "failed to update member is ready", "error", err)
+		return UpdateIsReadyResponse{}, err
+	}
+
+	// todo: fix double get ids
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
+		return UpdateIsReadyResponse{}, err
+	}
+
+	members, err := s.getMembers(ctx, params.RoomId)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
+		return UpdateIsReadyResponse{}, err
+	}
+
+	member.IsReady = params.IsReady
+
+	updatedMember := Member{
+		Id:        params.SenderId,
+		Username:  member.Username,
+		Color:     member.Color,
+		AvatarURL: member.AvatarURL,
+		IsMuted:   member.IsMuted,
+		IsAdmin:   member.IsAdmin,
+		IsReady:   member.IsReady,
+	}
+
+	ok := true
+	neededIsReady := members[0].IsReady
+	for i := 1; i < len(members); i++ {
+		if members[i].IsReady != neededIsReady {
+			ok = false
+			break
+		}
+	}
+
+	if ok {
+		playerState, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+		if err != nil {
+			s.logger.InfoContext(ctx, "failed to get player state", "error", err)
+			return UpdateIsReadyResponse{}, err
+		}
+
+		updatePlayerStateParams := room.UpdatePlayerStateParams{
+			IsPlaying:    neededIsReady,
+			CurrentTime:  playerState.CurrentTime,
+			PlaybackRate: playerState.PlaybackRate,
+			UpdatedAt:    int(time.Now().Unix()),
+			RoomId:       params.RoomId,
+		}
+		if err := s.roomRepo.UpdatePlayerState(ctx, &updatePlayerStateParams); err != nil {
+			s.logger.InfoContext(ctx, "failed to update player state", "error", err)
+			return UpdateIsReadyResponse{}, err
+		}
+
+		return UpdateIsReadyResponse{
+			Conns:         conns,
+			UpdatedMember: updatedMember,
+			Members:       members,
+			PlayerState: &PlayerState{
+				IsPlaying:    updatePlayerStateParams.IsPlaying,
+				CurrentTime:  playerState.CurrentTime,
+				PlaybackRate: playerState.PlaybackRate,
+				UpdatedAt:    playerState.UpdatedAt,
+			},
+		}, nil
+	}
+
+	return UpdateIsReadyResponse{
+		Conns:         conns,
+		UpdatedMember: updatedMember,
+		Members:       members,
 	}, nil
 }

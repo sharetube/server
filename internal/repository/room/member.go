@@ -7,7 +7,6 @@ type Member struct {
 	IsMuted   bool    `redis:"is_muted"`
 	IsAdmin   bool    `redis:"is_admin"`
 	IsReady   bool    `redis:"is_ready"`
-	RoomId    string  `redis:"room_id"`
 }
 
 type AddMemberToListParams struct {

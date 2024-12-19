@@ -70,7 +70,7 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 }
 
 func (r repo) getVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
-	video := room.Video{}
+	var video room.Video
 	if err := r.rc.HGetAll(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Scan(&video); err != nil {
 		return room.Video{}, err
 	}

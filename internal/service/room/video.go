@@ -34,18 +34,18 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 	return playlist, nil
 }
 
-func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, error) {
+func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, error) {
 	videos, err := s.getVideos(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return Playlist{}, err
 	}
 
 	lastVideo, err := s.getLastVideo(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return Playlist{}, err
 	}
 
-	return &Playlist{
+	return Playlist{
 		Videos:    videos,
 		LastVideo: lastVideo,
 	}, nil
@@ -85,7 +85,7 @@ type AddVideoParams struct {
 type AddVideoResponse struct {
 	AddedVideo Video
 	Conns      []*websocket.Conn
-	Playlist   *Playlist
+	Playlist   Playlist
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
@@ -147,7 +147,7 @@ type RemoveVideoParams struct {
 type RemoveVideoResponse struct {
 	Conns          []*websocket.Conn
 	RemovedVideoId string
-	Playlist       *Playlist
+	Playlist       Playlist
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {

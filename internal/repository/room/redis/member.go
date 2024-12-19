@@ -34,11 +34,11 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 		IsMuted:   params.IsMuted,
 		IsAdmin:   params.IsAdmin,
 		IsReady:   params.IsReady,
-		RoomId:    params.RoomId,
 	}
+
 	memberKey := r.getMemberKey(params.MemberId)
 	//? replace with hsetifnotexists
-	pipe.HSet(ctx, memberKey, member)
+	r.HSetStruct(ctx, pipe, memberKey, member)
 	pipe.Expire(ctx, memberKey, 10*time.Minute)
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
