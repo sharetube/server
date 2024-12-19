@@ -8,6 +8,7 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux := wsrouter.New()
 
 	// video
+	mux.Handle("ALIVE", c.handleAlive)
 	mux.Handle("ADD_VIDEO", c.handleAddVideo)
 	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
 	// mux.Handle("REORDER_PLAYLIST", c.handleRemoveVideo)

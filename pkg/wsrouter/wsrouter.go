@@ -3,6 +3,7 @@ package wsrouter
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/gorilla/websocket"
 )
@@ -41,6 +42,7 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 		if handler, exists := r.routes[msg.Type]; exists {
 			handler(ctx, conn, msg.Payload)
 		} else {
+			slog.ErrorContext(ctx, "unknown message type", "type", msg.Type)
 			conn.WriteJSON(map[string]string{"error": "Unknown message type"})
 		}
 	}

@@ -15,10 +15,16 @@ type Output struct {
 	Payload any    `json:"payload"`
 }
 
-func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "update player state")
+func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "alive", "room_id", roomId, "member_id", memberId)
+}
+
+func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "update player state", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		IsPlaying    bool    `json:"is_playing"`
@@ -57,9 +63,9 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 }
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "update player video")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "update player video", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		VideoId   string `json:"video_id"`
@@ -94,9 +100,9 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 }
 
 func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "add video")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "add video", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		VideoURL string `json:"video_url"`
@@ -120,7 +126,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 	}
 
 	if err := c.broadcast(addVideoResponse.Conns, &Output{
-		Type: "PLAYLIST_UPDATED",
+		Type: "VIDEO_ADDED",
 		Payload: map[string]any{
 			"added_video": addVideoResponse.AddedVideo,
 			"playlist":    addVideoResponse.Playlist,
@@ -132,9 +138,9 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 }
 
 func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "remove member")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "remove member", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		MemberId uuid.UUID `json:"member_id"`
@@ -173,9 +179,9 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 }
 
 func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "promote member")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "promote member", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		MemberId uuid.UUID `json:"member_id"`
@@ -222,9 +228,9 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 }
 
 func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "remove video")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "remove video", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		VideoId string `json:"video_id"`
@@ -261,9 +267,9 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 }
 
 func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "update profile")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "update profile", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		Username  *string         `json:"username"`
@@ -314,9 +320,9 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 }
 
 func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	c.logger.InfoContext(ctx, "update is_ready")
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
+	c.logger.InfoContext(ctx, "update is_ready", "room_id", roomId, "member_id", memberId)
 
 	var data struct {
 		IsReady bool `json:"is_ready"`

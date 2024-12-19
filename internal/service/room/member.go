@@ -173,7 +173,6 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 	if conn.NetConn() != nil { //! for testing
 		if err := conn.Close(); err != nil {
 			s.logger.InfoContext(ctx, "failed to close conn", "error", err)
-			return DisconnectMemberResponse{}, err
 		}
 	}
 
