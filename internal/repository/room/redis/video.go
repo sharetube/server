@@ -50,8 +50,7 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	// }
 
 	video := room.Video{
-		URL:       params.URL,
-		AddedById: params.AddedById,
+		URL: params.URL,
 	}
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
 	r.hSetIfNotExists(ctx, pipe, videoKey, video)
