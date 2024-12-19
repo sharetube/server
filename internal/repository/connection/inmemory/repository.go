@@ -20,6 +20,7 @@ func NewRepo(logger *slog.Logger) *repo {
 		connList: make(map[*websocket.Conn]string),
 		idList:   make(map[string]*websocket.Conn),
 		logger:   logger,
+		mu:       sync.RWMutex{},
 	}
 }
 

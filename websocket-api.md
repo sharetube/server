@@ -1,9 +1,17 @@
 # WebSocket API Reference
 
 ## Connection
-Create room: `/api/v1/room/create/ws?username=<required>&color=<required>&avatar-url=<required>&video-url=<required>`
+Create room: `/api/v1/room/create/ws?username=<required>&color=<required>&avatar-url=<optional>&video-url=<required>`
 
-Join room: `/api/v1/room/{room-id}/join/ws?jwt=<required>&username=<required>&color=<required>&avatar-url=<required>`
+Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&color=<required>&avatar-url=<optional>`
+
+## Message base structure
+```json
+{
+  "type": "string",
+  "payload": "object"
+}
+```
 
 ## Messages
 

@@ -71,17 +71,15 @@ type service struct {
 }
 
 func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string, logger *slog.Logger) *service {
-	s := service{
+	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+	return &service{
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
 		membersLimit:  membersLimit,
 		playlistLimit: playlistLimit,
 		secret:        []byte(secret),
 		logger:        logger,
+		generator:     randstr.New(letterBytes),
 	}
-
-	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	s.generator = randstr.New(letterBytes)
-
-	return &s
 }

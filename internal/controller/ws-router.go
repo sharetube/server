@@ -30,7 +30,7 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	// profile
 	mux.Handle("UPDATE_PROFILE", c.handleUpdateProfile)
 	// mux.Handle("UPDATE_MUTED", c.handleUpdateMuted)
-	// mux.Handle("UPDATE_READY", c.handleUpdateReady)
+	mux.Handle("UPDATE_READY", c.handleUpdateIsReady)
 
 	return mux
 }
@@ -76,6 +76,7 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 		Type:    "PLAYER_UPDATED",
 		Payload: updatePlayerStateResp.PlayerState,
 	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
 		return
 	}
 }
@@ -334,5 +335,54 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 	}); err != nil {
 		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
 		return
+	}
+}
+
+func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+	c.logger.InfoContext(ctx, "update is_ready")
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
+
+	var data struct {
+		IsReady bool `json:"is_ready"`
+	}
+	if err := c.unmarshalJSONorError(conn, payload, &data); err != nil {
+		return
+	}
+
+	updatePlayerVideoResp, err := c.roomService.UpdateIsReady(ctx, &room.UpdateIsReadyParams{
+		IsReady:    data.IsReady,
+		SenderId:   memberId,
+		RoomId:     roomId,
+		SenderConn: conn,
+	})
+	if err != nil {
+		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
+		if err := c.writeError(conn, err); err != nil {
+			c.logger.ErrorContext(ctx, "failed to write error", "error", err)
+		}
+
+		return
+	}
+
+	if err := c.broadcast(updatePlayerVideoResp.Conns, &Output{
+		Type: "MEMBER_UPDATED",
+		Payload: map[string]any{
+			"updated_member": updatePlayerVideoResp.UpdatedMember,
+			"members":        updatePlayerVideoResp.Members,
+		},
+	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
+		return
+	}
+
+	if updatePlayerVideoResp.PlayerState != nil {
+		if err := c.broadcast(updatePlayerVideoResp.Conns, &Output{
+			Type:    "PLAYER_UPDATED",
+			Payload: updatePlayerVideoResp.PlayerState,
+		}); err != nil {
+			c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
+			return
+		}
 	}
 }

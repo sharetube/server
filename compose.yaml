@@ -1,12 +1,12 @@
 services:
   redis:
     image: redis:7.4.1-alpine3.20
-    container_name: sharetube-redis
-    entrypoint: redis-server --requirepass ${REDIS_PASSWORD}
+    container_name: ${REDIS_HOST}
+    entrypoint: redis-server --requirepass ${REDIS_PASSWORD} --port ${REDIS_PORT}
     ports:
       - ${REDIS_PORT}:${REDIS_PORT}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli","-p", "${REDIS_PORT}","ping"]
       interval: 1s
       timeout: 1s
       retries: 10
@@ -46,6 +46,3 @@ services:
 
 networks:
   sharetube:
-
-volumes:
-  certs:

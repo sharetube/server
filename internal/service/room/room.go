@@ -89,6 +89,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		s.logger.InfoContext(ctx, "failed to set member", "error", err)
 		return nil, err
 	}
+
 	jwt, err := s.generateJWT(memberId)
 	if err != nil {
 		s.logger.ErrorContext(ctx, "failed to generate jwt", "error", err)
@@ -114,7 +115,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}, nil
 }
 
-func (s service) getMemberByJWT(ctx context.Context, jwt string) (string, *room.Member, error) {
+func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (string, *room.Member, error) {
 	if jwt == "" {
 		return "", nil, nil
 	}
@@ -127,6 +128,7 @@ func (s service) getMemberByJWT(ctx context.Context, jwt string) (string, *room.
 	// todo: add validation
 
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
+		RoomId:   roomId,
 		MemberId: claims.MemberId,
 	})
 	if err != nil {
@@ -164,7 +166,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}
 
 	jwt := params.JWT
-	memberId, member, err := s.getMemberByJWT(ctx, params.JWT)
+	memberId, member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get member", "error", err)
 		return JoinRoomResponse{}, err
@@ -194,7 +196,6 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			IsMuted:   false,
 			IsAdmin:   false,
 			IsReady:   false,
-			RoomId:    params.RoomId,
 		}
 		jwt, err = s.generateJWT(memberId)
 		if err != nil {
@@ -271,18 +272,16 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		return Room{}, err
 	}
 
-	videos, err := s.getVideos(ctx, roomId)
+	playlist, err := s.getPlaylist(ctx, roomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
 		return Room{}, err
 	}
 
 	return Room{
-		RoomId:  roomId,
-		Player:  Player(player),
-		Members: members,
-		Playlist: Playlist{
-			Videos: videos,
-		},
+		RoomId:   roomId,
+		Player:   Player(player),
+		Members:  members,
+		Playlist: playlist,
 	}, nil
 }

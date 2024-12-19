@@ -66,6 +66,7 @@ func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	for _, conn := range conns {
 		if err := conn.WriteJSON(output); err != nil {
 			slog.Warn("failed to broadcast", "error", err)
+			return err
 		}
 	}
 

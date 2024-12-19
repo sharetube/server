@@ -24,6 +24,7 @@ type iRoomService interface {
 	RemoveMember(context.Context, *room.RemoveMemberParams) (room.RemoveMemberResponse, error)
 	PromoteMember(context.Context, *room.PromoteMemberParams) (room.PromoteMemberResponse, error)
 	UpdateProfile(context.Context, *room.UpdateProfileParams) (room.UpdateProfileResponse, error)
+	UpdateIsReady(context.Context, *room.UpdateIsReadyParams) (room.UpdateIsReadyResponse, error)
 }
 
 type controller struct {

@@ -63,7 +63,7 @@ var (
 	redisHost = configVar[string]{
 		envKey:       "REDIS_HOST",
 		flagKey:      "redis-host",
-		defaultValue: "sharetube-redis",
+		defaultValue: "localhost",
 	}
 	redisPassword = configVar[string]{
 		envKey:       "REDIS_PASSWORD",

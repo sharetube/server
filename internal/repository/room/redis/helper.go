@@ -3,17 +3,18 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"reflect"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
-	return c.EvalSha(ctx, r.maxScoreScript, []string{key}, value).Err()
+func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) {
+	c.EvalSha(ctx, r.maxScoreScript, []string{key}, value)
 }
 
 // Same as HSet, but returns error if key already exists (implemented with lua script)
-func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) error {
+func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) {
 	v := reflect.ValueOf(value)
 	t := v.Type()
 
@@ -36,10 +37,7 @@ func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string,
 			// Convert field value to string
 			fieldValue := v.Field(i).Interface()
 
-			b, err := json.Marshal(fieldValue)
-			if err != nil {
-				return err
-			}
+			b, _ := json.Marshal(fieldValue)
 
 			strValue = string(b)
 		}
@@ -48,27 +46,52 @@ func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string,
 
 	}
 
-	result, err := c.EvalSha(ctx, r.hSetIfNotExistsScript, []string{key}, args...).Result()
-	if err != nil {
-		return err
+	c.EvalSha(ctx, r.hSetIfNotExistsScript, []string{key}, args...)
+}
+
+func (r repo) HSetStruct(ctx context.Context, c redis.Pipeliner, key string, value interface{}) error {
+	v := reflect.ValueOf(value)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
 	}
 
-	if result == 0 {
-		return redis.Nil
+	fields := make(map[string]interface{})
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		tag := t.Field(i).Tag.Get("redis")
+		if tag == "" {
+			tag = t.Field(i).Name
+		}
+
+		// Handle nil pointer fields
+		if field.Kind() == reflect.Ptr && field.IsNil() {
+			continue
+		}
+
+		// Get the actual value for pointer fields
+		if field.Kind() == reflect.Ptr {
+			fields[tag] = field.Elem().Interface()
+		} else {
+			fields[tag] = field.Interface()
+		}
 	}
 
-	return nil
+	return c.HSet(ctx, key, fields).Err()
 }
 
 func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
 	cmds, err := pipe.Exec(ctx)
 	if err != nil {
-		return err
-	}
-	for _, cmd := range cmds {
-		if err := cmd.Err(); err != nil {
-			return err
+		slog.InfoContext(ctx, "redis tx err != nil", "error", err)
+		for _, cmd := range cmds {
+			if err := cmd.Err(); err != nil {
+				slog.ErrorContext(ctx, "redis tx error", "error", err)
+			}
 		}
+
+		return err
 	}
 
 	return nil
