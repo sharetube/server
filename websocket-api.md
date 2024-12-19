@@ -169,9 +169,19 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
 ```json
 {
   "jwt": "string",
+  "joined_member": {
+    "id": "string",
+    "username": "string",
+    "color": "string",
+    "avatar_url": "string",
+    "is_ready": "boolean",
+    "is_admin": "boolean",
+    "is_muted": "boolean"
+  },
   "room": {
     "room_id": "string",
     "player": {
+      "video_url": "string",
       "playback_rate": "number",
       "is_playing": "boolean",
       "current_time": "number",

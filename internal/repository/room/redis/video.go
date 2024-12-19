@@ -20,9 +20,9 @@ func (r repo) geLastVideoKey(roomId string) string {
 	return "room:" + roomId + ":last-video"
 }
 
-func (r repo) getPlaylistVersionKey(roomId string) string {
-	return "room:" + roomId + ":playlist-version"
-}
+// func (r repo) getPlaylistVersionKey(roomId string) string {
+// 	return "room:" + roomId + ":playlist-version"
+// }
 
 func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})

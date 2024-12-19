@@ -67,16 +67,16 @@ type CreateRoomParams struct {
 }
 
 type CreateRoomResponse struct {
-	RoomId   string
-	MemberId string
-	JWT      string
+	RoomId       string
+	JoinedMember Member
+	JWT          string
 }
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*CreateRoomResponse, error) {
 	roomId := s.generator.GenerateRandomString(8)
 
 	memberId := uuid.NewString()
-	if err := s.roomRepo.SetMember(ctx, &room.SetMemberParams{
+	setMemberParams := room.SetMemberParams{
 		MemberId:  memberId,
 		Username:  params.Username,
 		Color:     params.Color,
@@ -85,7 +85,8 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		IsAdmin:   true,
 		IsReady:   false,
 		RoomId:    roomId,
-	}); err != nil {
+	}
+	if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
 		s.logger.InfoContext(ctx, "failed to set member", "error", err)
 		return nil, err
 	}
@@ -109,9 +110,17 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}
 
 	return &CreateRoomResponse{
-		JWT:      jwt,
-		RoomId:   roomId,
-		MemberId: memberId,
+		JWT:    jwt,
+		RoomId: roomId,
+		JoinedMember: Member{
+			Id:        memberId,
+			Username:  setMemberParams.Username,
+			Color:     setMemberParams.Color,
+			AvatarURL: setMemberParams.AvatarURL,
+			IsMuted:   setMemberParams.IsMuted,
+			IsAdmin:   setMemberParams.IsAdmin,
+			IsReady:   setMemberParams.IsReady,
+		},
 	}, nil
 }
 
