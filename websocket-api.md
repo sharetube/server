@@ -23,6 +23,17 @@ Join room: `/api/v1/room/{room-id}/join/ws?jwt=<optional>&username=<required>&co
 </tr>
 
 <tr>
+<td>ALIVE</td>
+<td>
+
+```json
+null
+```
+</td>
+</tr>
+
+
+<tr>
 <td>UPDATE_PROFILE</td>
 <td>
 

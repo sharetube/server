@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -50,11 +49,6 @@ var (
 		flagKey:      "server-playlist-limit",
 		defaultValue: 25,
 	}
-	updatesInterval = configVar[time.Duration]{
-		envKey:       "SERVER_UPDATES_INTERVAL",
-		flagKey:      "server-updates-interval",
-		defaultValue: 5 * time.Second,
-	}
 	redisPort = configVar[int]{
 		envKey:       "REDIS_PORT",
 		flagKey:      "redis-port",
@@ -80,7 +74,6 @@ func loadAppConfig() *app.AppConfig {
 	pflag.String(logLevel.flagKey, logLevel.defaultValue, "Logging level")
 	pflag.Int(membersLimit.flagKey, membersLimit.defaultValue, "Maximum number of members in the room")
 	pflag.Int(playlistLimit.flagKey, playlistLimit.defaultValue, "Maximum number of videos in the playlist")
-	pflag.Duration(updatesInterval.flagKey, updatesInterval.defaultValue, "Interval between updates")
 	pflag.Int(redisPort.flagKey, redisPort.defaultValue, "Redis port")
 	pflag.String(redisHost.flagKey, redisHost.defaultValue, "Redis host")
 	pflag.String(redisPassword.flagKey, redisPassword.defaultValue, "Redis password")
@@ -99,23 +92,21 @@ func loadAppConfig() *app.AppConfig {
 	viper.SetDefault(logLevel.envKey, logLevel.defaultValue)
 	viper.SetDefault(membersLimit.envKey, membersLimit.defaultValue)
 	viper.SetDefault(playlistLimit.envKey, playlistLimit.defaultValue)
-	viper.SetDefault(updatesInterval.envKey, updatesInterval.defaultValue)
 	viper.SetDefault(redisPort.envKey, redisPort.defaultValue)
 	viper.SetDefault(redisHost.envKey, redisHost.defaultValue)
 	viper.SetDefault(redisPassword.envKey, redisPassword.defaultValue)
 
 	// 5. Create config struct
 	config := &app.AppConfig{
-		Secret:          viper.GetString(secret.envKey),
-		Host:            viper.GetString(host.envKey),
-		Port:            viper.GetInt(port.envKey),
-		LogLevel:        viper.GetString(logLevel.envKey),
-		MembersLimit:    viper.GetInt(membersLimit.envKey),
-		PlaylistLimit:   viper.GetInt(playlistLimit.envKey),
-		UpdatesInterval: viper.GetDuration(updatesInterval.envKey),
-		RedisPort:       viper.GetInt(redisPort.envKey),
-		RedisHost:       viper.GetString(redisHost.envKey),
-		RedisPassword:   viper.GetString(redisPassword.envKey),
+		Secret:        viper.GetString(secret.envKey),
+		Host:          viper.GetString(host.envKey),
+		Port:          viper.GetInt(port.envKey),
+		LogLevel:      viper.GetString(logLevel.envKey),
+		MembersLimit:  viper.GetInt(membersLimit.envKey),
+		PlaylistLimit: viper.GetInt(playlistLimit.envKey),
+		RedisPort:     viper.GetInt(redisPort.envKey),
+		RedisHost:     viper.GetString(redisHost.envKey),
+		RedisPassword: viper.GetString(redisPassword.envKey),
 	}
 
 	return config

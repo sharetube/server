@@ -120,13 +120,7 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 		return room.ErrVideoNotFound
 	}
 
-	lastVideoId, err := r.getLastVideoId(ctx, params.RoomId)
-	if err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
-		return err
-	}
-
-	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, lastVideoId)).Err(); err != nil {
+	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Err(); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}

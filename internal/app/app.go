@@ -20,16 +20,15 @@ import (
 )
 
 type AppConfig struct {
-	Secret          string        `json:"-"`
-	Host            string        `json:"host"`
-	Port            int           `json:"port"`
-	MembersLimit    int           `json:"members_limit"`
-	PlaylistLimit   int           `json:"playlist_limit"`
-	UpdatesInterval time.Duration `json:"updates_interval"`
-	LogLevel        string        `json:"log_level"`
-	RedisPort       int           `json:"redis_port"`
-	RedisHost       string        `json:"redis_host"`
-	RedisPassword   string        `json:"-"`
+	Secret        string `json:"-"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	MembersLimit  int    `json:"members_limit"`
+	PlaylistLimit int    `json:"playlist_limit"`
+	LogLevel      string `json:"log_level"`
+	RedisPort     int    `json:"redis_port"`
+	RedisHost     string `json:"redis_host"`
+	RedisPassword string `json:"-"`
 }
 
 // todo: add validation
@@ -39,9 +38,6 @@ func (cfg *AppConfig) Validate() error {
 	}
 	if cfg.PlaylistLimit < 1 {
 		return fmt.Errorf("playlist limit must be greater than 0")
-	}
-	if cfg.UpdatesInterval < 1 {
-		return fmt.Errorf("updates interval must be greater than 0")
 	}
 	return nil
 }
@@ -67,7 +63,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc, logger)
+	roomRepo := redis.NewRepo(rc, 10*time.Minute, logger)
 	connectionRepo := inmemory.NewRepo(logger)
 	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret, logger)
 	controller := controller.NewController(roomService, logger)

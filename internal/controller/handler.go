@@ -9,6 +9,7 @@ import (
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
+	c.logger.InfoContext(r.Context(), "create room")
 	user, err := c.getUser(r)
 	if err != nil {
 		c.logger.DebugContext(r.Context(), "failed to get user", "error", err)
@@ -75,6 +76,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
+	c.logger.InfoContext(r.Context(), "join room")
 	roomId := chi.URLParam(r, "room-id")
 	if roomId == "" {
 		c.logger.DebugContext(r.Context(), "empty room id")
