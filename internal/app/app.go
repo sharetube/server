@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -29,6 +30,7 @@ type AppConfig struct {
 	RedisPort     int    `json:"redis_port"`
 	RedisHost     string `json:"redis_host"`
 	RedisPassword string `json:"-"`
+	LogPath       string `json:"log_path"`
 }
 
 // todo: add validation
@@ -43,12 +45,22 @@ func (cfg *AppConfig) Validate() error {
 }
 
 func Run(ctx context.Context, cfg *AppConfig) error {
-	logLevel := slog.LevelDebug
+	logLevel := slog.LevelInfo
 	if err := logLevel.UnmarshalText([]byte(strings.ToUpper(cfg.LogLevel))); err != nil {
 		log.Fatal(err)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	var writer io.Writer
+	logFile, err := os.OpenFile(cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		slog.Info("error opening log file for writing")
+		writer = os.Stdout
+	} else {
+		defer logFile.Close()
+		writer = io.MultiWriter(os.Stdout, logFile)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{
 		Level:     logLevel,
 		AddSource: true,
 	}))

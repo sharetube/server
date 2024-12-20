@@ -13,10 +13,12 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
 
-FROM scratch
+FROM alpine:latest
 
 WORKDIR /app
 
 COPY --from=build app/server .
+
+RUN mkdir -p /var/log/sharetube && chmod 777 /var/log/sharetube && touch /var/log/sharetube/server.log
 
 CMD ["./server"]
