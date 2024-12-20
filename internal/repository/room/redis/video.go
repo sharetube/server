@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
@@ -16,7 +15,7 @@ func (r repo) getPlaylistKey(roomId string) string {
 	return "room:" + roomId + ":playlist"
 }
 
-func (r repo) geLastVideoKey(roomId string) string {
+func (r repo) getLastVideoKey(roomId string) string {
 	return "room:" + roomId + ":last-video"
 }
 
@@ -32,6 +31,8 @@ func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return 0, err
 	}
+
+	r.rc.Expire(ctx, playlistKey, r.expireDuration)
 
 	videosLength := int(cmd.Val())
 	return videosLength, nil
@@ -54,11 +55,11 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	}
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
 	r.hSetIfNotExists(ctx, pipe, videoKey, video)
-	pipe.Expire(ctx, videoKey, 10*time.Minute)
+	pipe.Expire(ctx, videoKey, r.expireDuration)
 
 	playlistKey := r.getPlaylistKey(params.RoomId)
 	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoId)
-	pipe.Expire(ctx, playlistKey, 10*time.Minute)
+	pipe.Expire(ctx, playlistKey, r.expireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
@@ -70,13 +71,16 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 
 func (r repo) getVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
 	var video room.Video
-	if err := r.rc.HGetAll(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Scan(&video); err != nil {
+	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
+	if err := r.rc.HGetAll(ctx, videoKey).Scan(&video); err != nil {
 		return room.Video{}, err
 	}
 
 	if video.URL == "" {
 		return room.Video{}, room.ErrVideoNotFound
 	}
+
+	r.rc.Expire(ctx, videoKey, r.expireDuration)
 
 	return video, nil
 }
@@ -92,17 +96,17 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 	return video, nil
 }
 
-func (r repo) getVideoIds(ctx context.Context, roomId string) ([]string, error) {
-	return r.rc.ZRange(ctx, r.getPlaylistKey(roomId), 0, -1).Result()
-}
-
 func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
-	videoIds, err := r.getVideoIds(ctx, roomId)
+
+	playlistKey := r.getPlaylistKey(roomId)
+	videoIds, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
 	if err != nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
+
+	r.rc.Expire(ctx, playlistKey, r.expireDuration)
 
 	return videoIds, nil
 }
@@ -128,13 +132,11 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 	return nil
 }
 
-func (r repo) getLastVideoId(ctx context.Context, roomId string) (string, error) {
-	return r.rc.Get(ctx, r.geLastVideoKey(roomId)).Result()
-}
-
 func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*string, error) {
 	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
-	lastVideoId, err := r.getLastVideoId(ctx, roomId)
+
+	lastVideoKey := r.getLastVideoKey(roomId)
+	lastVideoId, err := r.rc.Get(ctx, lastVideoKey).Result()
 	if err != nil && err != redis.Nil {
 		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
@@ -143,6 +145,8 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*string, error
 	if lastVideoId == "" {
 		return nil, nil
 	}
+
+	r.rc.Expire(ctx, lastVideoKey, r.expireDuration)
 
 	return &lastVideoId, nil
 }

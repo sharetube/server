@@ -16,9 +16,6 @@ type Output struct {
 }
 
 func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-	roomId := c.getRoomIdFromCtx(ctx)
-	memberId := c.getMemberIdFromCtx(ctx)
-	c.logger.InfoContext(ctx, "alive", "room_id", roomId, "member_id", memberId)
 }
 
 func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
