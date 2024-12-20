@@ -81,9 +81,10 @@ type PromoteMemberParams struct {
 }
 
 type PromoteMemberResponse struct {
-	PromotedMember Member
-	Members        []Member
-	Conns          []*websocket.Conn
+	PromotedMember     Member
+	PromotedMemberConn *websocket.Conn
+	Members            []Member
+	Conns              []*websocket.Conn
 }
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
@@ -105,6 +106,13 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, errors.New("member is already admin")
 	}
 
+	updatedMemberIsAdmin := true
+	if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.RoomId, params.PromotedMemberId, updatedMemberIsAdmin); err != nil {
+		s.logger.InfoContext(ctx, "failed to update member is admin", "error", err)
+		return PromoteMemberResponse{}, err
+	}
+	member.IsAdmin = updatedMemberIsAdmin
+
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
@@ -117,8 +125,15 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, err
 	}
 
+	promotedMemberConn, err := s.connRepo.GetConn(params.PromotedMemberId)
+	if err != nil {
+		s.logger.InfoContext(ctx, "failed to get conn", "error", err)
+		return PromoteMemberResponse{}, err
+	}
+
 	return PromoteMemberResponse{
-		Conns: conns,
+		Conns:              conns,
+		PromotedMemberConn: promotedMemberConn,
 		PromotedMember: Member{
 			Id:        params.PromotedMemberId,
 			Username:  member.Username,

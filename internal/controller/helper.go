@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -65,7 +64,6 @@ func (c controller) writeError(conn *websocket.Conn, err error) error {
 func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	for _, conn := range conns {
 		if err := conn.WriteJSON(output); err != nil {
-			slog.Warn("failed to broadcast", "error", err)
 			return err
 		}
 	}

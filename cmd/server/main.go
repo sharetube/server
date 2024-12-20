@@ -21,32 +21,37 @@ type configVar[T any] struct {
 var (
 	secret = configVar[string]{
 		envKey:       "SERVER_SECRET",
-		flagKey:      "server-secret",
+		flagKey:      "secret",
 		defaultValue: "",
+	}
+	logPath = configVar[string]{
+		envKey:       "SERVER_LOG_PATH",
+		flagKey:      "log-path",
+		defaultValue: "/var/log/sharetube/server.log",
 	}
 	port = configVar[int]{
 		envKey:       "SERVER_PORT",
-		flagKey:      "server-port",
+		flagKey:      "port",
 		defaultValue: 80,
 	}
 	host = configVar[string]{
 		envKey:       "SERVER_HOST",
-		flagKey:      "server-host",
+		flagKey:      "host",
 		defaultValue: "0.0.0.0",
 	}
 	logLevel = configVar[string]{
 		envKey:       "SERVER_LOG_LEVEL",
-		flagKey:      "server-log-level",
+		flagKey:      "log-level",
 		defaultValue: "INFO",
 	}
 	membersLimit = configVar[int]{
 		envKey:       "SERVER_MEMBERS_LIMIT",
-		flagKey:      "server-members-limit",
+		flagKey:      "members-limit",
 		defaultValue: 9,
 	}
 	playlistLimit = configVar[int]{
 		envKey:       "SERVER_PLAYLIST_LIMIT",
-		flagKey:      "server-playlist-limit",
+		flagKey:      "playlist-limit",
 		defaultValue: 25,
 	}
 	redisPort = configVar[int]{
@@ -72,6 +77,7 @@ func loadAppConfig() *app.AppConfig {
 	pflag.Int(port.flagKey, port.defaultValue, "Server port")
 	pflag.String(host.flagKey, host.defaultValue, "Server host")
 	pflag.String(logLevel.flagKey, logLevel.defaultValue, "Logging level")
+	pflag.String(logPath.flagKey, logPath.defaultValue, "Log file path")
 	pflag.Int(membersLimit.flagKey, membersLimit.defaultValue, "Maximum number of members in the room")
 	pflag.Int(playlistLimit.flagKey, playlistLimit.defaultValue, "Maximum number of videos in the playlist")
 	pflag.Int(redisPort.flagKey, redisPort.defaultValue, "Redis port")
@@ -90,6 +96,7 @@ func loadAppConfig() *app.AppConfig {
 	viper.SetDefault(port.envKey, port.defaultValue)
 	viper.SetDefault(host.envKey, host.defaultValue)
 	viper.SetDefault(logLevel.envKey, logLevel.defaultValue)
+	viper.SetDefault(logPath.envKey, logPath.defaultValue)
 	viper.SetDefault(membersLimit.envKey, membersLimit.defaultValue)
 	viper.SetDefault(playlistLimit.envKey, playlistLimit.defaultValue)
 	viper.SetDefault(redisPort.envKey, redisPort.defaultValue)
@@ -102,6 +109,7 @@ func loadAppConfig() *app.AppConfig {
 		Host:          viper.GetString(host.envKey),
 		Port:          viper.GetInt(port.envKey),
 		LogLevel:      viper.GetString(logLevel.envKey),
+		LogPath:       viper.GetString(logPath.envKey),
 		MembersLimit:  viper.GetInt(membersLimit.envKey),
 		PlaylistLimit: viper.GetInt(playlistLimit.envKey),
 		RedisPort:     viper.GetInt(redisPort.envKey),

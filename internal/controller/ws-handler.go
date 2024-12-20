@@ -222,6 +222,15 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		c.logger.ErrorContext(ctx, "failed to broadcast", "error", err)
 		return
 	}
+
+	if err := promoteMemberResp.PromotedMemberConn.WriteJSON(&Output{
+		Type: "IS_ADMIN_CHANGED",
+		Payload: map[string]any{
+			"is_admin": promoteMemberResp.PromotedMember.IsAdmin,
+		},
+	}); err != nil {
+		c.logger.ErrorContext(ctx, "failed to write json", "error", err)
+	}
 }
 
 func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {

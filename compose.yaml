@@ -13,18 +13,61 @@ services:
     networks:
       - sharetube
 
+  fluent-bit:
+    image: fluent/fluent-bit:3.2.3
+    container_name: sharetube-fluent-bit
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - logs:/logs
+    depends_on:
+      - loki
+    networks:
+    - sharetube
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: sharetube-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+    - sharetube
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: sharetube-grafana
+    depends_on:
+      - fluent-bit
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana:/var/lib/grafana # Persist data.
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_BASIC_ENABLED=false
+    networks:
+    - sharetube
+
   server:
     container_name: sharetube-server
     build:
-      dockerfile: Dockerfile
+      dockerfile: server.dockerfile
     env_file:
       - .env
     ports:
       - ${SERVER_PORT}:${SERVER_PORT}
     restart: unless-stopped
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
+      - fluent-bit
+    volumes:
+      - logs:/var/log
     networks:
       - sharetube
 
@@ -43,6 +86,10 @@ services:
   #       condition: service_started
   #   networks:
   #     - sharetube
+
+volumes:
+  grafana:
+  logs:
 
 networks:
   sharetube:
