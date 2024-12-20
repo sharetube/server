@@ -5,18 +5,18 @@ type Video struct {
 }
 
 type RemoveVideoParams struct {
-	VideoId string
-	RoomId  string
+	VideoId string `json:"video_id"`
+	RoomId  string `json:"room_id"`
 }
 
 type SetVideoParams struct {
-	VideoId string
-	RoomId  string
-	URL     string
+	VideoId string `json:"video_id"`
+	RoomId  string `json:"room_id"`
+	URL     string `json:"url"`
 	// Version   int
 }
 
 type GetVideoParams struct {
-	VideoId string
-	RoomId  string
+	VideoId string `json:"video_id"`
+	RoomId  string `json:"room_id"`
 }
