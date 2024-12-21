@@ -25,6 +25,11 @@ func (c controller) GetMux() http.Handler {
 	r.Use(cors.AllowAll().Handler)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+			return
+		})
 		r.Route("/ws", func(r chi.Router) {
 			r.Route("/room", func(r chi.Router) {
 				r.With(c.connectionIdMiddleware).Get("/create", c.createRoom)
