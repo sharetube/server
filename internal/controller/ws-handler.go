@@ -95,6 +95,8 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 		return
 	}
 
+	// todo: add validation
+
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
 		SenderId: memberId,
 		RoomId:   roomId,
@@ -130,7 +132,6 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
 		c.writeError(ctx, conn, err)
-
 		return
 	}
 
@@ -165,7 +166,6 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
 		c.writeError(ctx, conn, err)
-
 		return
 	}
 
@@ -210,7 +210,7 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		return
 	}
 
-	addVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
+	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
 		VideoId:  data.VideoId,
 		SenderId: memberId,
 		RoomId:   roomId,
@@ -221,11 +221,11 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		return
 	}
 
-	c.broadcast(ctx, addVideoResponse.Conns, &Output{
+	c.broadcast(ctx, removeVideoResponse.Conns, &Output{
 		Type: "VIDEO_REMOVED",
 		Payload: map[string]any{
 			"removed_video_id": data.VideoId,
-			"playlist":         addVideoResponse.Playlist,
+			"playlist":         removeVideoResponse.Playlist,
 		},
 	})
 }

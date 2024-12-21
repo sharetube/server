@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"runtime"
 	"time"
@@ -12,14 +13,14 @@ import (
 	"github.com/sharetube/server/pkg/wsrouter"
 )
 
-func (c controller) requestIdWSMiddleware(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
+func (c controller) wsRequestIdWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
 	return func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-		ctx = ctxlogger.AppendCtx(ctx, slog.String("request_id", c.generateTimeBasedId()))
+		ctx = ctxlogger.AppendCtx(ctx, slog.String("ws_request_id", c.generateTimeBasedId()))
 		next(ctx, conn, payload)
 	}
 }
 
-func (c controller) loggerWSMiddleware(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
+func (c controller) loggerWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
 	return func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
 		c.logger.InfoContext(ctx, "request", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
 		start := time.Now()
@@ -38,11 +39,18 @@ func (c controller) loggerWSMiddleware(next wsrouter.HandlerFunc) wsrouter.Handl
 	}
 }
 
-func (c controller) getWSRouter() *wsrouter.WSRouter {
-	mux := wsrouter.New()
+func (c controller) handleWSNotFound(ctx context.Context, conn *websocket.Conn, typ string) {
+	c.logger.InfoContext(ctx, "handler not found", "type", typ)
+	c.writeError(ctx, conn, fmt.Errorf("handler for type %s not found", typ))
+}
 
-	mux.Use(c.requestIdWSMiddleware)
-	mux.Use(c.loggerWSMiddleware)
+func (c controller) getWSRouter() *wsrouter.WSRouter {
+	mux := wsrouter.New(c.logger)
+
+	mux.SetHandlerNotFound(c.handleWSNotFound)
+
+	mux.Use(c.wsRequestIdWSMw)
+	mux.Use(c.loggerWSMw)
 
 	// video
 	mux.Handle("ALIVE", c.handleAlive)
