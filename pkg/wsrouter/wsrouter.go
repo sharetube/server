@@ -3,6 +3,7 @@ package wsrouter
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/gorilla/websocket"
@@ -20,20 +21,34 @@ type message struct {
 }
 
 type (
-	HandlerFunc    func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage)
-	MiddlewareFunc func(HandlerFunc) HandlerFunc
+	HandlerFunc     func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage)
+	MiddlewareFunc  func(HandlerFunc) HandlerFunc
+	NotFoundHandler func(ctx context.Context, conn *websocket.Conn, typ string)
 )
 
 type WSRouter struct {
-	routes      map[string]HandlerFunc
-	middlewares []MiddlewareFunc
+	routes          map[string]HandlerFunc
+	middlewares     []MiddlewareFunc
+	handlerNotFound NotFoundHandler
+	logger          *slog.Logger
 }
 
-func New() *WSRouter {
+func New(logger *slog.Logger) *WSRouter {
 	return &WSRouter{
 		routes:      make(map[string]HandlerFunc),
 		middlewares: make([]MiddlewareFunc, 0),
+		logger:      logger,
+		handlerNotFound: func(ctx context.Context, conn *websocket.Conn, typ string) {
+			conn.WriteJSON(map[string]any{
+				"type":    "ERROR",
+				"payload": fmt.Sprintf("handler for type %s not found", typ),
+			})
+		},
 	}
+}
+
+func (r *WSRouter) SetHandlerNotFound(handler NotFoundHandler) {
+	r.handlerNotFound = handler
 }
 
 func (r *WSRouter) Use(middleware MiddlewareFunc) {
@@ -49,13 +64,14 @@ func (r *WSRouter) Handle(messageType string, handler HandlerFunc) {
 }
 
 func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
-	defer conn.Close()
-
 	for {
 		// Read JSON message from the connection
 		var msg message
 		err := conn.ReadJSON(&msg)
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				r.logger.InfoContext(ctx, "websocket closed", "error", err)
+			}
 			return err
 		}
 
@@ -64,8 +80,7 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 			ctx = context.WithValue(ctx, messageTypeKey, msg.Type)
 			handler(ctx, conn, msg.Payload)
 		} else {
-			slog.ErrorContext(ctx, "unknown message type", "type", msg.Type)
-			conn.WriteJSON(map[string]string{"error": "Unknown message type"})
+			r.handlerNotFound(ctx, conn, msg.Type)
 		}
 	}
 }

@@ -86,13 +86,13 @@ func (c controller) broadcast(ctx context.Context, conns []*websocket.Conn, outp
 	// 	return errors[0]
 	// }
 
+	c.logger.DebugContext(ctx, "broadcasting", "output", output)
+	var err error
 	for _, conn := range conns {
-		if err := c.writeToConn(ctx, conn, output); err != nil {
-			return err
-		}
+		err = conn.WriteJSON(output)
 	}
 
-	return nil
+	return err
 }
 
 func (c controller) unmarshalJSONorError(ctx context.Context, conn *websocket.Conn, data json.RawMessage, v any) error {
@@ -118,15 +118,13 @@ func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 	}
 
 	if !disconnectMemberResp.IsRoomDeleted {
-		if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
+		c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
 			Type: "MEMBER_DISCONNECTED",
 			Payload: map[string]any{
 				"disconnected_member_id": memberId,
 				"members":                disconnectMemberResp.Members,
 			},
-		}); err != nil {
-			c.logger.WarnContext(ctx, "failed to broadcast", "error", err)
-		}
+		})
 	}
 }
 

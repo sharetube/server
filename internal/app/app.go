@@ -27,11 +27,11 @@ type AppConfig struct {
 	Port          int    `json:"port"`
 	MembersLimit  int    `json:"members_limit"`
 	PlaylistLimit int    `json:"playlist_limit"`
+	LogPath       string `json:"log_path"`
 	LogLevel      string `json:"log_level"`
 	RedisPort     int    `json:"redis_port"`
 	RedisHost     string `json:"redis_host"`
 	RedisPassword string `json:"-"`
-	LogPath       string `json:"log_path"`
 }
 
 // todo: add validation
@@ -58,6 +58,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 		writer = os.Stdout
 	} else {
 		defer logFile.Close()
+		// todo: add config to disable stdout
 		writer = io.MultiWriter(os.Stdout, logFile)
 	}
 
@@ -82,7 +83,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
 	connectionRepo := inmemory.NewRepo(logger)
-	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret, logger)
+	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret)
 	controller := controller.NewController(roomService, logger)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 

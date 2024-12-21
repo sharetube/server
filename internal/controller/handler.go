@@ -44,6 +44,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
+	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
 		Conn:     conn,
@@ -59,7 +60,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := conn.WriteJSON(&Output{
+	if err := c.writeToConn(r.Context(), conn, &Output{
 		Type: "JOINED_ROOM",
 		Payload: map[string]any{
 			"jwt":           createRoomResponse.JWT,
@@ -67,7 +68,6 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 			"room":          roomState,
 		},
 	}); err != nil {
-		c.logger.ErrorContext(r.Context(), "failed to write json", "error", err)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, createRoomResponse.RoomId)
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", createRoomResponse.RoomId))
 	ctx = context.WithValue(ctx, memberIdCtxKey, createRoomResponse.JoinedMember.Id)
-	ctx = ctxlogger.AppendCtx(ctx, slog.String("member_id", createRoomResponse.JoinedMember.Id))
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("sender_id", createRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
@@ -136,16 +136,14 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := conn.WriteJSON(&Output{
+	if err := c.writeToConn(r.Context(), conn, &Output{
 		Type: "JOINED_ROOM",
-		// todo: define output data structs
 		Payload: map[string]any{
 			"jwt":           joinRoomResponse.JWT,
 			"joined_member": joinRoomResponse.JoinedMember,
 			"room":          roomState,
 		},
 	}); err != nil {
-		c.logger.ErrorContext(r.Context(), "failed to write json", "error", err)
 		return
 	}
 
@@ -164,7 +162,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, roomId)
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", roomId))
 	ctx = context.WithValue(ctx, memberIdCtxKey, joinRoomResponse.JoinedMember.Id)
-	ctx = ctxlogger.AppendCtx(ctx, slog.String("member_id", joinRoomResponse.JoinedMember.Id))
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("sender_id", joinRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)

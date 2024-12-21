@@ -3,7 +3,6 @@ package room
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -67,10 +66,9 @@ type service struct {
 	membersLimit  int
 	playlistLimit int
 	secret        []byte
-	logger        *slog.Logger
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string, logger *slog.Logger) *service {
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string) *service {
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	return &service{
@@ -79,7 +77,6 @@ func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistL
 		membersLimit:  membersLimit,
 		playlistLimit: playlistLimit,
 		secret:        []byte(secret),
-		logger:        logger,
 		generator:     randstr.New(letterBytes),
 	}
 }

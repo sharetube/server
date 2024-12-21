@@ -66,6 +66,9 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 		VideoId: *lastVideoId,
 	})
 	if err != nil {
+		if err == room.ErrVideoNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 
