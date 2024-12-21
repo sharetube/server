@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"reflect"
 
 	"github.com/redis/go-redis/v9"
@@ -84,10 +83,9 @@ func (r repo) HSetStruct(ctx context.Context, c redis.Pipeliner, key string, val
 func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
 	cmds, err := pipe.Exec(ctx)
 	if err != nil {
-		slog.InfoContext(ctx, "redis tx err != nil", "error", err)
 		for _, cmd := range cmds {
 			if err := cmd.Err(); err != nil {
-				slog.ErrorContext(ctx, "redis tx error", "error", err)
+				return err
 			}
 		}
 

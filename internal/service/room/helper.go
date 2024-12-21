@@ -1,6 +1,9 @@
 package room
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 func (s service) getDefaultPlayerPlaybackRate() float64 {
 	return 1.0
@@ -17,8 +20,7 @@ func (s service) getDefaultPlayerIsPlaying() bool {
 func (s service) checkIfMemberAdmin(ctx context.Context, roomId, memberId string) error {
 	isAdmin, err := s.roomRepo.GetMemberIsAdmin(ctx, roomId, memberId)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "failed to get member is admin", "error", err)
-		return err
+		return fmt.Errorf("failed to get member is admin", "error", err)
 	}
 
 	if !isAdmin {

@@ -2,6 +2,7 @@ package room
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -88,17 +89,15 @@ type AddVideoResponse struct {
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
 	}
 
 	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get videos length", "error", err)
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to get videos length: %w", err)
 	}
 
 	if videosLength >= s.playlistLimit {
-		s.logger.InfoContext(ctx, "playlist limit reached", "limit", s.playlistLimit)
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
@@ -108,20 +107,17 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		RoomId:  params.RoomId,
 		URL:     params.VideoURL,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to set video", "error", err)
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return AddVideoResponse{
@@ -155,20 +151,17 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to remove video", "error", err)
-		return RemoveVideoResponse{}, err
+		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return RemoveVideoResponse{}, err
+		return RemoveVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get playlist", "error", err)
-		return RemoveVideoResponse{}, err
+		return RemoveVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return RemoveVideoResponse{

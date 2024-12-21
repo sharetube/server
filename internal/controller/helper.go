@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
 )
@@ -54,16 +56,38 @@ func (c controller) getUser(r *http.Request) (user, error) {
 	}, nil
 }
 
-func (c controller) writeError(conn *websocket.Conn, err error) error {
-	return conn.WriteJSON(Output{
+func (c controller) writeToConn(ctx context.Context, conn *websocket.Conn, output *Output) error {
+	c.logger.DebugContext(ctx, "writing to conn", "output", output)
+	if err := conn.WriteJSON(output); err != nil {
+		c.logger.ErrorContext(ctx, "failed to write to conn", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c controller) writeError(ctx context.Context, conn *websocket.Conn, err error) error {
+	return c.writeToConn(ctx, conn, &Output{
 		Type:    "error",
 		Payload: err.Error(),
 	})
 }
 
-func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
+func (c controller) broadcast(ctx context.Context, conns []*websocket.Conn, output *Output) error {
+	// errors := make([]error, len(conns))
+	// for _, conn := range conns {
+	// 	if err := c.writeToConn(ctx, conn, output); err != nil {
+	// 		errors = append(errors, err)
+	// 	}
+	// }
+	// if len(errors) > 0 {
+	// 	c.logger.ErrorContext(ctx, "failed to broadcast", "errors", errors)
+	// 	// todo: return all errors
+	// 	return errors[0]
+	// }
+
 	for _, conn := range conns {
-		if err := conn.WriteJSON(output); err != nil {
+		if err := c.writeToConn(ctx, conn, output); err != nil {
 			return err
 		}
 	}
@@ -71,11 +95,13 @@ func (c controller) broadcast(conns []*websocket.Conn, output *Output) error {
 	return nil
 }
 
-func (c controller) unmarshalJSONorError(conn *websocket.Conn, data json.RawMessage, v any) error {
+func (c controller) unmarshalJSONorError(ctx context.Context, conn *websocket.Conn, data json.RawMessage, v any) error {
 	if err := json.Unmarshal(data, &v); err != nil {
-		if err := c.writeError(conn, err); err != nil {
+		if err := c.writeError(ctx, conn, err); err != nil {
 			return err
 		}
+
+		c.logger.InfoContext(ctx, "failed to unmarshal json", "error", err)
 		return err
 	}
 
@@ -92,7 +118,7 @@ func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 	}
 
 	if !disconnectMemberResp.IsRoomDeleted {
-		if err := c.broadcast(disconnectMemberResp.Conns, &Output{
+		if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
 			Type: "MEMBER_DISCONNECTED",
 			Payload: map[string]any{
 				"disconnected_member_id": memberId,
@@ -102,4 +128,8 @@ func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 			c.logger.WarnContext(ctx, "failed to broadcast", "error", err)
 		}
 	}
+}
+
+func (c controller) generateTimeBasedId() string {
+	return fmt.Sprintf("%d-%s", time.Now().Unix(), uuid.NewString())
 }

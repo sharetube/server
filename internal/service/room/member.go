@@ -3,12 +3,15 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
 	o "github.com/skewb1k/optional"
 )
+
+var ErrMemberIsAlreadyAdmin = errors.New("member is already admin")
 
 func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error) {
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
@@ -52,21 +55,19 @@ type RemoveMemberResponse struct {
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return RemoveMemberResponse{}, err
+		return RemoveMemberResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
 	}
 
 	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
 		MemberId: params.RemovedMemberId,
 		RoomId:   params.RoomId,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to remove member", "error", err)
-		return RemoveMemberResponse{}, err
+		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
 	}
 
 	conn, err := s.connRepo.GetConn(params.RemovedMemberId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conn", "error", err)
-		return RemoveMemberResponse{}, err
+		return RemoveMemberResponse{}, fmt.Errorf("failed to get conn: %w", err)
 	}
 
 	return RemoveMemberResponse{
@@ -89,7 +90,7 @@ type PromoteMemberResponse struct {
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
 	}
 
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
@@ -97,38 +98,33 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		RoomId:   params.RoomId,
 	})
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member", "error", err)
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to get member: %w", err)
 	}
 
 	if member.IsAdmin {
-		s.logger.InfoContext(ctx, "member is already admin", "member_id", params.PromotedMemberId)
-		return PromoteMemberResponse{}, errors.New("member is already admin")
+		return PromoteMemberResponse{}, ErrMemberIsAlreadyAdmin
 	}
 
 	updatedMemberIsAdmin := true
 	if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.RoomId, params.PromotedMemberId, updatedMemberIsAdmin); err != nil {
-		s.logger.InfoContext(ctx, "failed to update member is admin", "error", err)
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to update member is admin: %w", err)
 	}
 	member.IsAdmin = updatedMemberIsAdmin
 
+	// todo: refactor by do not use getConnsByRoomId to save conn inside for
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	promotedMemberConn, err := s.connRepo.GetConn(params.PromotedMemberId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conn", "error", err)
-		return PromoteMemberResponse{}, err
+		return PromoteMemberResponse{}, fmt.Errorf("failed to get conn: %w", err)
 	}
 
 	return PromoteMemberResponse{
@@ -154,8 +150,7 @@ type ConnectMemberParams struct {
 
 func (s service) ConnectMember(ctx context.Context, params *ConnectMemberParams) error {
 	if err := s.connRepo.Add(params.Conn, params.MemberId); err != nil {
-		s.logger.InfoContext(ctx, "failed to connect member", "error", err)
-		return err
+		return fmt.Errorf("failed to connect member: %w", err)
 	}
 
 	return nil
@@ -177,31 +172,25 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		MemberId: params.MemberId,
 		RoomId:   params.RoomId,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to remove member", "error", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove member from list: %w", err)
 	}
 
 	conn, err := s.connRepo.RemoveByMemberId(params.MemberId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to remove conn", "error", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove conn by member id: %w", err)
 	}
 
-	if conn.NetConn() != nil { //! for testing
-		if err := conn.Close(); err != nil {
-			s.logger.InfoContext(ctx, "failed to close conn", "error", err)
-		}
-	}
+	conn.Close()
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return DisconnectMemberResponse{}, err
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	// delete room if no member left
 	if len(members) == 0 {
 		if err := s.deleteRoom(ctx, params.RoomId); err != nil {
-			s.logger.InfoContext(ctx, "failed to delete room", "error", err)
-			return DisconnectMemberResponse{}, err
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to delete room: %w", err)
 		}
 
 		return DisconnectMemberResponse{
@@ -211,8 +200,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return DisconnectMemberResponse{}, err
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	return DisconnectMemberResponse{
@@ -242,23 +230,20 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 		RoomId:   params.RoomId,
 	})
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member", "error", err)
-		return UpdateProfileResponse{}, err
+		return UpdateProfileResponse{}, fmt.Errorf("failed to get member: %w", err)
 	}
 
 	// todo: wrap in transaction
 	if params.Username != nil && member.Username != *params.Username {
 		if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, params.SenderId, *params.Username); err != nil {
-			s.logger.InfoContext(ctx, "failed to update member username", "error", err)
-			return UpdateProfileResponse{}, err
+			return UpdateProfileResponse{}, fmt.Errorf("failed to update member username: %w", err)
 		}
 		member.Username = *params.Username
 	}
 
 	if params.Color != nil && member.Color != *params.Color {
 		if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, params.SenderId, *params.Color); err != nil {
-			s.logger.InfoContext(ctx, "failed to update member color", "error", err)
-			return UpdateProfileResponse{}, err
+			return UpdateProfileResponse{}, fmt.Errorf("failed to update member color: %w", err)
 		}
 		member.Color = *params.Color
 	}
@@ -266,8 +251,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	if params.AvatarURL.Defined {
 		if member.AvatarURL != params.AvatarURL.Value {
 			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, params.SenderId, params.AvatarURL.Value); err != nil {
-				s.logger.InfoContext(ctx, "failed to update member avatar url", "error", err)
-				return UpdateProfileResponse{}, err
+				return UpdateProfileResponse{}, fmt.Errorf("failed to update member avatar url: %w", err)
 			}
 			member.AvatarURL = params.AvatarURL.Value
 		}
@@ -276,14 +260,12 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	// todo: fix double get ids
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return UpdateProfileResponse{}, err
+		return UpdateProfileResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return UpdateProfileResponse{}, err
+		return UpdateProfileResponse{}, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	return UpdateProfileResponse{
@@ -321,8 +303,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		RoomId:   params.RoomId,
 	})
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member", "error", err)
-		return UpdateIsReadyResponse{}, err
+		return UpdateIsReadyResponse{}, fmt.Errorf("failed to get member: %w", err)
 	}
 
 	if member.IsReady == params.IsReady {
@@ -344,21 +325,18 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	if err := s.roomRepo.UpdateMemberIsReady(ctx, params.RoomId, params.SenderId, params.IsReady); err != nil {
-		s.logger.InfoContext(ctx, "failed to update member is ready", "error", err)
-		return UpdateIsReadyResponse{}, err
+		return UpdateIsReadyResponse{}, fmt.Errorf("failed to update member is ready: %w", err)
 	}
 
 	// todo: fix double get ids
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return UpdateIsReadyResponse{}, err
+		return UpdateIsReadyResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return UpdateIsReadyResponse{}, err
+		return UpdateIsReadyResponse{}, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	member.IsReady = params.IsReady
@@ -385,8 +363,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	if ok {
 		playerState, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 		if err != nil {
-			s.logger.InfoContext(ctx, "failed to get player state", "error", err)
-			return UpdateIsReadyResponse{}, err
+			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
 		}
 
 		updatePlayerStateParams := room.UpdatePlayerStateParams{
@@ -397,8 +374,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 			RoomId:       params.RoomId,
 		}
 		if err := s.roomRepo.UpdatePlayerState(ctx, &updatePlayerStateParams); err != nil {
-			s.logger.InfoContext(ctx, "failed to update player state", "error", err)
-			return UpdateIsReadyResponse{}, err
+			return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player state: %w", err)
 		}
 
 		return UpdateIsReadyResponse{

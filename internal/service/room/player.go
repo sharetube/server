@@ -2,6 +2,7 @@ package room
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -23,7 +24,7 @@ type UpdatePlayerStateResponse struct {
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
 	}
 
 	if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
@@ -33,14 +34,12 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		UpdatedAt:    params.UpdatedAt,
 		RoomId:       params.RoomId,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to update player state", "error", err)
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player state: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	return UpdatePlayerStateResponse{
@@ -68,7 +67,7 @@ type UpdatePlayerVideoResponse struct {
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
 	}
 
 	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
@@ -76,8 +75,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		RoomId:  params.RoomId,
 	})
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get video", "error", err)
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get video:%w", err)
 	}
 
 	updatePlayerParams := room.UpdatePlayerParams{
@@ -89,14 +87,12 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		RoomId:       params.RoomId,
 	}
 	if err := s.roomRepo.UpdatePlayer(ctx, &updatePlayerParams); err != nil {
-		s.logger.InfoContext(ctx, "failed to update player", "error", err)
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns by room id", "error", err)
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	return UpdatePlayerVideoResponse{

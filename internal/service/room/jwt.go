@@ -6,6 +6,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+var ErrInvalidToken = errors.New("invalid token")
+
 const memberIdKey = "member_id"
 
 type Claims struct {
@@ -31,17 +33,17 @@ func (s service) parseJWT(tokenString string) (*Claims, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	memberId, ok := claims[memberIdKey].(string)
 	if !ok {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	return &Claims{

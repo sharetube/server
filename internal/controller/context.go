@@ -7,6 +7,7 @@ type contextKey int
 const (
 	roomIdCtxKey contextKey = iota
 	memberIdCtxKey
+	requestIdCtxKey
 )
 
 func (c controller) getRoomIdFromCtx(ctx context.Context) string {
