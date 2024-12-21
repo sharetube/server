@@ -25,17 +25,10 @@ func (c controller) GetMux() http.Handler {
 	r.Use(cors.AllowAll().Handler)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Route("/room", func(r chi.Router) {
-			// r.Get("/{room-id}", c.GetRoom)
-			r.Route("/create", func(r chi.Router) {
-				// r.Post"/validate", c.validateCreateRoom)
-				r.With(c.connectionIdMiddleware).Get("/ws", c.createRoom)
-			})
-			r.Route("/{room-id}", func(r chi.Router) {
-				r.Route("/join", func(r chi.Router) {
-					// r.Post("/validate", c.validateJoinRoom)
-					r.With(c.connectionIdMiddleware).Get("/ws", c.joinRoom)
-				})
+		r.Route("/ws", func(r chi.Router) {
+			r.Route("/room", func(r chi.Router) {
+				r.With(c.connectionIdMiddleware).Get("/create", c.createRoom)
+				r.With(c.connectionIdMiddleware).Get("/join", c.joinRoom)
 			})
 		})
 	})

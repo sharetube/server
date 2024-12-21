@@ -48,9 +48,8 @@ services:
     volumes:
       - grafana:/var/lib/grafana # Persist data.
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_BASIC_ENABLED=false
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=your_secure_password
     networks:
     - sharetube
 
@@ -76,7 +75,9 @@ services:
     container_name: nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - server
     ports:
       - "80:80"
       - "443:443"
@@ -89,3 +90,4 @@ volumes:
 
 networks:
   sharetube:
+    driver: bridge
