@@ -17,6 +17,7 @@ import (
 	"github.com/sharetube/server/internal/repository/connection/inmemory"
 	"github.com/sharetube/server/internal/repository/room/redis"
 	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/pkg/ctxlogger"
 	"github.com/sharetube/server/pkg/redisclient"
 )
 
@@ -60,10 +61,14 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 		writer = io.MultiWriter(os.Stdout, logFile)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{
-		Level:     logLevel,
-		AddSource: true,
-	}))
+	h := ctxlogger.ContextHandler{
+		Handler: slog.NewJSONHandler(writer, &slog.HandlerOptions{
+			Level:     logLevel,
+			AddSource: true,
+		}),
+	}
+
+	logger := slog.New(&h)
 
 	rc, err := redisclient.NewRedisClient(&redisclient.Config{
 		Port:     cfg.RedisPort,
@@ -75,7 +80,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc, 24*14*time.Hour, logger)
+	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
 	connectionRepo := inmemory.NewRepo(logger)
 	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret, logger)
 	controller := controller.NewController(roomService, logger)

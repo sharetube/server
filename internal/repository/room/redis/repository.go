@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -13,10 +12,9 @@ type repo struct {
 	hSetIfNotExistsScript string
 	maxScoreScript        string
 	expireDuration        time.Duration
-	logger                *slog.Logger
 }
 
-func NewRepo(rc *redis.Client, expireDuration time.Duration, logger *slog.Logger) *repo {
+func NewRepo(rc *redis.Client, expireDuration time.Duration) *repo {
 	return &repo{
 		rc: rc,
 		hSetIfNotExistsScript: rc.ScriptLoad(context.Background(), `
@@ -39,6 +37,5 @@ func NewRepo(rc *redis.Client, expireDuration time.Duration, logger *slog.Logger
 			return nextScore
 		`).Val(),
 		expireDuration: expireDuration,
-		logger:         logger,
 	}
 }

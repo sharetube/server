@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,19 +14,17 @@ import (
 func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websocket.Conn, error) {
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member ids", "error", err)
 		return nil, err
 	}
 
 	if len(memberIds) == 0 {
-		return nil, errors.New("room does not exist")
+		return nil, ErrRoomNotFound
 	}
 
 	conns := make([]*websocket.Conn, 0, len(memberIds))
 	for _, memberId := range memberIds {
 		conn, err := s.connRepo.GetConn(memberId)
 		if err != nil {
-			s.logger.InfoContext(ctx, "failed to get conn", "error", err)
 			return nil, err
 		}
 
@@ -37,13 +36,12 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 
 func (s service) deleteRoom(ctx context.Context, roomId string) error {
 	if err := s.roomRepo.RemovePlayer(ctx, roomId); err != nil {
-		s.logger.InfoContext(ctx, "failed to remove player", "error", err)
+		return fmt.Errorf("failed to remove player: %w", err)
 	}
 
 	videoIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get video ids", "error", err)
-		return err
+		return fmt.Errorf("failed to get video ids: %w", err)
 	}
 
 	for _, videoId := range videoIds {
@@ -51,8 +49,7 @@ func (s service) deleteRoom(ctx context.Context, roomId string) error {
 			VideoId: videoId,
 			RoomId:  roomId,
 		}); err != nil {
-			s.logger.InfoContext(ctx, "failed to remove video", "error", err)
-			return err
+			return fmt.Errorf("failed to remove video: %w", err)
 		}
 	}
 
@@ -87,14 +84,12 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		RoomId:    roomId,
 	}
 	if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
-		s.logger.InfoContext(ctx, "failed to set member", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to set member: %w", err)
 	}
 
 	jwt, err := s.generateJWT(memberId)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "failed to generate jwt", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to generate jwt: %w", err)
 	}
 
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
@@ -105,8 +100,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		UpdatedAt:       int(time.Now().Unix()),
 		RoomId:          roomId,
 	}); err != nil {
-		s.logger.InfoContext(ctx, "failed to set player", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to set player: %w", err)
 	}
 
 	return &CreateRoomResponse{
@@ -131,7 +125,6 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (string
 
 	claims, err := s.parseJWT(jwt)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to parse jwt", "error", err)
 		return "", nil, err
 	}
 	// todo: add validation
@@ -145,7 +138,6 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (string
 			return "", nil, nil
 		}
 
-		s.logger.InfoContext(ctx, "failed to get member", "error", err)
 		return "", nil, err
 	}
 
@@ -170,15 +162,13 @@ type JoinRoomResponse struct {
 func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get conns", "error", err)
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	jwt := params.JWT
 	memberId, member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member", "error", err)
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get member: %w", err)
 	}
 	if member == nil {
 		// member not found, creating new one
@@ -194,8 +184,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			RoomId:    params.RoomId,
 		}
 		if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
-			s.logger.InfoContext(ctx, "failed to set member", "error", err)
-			return JoinRoomResponse{}, err
+			return JoinRoomResponse{}, fmt.Errorf("failed to set member: %w", err)
 		}
 
 		member = &room.Member{
@@ -208,8 +197,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		}
 		jwt, err = s.generateJWT(memberId)
 		if err != nil {
-			s.logger.ErrorContext(ctx, "failed to generate jwt", "error", err)
-			return JoinRoomResponse{}, err
+			return JoinRoomResponse{}, fmt.Errorf("failed to generate jwt: %w", err)
 		}
 	} else {
 		// member found, updating
@@ -217,30 +205,26 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			RoomId:   params.RoomId,
 			MemberId: memberId,
 		}); err != nil {
-			s.logger.InfoContext(ctx, "failed to add member to list", "error", err)
-			return JoinRoomResponse{}, err
+			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
 		}
 
 		if member.Username != params.Username {
 			if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, memberId, params.Username); err != nil {
-				s.logger.InfoContext(ctx, "failed to update member username", "error", err)
-				return JoinRoomResponse{}, err
+				return JoinRoomResponse{}, fmt.Errorf("failed to update member username: %w", err)
 			}
 			member.Username = params.Username
 		}
 
 		if member.Color != params.Color {
 			if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, memberId, params.Color); err != nil {
-				s.logger.InfoContext(ctx, "failed to update member color", "error", err)
-				return JoinRoomResponse{}, err
+				return JoinRoomResponse{}, fmt.Errorf("failed to update member color: %w", err)
 			}
 			member.Color = params.Color
 		}
 
 		if member.AvatarURL != params.AvatarURL {
 			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, memberId, params.AvatarURL); err != nil {
-				s.logger.InfoContext(ctx, "failed to update member avatar URL", "error", err)
-				return JoinRoomResponse{}, err
+				return JoinRoomResponse{}, fmt.Errorf("failed to update member avatar URL: %w", err)
 			}
 			member.AvatarURL = params.AvatarURL
 		}
@@ -248,8 +232,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	return JoinRoomResponse{
@@ -271,20 +254,17 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	player, err := s.roomRepo.GetPlayer(ctx, roomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get player", "error", err)
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get member list", "error", err)
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, roomId)
 	if err != nil {
-		s.logger.InfoContext(ctx, "failed to get videos", "error", err)
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return Room{

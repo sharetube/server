@@ -2,14 +2,19 @@ package controller
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/pkg/ctxlogger"
 )
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	c.logger.InfoContext(r.Context(), "create room")
+	start := time.Now()
+
 	user, err := c.getUser(r)
 	if err != nil {
 		c.logger.DebugContext(r.Context(), "failed to get user", "error", err)
@@ -29,7 +34,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		InitialVideoURL: initialVideoURL,
 	})
 	if err != nil {
-		c.logger.DebugContext(r.Context(), "failed to create room", "error", err)
+		c.logger.InfoContext(r.Context(), "failed to create room", "error", err)
 		return
 	}
 	defer c.disconnect(r.Context(), createRoomResponse.RoomId, createRoomResponse.JoinedMember.Id)
@@ -66,8 +71,12 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "room created", "room_id", createRoomResponse.RoomId, "duration", time.Since(start).Microseconds())
+
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, createRoomResponse.RoomId)
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", createRoomResponse.RoomId))
 	ctx = context.WithValue(ctx, memberIdCtxKey, createRoomResponse.JoinedMember.Id)
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("member_id", createRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
@@ -77,6 +86,8 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	c.logger.InfoContext(r.Context(), "join room")
+	start := time.Now()
+
 	roomId := chi.URLParam(r, "room-id")
 	if roomId == "" {
 		c.logger.DebugContext(r.Context(), "empty room id")
@@ -138,19 +149,22 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.broadcast(joinRoomResponse.Conns, &Output{
+	if err := c.broadcast(r.Context(), joinRoomResponse.Conns, &Output{
 		Type: "MEMBER_JOINED",
 		Payload: map[string]any{
 			"joined_member": joinRoomResponse.JoinedMember,
 			"members":       joinRoomResponse.Members,
 		},
 	}); err != nil {
-		c.logger.WarnContext(r.Context(), "failed to broadcast", "error", err)
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "room joined", "room_id", roomId, "duration", time.Since(start).Microseconds())
+
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, roomId)
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", roomId))
 	ctx = context.WithValue(ctx, memberIdCtxKey, joinRoomResponse.JoinedMember.Id)
+	ctx = ctxlogger.AppendCtx(ctx, slog.String("member_id", joinRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)

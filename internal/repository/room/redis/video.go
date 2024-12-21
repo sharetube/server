@@ -24,11 +24,9 @@ func (r repo) getLastVideoKey(roomId string) string {
 // }
 
 func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
 	playlistKey := r.getPlaylistKey(roomId)
 	cmd := r.rc.ZCard(ctx, playlistKey)
 	if err := cmd.Err(); err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return 0, err
 	}
 
@@ -39,7 +37,6 @@ func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
 }
 
 func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
-	r.logger.DebugContext(ctx, "called", "params", params)
 	pipe := r.rc.TxPipeline()
 
 	// playlistVersionKey := r.getPlaylistVersionKey(params.RoomID)
@@ -62,7 +59,6 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	pipe.Expire(ctx, playlistKey, r.expireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -86,10 +82,8 @@ func (r repo) getVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 }
 
 func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
-	r.logger.DebugContext(ctx, "called", "params", params)
 	video, err := r.getVideo(ctx, params)
 	if err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return room.Video{}, err
 	}
 
@@ -97,12 +91,9 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 }
 
 func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
-
 	playlistKey := r.getPlaylistKey(roomId)
 	videoIds, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
 	if err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
 
@@ -112,20 +103,16 @@ func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) 
 }
 
 func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) error {
-	r.logger.DebugContext(ctx, "called", "params", params)
 	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomId), params.VideoId).Result()
 	if err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
 	if res == 0 {
-		r.logger.DebugContext(ctx, "returned", "error", room.ErrVideoNotFound)
 		return room.ErrVideoNotFound
 	}
 
 	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Err(); err != nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return err
 	}
 
@@ -133,12 +120,9 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 }
 
 func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*string, error) {
-	r.logger.DebugContext(ctx, "called", "params", map[string]string{"room_id": roomId})
-
 	lastVideoKey := r.getLastVideoKey(roomId)
 	lastVideoId, err := r.rc.Get(ctx, lastVideoKey).Result()
 	if err != nil && err != redis.Nil {
-		r.logger.DebugContext(ctx, "returned", "error", err)
 		return nil, err
 	}
 

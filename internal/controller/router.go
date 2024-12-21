@@ -1,14 +1,24 @@
 package controller
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/sharetube/server/pkg/ctxlogger"
 )
 
-func (c *controller) GetMux() http.Handler {
+func (c controller) connectionIdMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ctx = ctxlogger.AppendCtx(ctx, slog.String("connection_id", c.generateTimeBasedId()))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (c controller) GetMux() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
@@ -19,12 +29,12 @@ func (c *controller) GetMux() http.Handler {
 			// r.Get("/{room-id}", c.GetRoom)
 			r.Route("/create", func(r chi.Router) {
 				// r.Post"/validate", c.validateCreateRoom)
-				r.Get("/ws", c.createRoom)
+				r.With(c.connectionIdMiddleware).Get("/ws", c.createRoom)
 			})
 			r.Route("/{room-id}", func(r chi.Router) {
 				r.Route("/join", func(r chi.Router) {
 					// r.Post("/validate", c.validateJoinRoom)
-					r.Get("/ws", c.joinRoom)
+					r.With(c.connectionIdMiddleware).Get("/ws", c.joinRoom)
 				})
 			})
 		})
