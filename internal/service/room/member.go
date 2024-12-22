@@ -294,7 +294,7 @@ type UpdateIsReadyResponse struct {
 	Conns         []*websocket.Conn
 	UpdatedMember Member
 	Members       []Member
-	PlayerState   *PlayerState
+	Player        *Player
 }
 
 func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams) (UpdateIsReadyResponse, error) {
@@ -361,15 +361,15 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	if ok {
-		playerState, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+		player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 		if err != nil {
 			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
 		}
 
 		updatePlayerStateParams := room.UpdatePlayerStateParams{
 			IsPlaying:    neededIsReady,
-			CurrentTime:  playerState.CurrentTime,
-			PlaybackRate: playerState.PlaybackRate,
+			CurrentTime:  player.CurrentTime,
+			PlaybackRate: player.PlaybackRate,
 			UpdatedAt:    int(time.Now().Unix()),
 			RoomId:       params.RoomId,
 		}
@@ -381,11 +381,12 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 			Conns:         conns,
 			UpdatedMember: updatedMember,
 			Members:       members,
-			PlayerState: &PlayerState{
+			Player: &Player{
+				VideoURL:     player.VideoURL,
 				IsPlaying:    updatePlayerStateParams.IsPlaying,
-				CurrentTime:  playerState.CurrentTime,
-				PlaybackRate: playerState.PlaybackRate,
-				UpdatedAt:    playerState.UpdatedAt,
+				CurrentTime:  player.CurrentTime,
+				PlaybackRate: player.PlaybackRate,
+				UpdatedAt:    player.UpdatedAt,
 			},
 		}, nil
 	}

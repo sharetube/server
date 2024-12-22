@@ -22,14 +22,14 @@ func (c controller) wsRequestIdWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerF
 
 func (c controller) loggerWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
 	return func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-		c.logger.InfoContext(ctx, "request", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
+		c.logger.InfoContext(ctx, "websocket message received", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
 		start := time.Now()
 
 		next(ctx, conn, payload)
 
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
-		c.logger.InfoContext(ctx, "returned",
+		c.logger.InfoContext(ctx, "websocket message handled",
 			"duration", time.Since(start).Microseconds(),
 			"alloc", memStats.Alloc/1024,
 			"total_alloc", memStats.TotalAlloc/1024,

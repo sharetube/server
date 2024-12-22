@@ -131,3 +131,22 @@ func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
 func (c controller) generateTimeBasedId() string {
 	return fmt.Sprintf("%d-%s", time.Now().Unix(), uuid.NewString())
 }
+
+func (c controller) broadcastMemberUpdated(ctx context.Context, conns []*websocket.Conn, updatedMember *room.Member, members []room.Member) error {
+	return c.broadcast(ctx, conns, &Output{
+		Type: "MEMBER_UPDATED",
+		Payload: map[string]any{
+			"updated_member": updatedMember,
+			"members":        members,
+		},
+	})
+}
+
+func (c controller) broadcastPlayerUpdated(ctx context.Context, conns []*websocket.Conn, player *room.Player) error {
+	return c.broadcast(ctx, conns, &Output{
+		Type: "PLAYER_UPDATED",
+		Payload: map[string]any{
+			"player": player,
+		},
+	})
+}

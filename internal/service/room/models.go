@@ -28,13 +28,6 @@ type Player struct {
 	UpdatedAt    int     `json:"updated_at"`
 }
 
-type PlayerState struct {
-	IsPlaying    bool    `json:"is_playing"`
-	CurrentTime  int     `json:"current_time"`
-	PlaybackRate float64 `json:"playback_rate"`
-	UpdatedAt    int     `json:"updated_at"`
-}
-
 type Room struct {
 	RoomId   string   `json:"room_id"`
 	Player   Player   `json:"player"`

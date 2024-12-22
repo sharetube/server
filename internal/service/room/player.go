@@ -18,8 +18,8 @@ type UpdatePlayerStateParams struct {
 }
 
 type UpdatePlayerStateResponse struct {
-	PlayerState PlayerState
-	Conns       []*websocket.Conn
+	Player Player
+	Conns  []*websocket.Conn
 }
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
@@ -37,13 +37,19 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player state: %w", err)
 	}
 
+	videoURL, err := s.roomRepo.GetPlayerVideoURL(ctx, params.RoomId)
+	if err != nil {
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player video url: %w", err)
+	}
+
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	return UpdatePlayerStateResponse{
-		PlayerState: PlayerState{
+		Player: Player{
+			VideoURL:     videoURL,
 			IsPlaying:    params.IsPlaying,
 			CurrentTime:  params.CurrentTime,
 			PlaybackRate: params.PlaybackRate,

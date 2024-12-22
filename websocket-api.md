@@ -233,6 +233,7 @@ null
 ```json
 {
   "player": {
+    "video_url": "string",
     "playback_rate": "number",
     "is_playing": "boolean",
     "current_time": "number",

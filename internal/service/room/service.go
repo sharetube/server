@@ -45,6 +45,7 @@ type iRoomRepo interface {
 	RemovePlayer(context.Context, string) error
 	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
+	GetPlayerVideoURL(context.Context, string) (string, error)
 }
 
 type iConnRepo interface {

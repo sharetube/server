@@ -43,14 +43,10 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 	if err != nil {
 		c.logger.InfoContext(ctx, "failed to update player state", "error", err)
 		c.writeError(ctx, conn, err)
-
 		return
 	}
 
-	c.broadcast(ctx, updatePlayerStateResp.Conns, &Output{
-		Type:    "PLAYER_UPDATED",
-		Payload: updatePlayerStateResp.PlayerState,
-	})
+	c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player)
 }
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
@@ -74,7 +70,6 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
 		c.writeError(ctx, conn, err)
-
 		return
 	}
 
@@ -181,13 +176,7 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		return
 	}
 
-	if err := c.broadcast(ctx, promoteMemberResp.Conns, &Output{
-		Type: "MEMBER_UPDATED",
-		Payload: map[string]any{
-			"updated_member": promoteMemberResp.PromotedMember,
-			"members":        promoteMemberResp.Members,
-		},
-	}); err != nil {
+	if err := c.broadcastMemberUpdated(ctx, promoteMemberResp.Conns, &promoteMemberResp.PromotedMember, promoteMemberResp.Members); err != nil {
 		return
 	}
 
@@ -264,13 +253,7 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 		return
 	}
 
-	c.broadcast(ctx, updateProfileResp.Conns, &Output{
-		Type: "MEMBER_UPDATED",
-		Payload: map[string]any{
-			"updated_member": updateProfileResp.UpdatedMember,
-			"members":        updateProfileResp.Members,
-		},
-	})
+	c.broadcastMemberUpdated(ctx, updateProfileResp.Conns, &updateProfileResp.UpdatedMember, updateProfileResp.Members)
 }
 
 func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
@@ -296,20 +279,11 @@ func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Con
 		return
 	}
 
-	if err := c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
-		Type: "MEMBER_UPDATED",
-		Payload: map[string]any{
-			"updated_member": updatePlayerVideoResp.UpdatedMember,
-			"members":        updatePlayerVideoResp.Members,
-		},
-	}); err != nil {
+	if err := c.broadcastMemberUpdated(ctx, updatePlayerVideoResp.Conns, &updatePlayerVideoResp.UpdatedMember, updatePlayerVideoResp.Members); err != nil {
 		return
 	}
 
-	if updatePlayerVideoResp.PlayerState != nil {
-		c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
-			Type:    "PLAYER_UPDATED",
-			Payload: updatePlayerVideoResp.PlayerState,
-		})
+	if updatePlayerVideoResp.Player != nil {
+		c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player)
 	}
 }

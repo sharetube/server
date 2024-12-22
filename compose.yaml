@@ -46,10 +46,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - grafana:/var/lib/grafana # Persist data.
+      - grafana:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=your_secure_password
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     networks:
     - sharetube
 

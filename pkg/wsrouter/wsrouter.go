@@ -23,7 +23,7 @@ type message struct {
 type (
 	HandlerFunc     func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage)
 	MiddlewareFunc  func(HandlerFunc) HandlerFunc
-	NotFoundHandler func(ctx context.Context, conn *websocket.Conn, typ string)
+	NotFoundHandler func(ctx context.Context, conn *websocket.Conn, messageType string)
 )
 
 type WSRouter struct {
@@ -38,10 +38,10 @@ func New(logger *slog.Logger) *WSRouter {
 		routes:      make(map[string]HandlerFunc),
 		middlewares: make([]MiddlewareFunc, 0),
 		logger:      logger,
-		handlerNotFound: func(ctx context.Context, conn *websocket.Conn, typ string) {
+		handlerNotFound: func(ctx context.Context, conn *websocket.Conn, messageType string) {
 			conn.WriteJSON(map[string]any{
 				"type":    "ERROR",
-				"payload": fmt.Sprintf("handler for type %s not found", typ),
+				"payload": fmt.Sprintf("handler for type %s not found", messageType),
 			})
 		},
 	}
