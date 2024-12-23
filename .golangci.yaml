@@ -24,6 +24,12 @@ linters:
     - errcheck
 
 linters-settings:
+  unused:
+    field-writes-are-uses: true
+    post-statements-are-reads: false
+    exported-fields-are-used: true
+    parameters-are-used: true
+    local-variables-are-used: false
   misspell:
     locale: US              # Enforce American English spelling
   revive:

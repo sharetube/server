@@ -32,7 +32,6 @@ null
 </td>
 </tr>
 
-
 <tr>
 <td>UPDATE_PROFILE</td>
 <td>

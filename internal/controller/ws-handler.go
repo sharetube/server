@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -15,95 +14,93 @@ type Output struct {
 	Payload any    `json:"payload"`
 }
 
-func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type EmptyStruct struct{}
+
+func (es *EmptyStruct) UnmarshalJSON([]byte) error {
+	return nil
 }
 
-func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, input EmptyStruct) error {
+	return nil
+}
+
+type UpdatePlayerStateInput struct {
+	IsPlaying    bool    `json:"is_playing"`
+	CurrentTime  int     `json:"current_time"`
+	PlaybackRate float64 `json:"playback_rate"`
+	UpdatedAt    int     `json:"updated_at"`
+}
+
+func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, input UpdatePlayerStateInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		IsPlaying    bool    `json:"is_playing"`
-		CurrentTime  int     `json:"current_time"`
-		PlaybackRate float64 `json:"playback_rate"`
-		UpdatedAt    int     `json:"updated_at"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
 	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
-		IsPlaying:    data.IsPlaying,
-		CurrentTime:  data.CurrentTime,
-		PlaybackRate: data.PlaybackRate,
-		UpdatedAt:    data.UpdatedAt,
+		IsPlaying:    input.IsPlaying,
+		CurrentTime:  input.CurrentTime,
+		PlaybackRate: input.PlaybackRate,
+		UpdatedAt:    input.UpdatedAt,
 		SenderId:     memberId,
 		RoomId:       roomId,
 	})
 	if err != nil {
 		c.logger.InfoContext(ctx, "failed to update player state", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
-	c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player)
+	return c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player)
 }
 
-func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type UpdatePlayerVideoInput struct {
+	VideoId   string `json:"video_id"`
+	UpdatedAt int    `json:"updated_at"`
+}
+
+func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, input UpdatePlayerVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		VideoId   string `json:"video_id"`
-		UpdatedAt int    `json:"updated_at"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
 	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &room.UpdatePlayerVideoParams{
-		VideoId:   data.VideoId,
-		UpdatedAt: data.UpdatedAt,
+		VideoId:   input.VideoId,
+		UpdatedAt: input.UpdatedAt,
 		SenderId:  memberId,
 		RoomId:    roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
-	c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
-		Type:    "PLAYER_VIDEO_UPDATED",
-		Payload: updatePlayerVideoResp.Player,
+	return c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
+		Type: "PLAYER_VIDEO_UPDATED",
+		Payload: map[string]any{
+			"player":   updatePlayerVideoResp.Player,
+			"playlist": updatePlayerVideoResp.Playlist,
+		},
 	})
 }
 
-func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type AddVideoInput struct {
+	VideoURL string `json:"video_url"`
+}
+
+func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, input AddVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
-
-	var data struct {
-		VideoURL string `json:"video_url"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
 
 	// todo: add validation
 
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
 		SenderId: memberId,
 		RoomId:   roomId,
-		VideoURL: data.VideoURL,
+		VideoURL: input.VideoURL,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to add video", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
-	c.broadcast(ctx, addVideoResponse.Conns, &Output{
+	return c.broadcast(ctx, addVideoResponse.Conns, &Output{
 		Type: "VIDEO_ADDED",
 		Payload: map[string]any{
 			"added_video": addVideoResponse.AddedVideo,
@@ -112,75 +109,65 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, pa
 	})
 }
 
-func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type RemoveMemberInput struct {
+	MemberId uuid.UUID `json:"member_id"`
+}
+
+func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, input RemoveMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		MemberId uuid.UUID `json:"member_id"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
-	if data.MemberId == uuid.Nil {
+	if input.MemberId == uuid.Nil {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
 	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
-		RemovedMemberId: data.MemberId.String(),
+		RemovedMemberId: input.MemberId.String(),
 		SenderId:        memberId,
 		RoomId:          roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to remove member", "error", err)
-		c.writeError(ctx, conn, err)
-
-		return
+		return err
 	}
 
 	//? send message to removed member that he have been removed
 	removeMemberResp.Conn.Close()
+
+	return nil
 }
 
-func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type PromotedMemberInput struct {
+	MemberId uuid.UUID `json:"member_id"`
+}
+
+func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, input PromotedMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		MemberId uuid.UUID `json:"member_id"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
-	if data.MemberId == uuid.Nil {
+	if input.MemberId == uuid.Nil {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
 	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &room.PromoteMemberParams{
-		PromotedMemberId: data.MemberId.String(),
+		PromotedMemberId: input.MemberId.String(),
 		SenderId:         memberId,
 		RoomId:           roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to promote member", "error", err)
-		c.writeError(ctx, conn, err)
-
-		return
+		return err
 	}
 
 	if err := c.broadcastMemberUpdated(ctx, promoteMemberResp.Conns, &promoteMemberResp.PromotedMember, promoteMemberResp.Members); err != nil {
-		return
+		return err
 	}
 
-	c.writeToConn(ctx, promoteMemberResp.PromotedMemberConn, &Output{
+	return c.writeToConn(ctx, promoteMemberResp.PromotedMemberConn, &Output{
 		Type: "IS_ADMIN_CHANGED",
 		Payload: map[string]any{
 			"is_admin": promoteMemberResp.PromotedMember.IsAdmin,
@@ -188,102 +175,91 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	})
 }
 
-func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type RemoveVideoInput struct {
+	VideoId string `json:"video_id"`
+}
+
+func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, input RemoveVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		VideoId string `json:"video_id"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
 	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
-		VideoId:  data.VideoId,
+		VideoId:  input.VideoId,
 		SenderId: memberId,
 		RoomId:   roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to remove video", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
-	c.broadcast(ctx, removeVideoResponse.Conns, &Output{
+	return c.broadcast(ctx, removeVideoResponse.Conns, &Output{
 		Type: "VIDEO_REMOVED",
 		Payload: map[string]any{
-			"removed_video_id": data.VideoId,
+			"removed_video_id": input.VideoId,
 			"playlist":         removeVideoResponse.Playlist,
 		},
 	})
 }
 
-func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type UpdateProfileInput struct {
+	Username  *string         `json:"username"`
+	Color     *string         `json:"color"`
+	AvatarURL o.Field[string] `json:"avatar_url"`
+}
+
+func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, input UpdateProfileInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		Username  *string         `json:"username"`
-		Color     *string         `json:"color"`
-		AvatarURL o.Field[string] `json:"avatar_url"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
-	if data.Username == nil && data.Color == nil && !data.AvatarURL.Defined {
+	if input.Username == nil && input.Color == nil && !input.AvatarURL.Defined {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 	// todo: add validation
 
 	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &room.UpdateProfileParams{
-		Username:  data.Username,
-		Color:     data.Color,
-		AvatarURL: data.AvatarURL,
+		Username:  input.Username,
+		Color:     input.Color,
+		AvatarURL: input.AvatarURL,
 		SenderId:  memberId,
 		RoomId:    roomId,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update member", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
-	c.broadcastMemberUpdated(ctx, updateProfileResp.Conns, &updateProfileResp.UpdatedMember, updateProfileResp.Members)
+	return c.broadcastMemberUpdated(ctx, updateProfileResp.Conns, &updateProfileResp.UpdatedMember, updateProfileResp.Members)
 }
 
-func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
+type UpdateIsReadyInput struct {
+	IsReady bool `json:"is_ready"`
+}
+
+func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Conn, input UpdateIsReadyInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	var data struct {
-		IsReady bool `json:"is_ready"`
-	}
-	if err := c.unmarshalJSONorError(ctx, conn, payload, &data); err != nil {
-		return
-	}
-
 	updatePlayerVideoResp, err := c.roomService.UpdateIsReady(ctx, &room.UpdateIsReadyParams{
-		IsReady:    data.IsReady,
+		IsReady:    input.IsReady,
 		SenderId:   memberId,
 		RoomId:     roomId,
 		SenderConn: conn,
 	})
 	if err != nil {
 		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
-		c.writeError(ctx, conn, err)
-		return
+		return err
 	}
 
 	if err := c.broadcastMemberUpdated(ctx, updatePlayerVideoResp.Conns, &updatePlayerVideoResp.UpdatedMember, updatePlayerVideoResp.Members); err != nil {
-		return
+		return err
 	}
 
 	if updatePlayerVideoResp.Player != nil {
-		c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player)
+		return c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player)
 	}
+
+	return nil
 }

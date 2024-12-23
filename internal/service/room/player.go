@@ -67,8 +67,9 @@ type UpdatePlayerVideoParams struct {
 }
 
 type UpdatePlayerVideoResponse struct {
-	Player Player
-	Conns  []*websocket.Conn
+	Player   Player
+	Conns    []*websocket.Conn
+	Playlist Playlist
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
@@ -96,6 +97,11 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player: %w", err)
 	}
 
+	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	if err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+	}
+
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
@@ -109,6 +115,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			VideoURL:     updatePlayerParams.VideoURL,
 			UpdatedAt:    updatePlayerParams.UpdatedAt,
 		},
-		Conns: conns,
+		Playlist: playlist,
+		Conns:    conns,
 	}, nil
 }

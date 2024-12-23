@@ -2,8 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"runtime"
 	"time"
@@ -13,63 +11,69 @@ import (
 	"github.com/sharetube/server/pkg/wsrouter"
 )
 
-func (c controller) wsRequestIdWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
-	return func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-		ctx = ctxlogger.AppendCtx(ctx, slog.String("ws_request_id", c.generateTimeBasedId()))
-		next(ctx, conn, payload)
+func (c controller) wsRequestIdWSMw() wsrouter.Middleware {
+	return func(next wsrouter.HandlerFunc[any]) wsrouter.HandlerFunc[any] {
+		return func(ctx context.Context, conn *websocket.Conn, payload any) error {
+			ctx = ctxlogger.AppendCtx(ctx, slog.String("ws_request_id", c.generateTimeBasedId()))
+			return next(ctx, conn, payload)
+		}
 	}
 }
 
-func (c controller) loggerWSMw(next wsrouter.HandlerFunc) wsrouter.HandlerFunc {
-	return func(ctx context.Context, conn *websocket.Conn, payload json.RawMessage) {
-		c.logger.InfoContext(ctx, "websocket message received", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
-		start := time.Now()
+func (c controller) loggerWSMw() wsrouter.Middleware {
+	return func(next wsrouter.HandlerFunc[any]) wsrouter.HandlerFunc[any] {
+		return func(ctx context.Context, conn *websocket.Conn, payload any) error {
+			c.logger.InfoContext(ctx, "websocket message received", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
+			start := time.Now()
 
-		next(ctx, conn, payload)
+			err := next(ctx, conn, payload)
 
-		var memStats runtime.MemStats
-		runtime.ReadMemStats(&memStats)
-		c.logger.InfoContext(ctx, "websocket message handled",
-			"duration", time.Since(start).Microseconds(),
-			"alloc", memStats.Alloc/1024,
-			"total_alloc", memStats.TotalAlloc/1024,
-			"sys", memStats.Sys/1024,
-			"goroutines", runtime.NumGoroutine(),
-		)
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			c.logger.InfoContext(ctx, "websocket message handled",
+				"duration", time.Since(start).Microseconds(),
+				"alloc", memStats.Alloc/1024,
+				"total_alloc", memStats.TotalAlloc/1024,
+				"sys", memStats.Sys/1024,
+				"goroutines", runtime.NumGoroutine(),
+			)
+
+			return err
+		}
 	}
 }
 
-func (c controller) handleWSNotFound(ctx context.Context, conn *websocket.Conn, typ string) {
-	c.logger.InfoContext(ctx, "handler not found", "type", typ)
-	c.writeError(ctx, conn, fmt.Errorf("handler for type %s not found", typ))
-}
+// func (c controller) handleWSNotFound(ctx context.Context, conn *websocket.Conn, err error) {
+// 	c.logger.InfoContext(ctx, "handler not found", "type", err.Error())
+// 	c.writeError(ctx, conn, err)
+// }
 
 func (c controller) getWSRouter() *wsrouter.WSRouter {
-	mux := wsrouter.New(c.logger)
+	mux := wsrouter.New()
 
-	mux.SetHandlerNotFound(c.handleWSNotFound)
+	// mux.SetErrorHandler(c.handleWSNotFound)
 
-	mux.Use(c.wsRequestIdWSMw)
-	mux.Use(c.loggerWSMw)
+	mux.Use(c.wsRequestIdWSMw())
+	mux.Use(c.loggerWSMw())
 
 	// video
-	mux.Handle("ALIVE", c.handleAlive)
-	mux.Handle("ADD_VIDEO", c.handleAddVideo)
-	mux.Handle("REMOVE_VIDEO", c.handleRemoveVideo)
-	// mux.Handle("REORDER_PLAYLIST", c.handleRemoveVideo)
+	wsrouter.Handle(mux, "ALIVE", c.handleAlive)
+	wsrouter.Handle(mux, "ADD_VIDEO", c.handleAddVideo)
+	wsrouter.Handle(mux, "REMOVE_VIDEO", c.handleRemoveVideo)
+	// wsrouter.Handle(mux, "REORDER_PLAYLIST", c.handleRemoveVideo)
 
 	// member
-	mux.Handle("PROMOTE_MEMBER", c.handlePromoteMember)
-	mux.Handle("REMOVE_MEMBER", c.handleRemoveMember)
+	wsrouter.Handle(mux, "PROMOTE_MEMBER", c.handlePromoteMember)
+	wsrouter.Handle(mux, "REMOVE_MEMBER", c.handleRemoveMember)
 
 	// player
-	mux.Handle("UPDATE_PLAYER_STATE", c.handleUpdatePlayerState)
-	mux.Handle("UPDATE_PLAYER_VIDEO", c.handleUpdatePlayerVideo)
+	wsrouter.Handle(mux, "UPDATE_PLAYER_STATE", c.handleUpdatePlayerState)
+	wsrouter.Handle(mux, "UPDATE_PLAYER_VIDEO", c.handleUpdatePlayerVideo)
 
 	// profile
-	mux.Handle("UPDATE_PROFILE", c.handleUpdateProfile)
+	wsrouter.Handle(mux, "UPDATE_PROFILE", c.handleUpdateProfile)
 	// mux.Handle("UPDATE_MUTED", c.handleUpdateMuted)
-	mux.Handle("UPDATE_READY", c.handleUpdateIsReady)
+	wsrouter.Handle(mux, "UPDATE_READY", c.handleUpdateIsReady)
 
 	return mux
 }
