@@ -43,15 +43,15 @@ func (c controller) loggerWSMw() wsrouter.Middleware {
 	}
 }
 
-// func (c controller) handleWSNotFound(ctx context.Context, conn *websocket.Conn, err error) {
-// 	c.logger.InfoContext(ctx, "handler not found", "type", err.Error())
-// 	c.writeError(ctx, conn, err)
-// }
+func (c controller) handleError(ctx context.Context, conn *websocket.Conn, err error) error {
+	c.logger.InfoContext(ctx, "websocket handler error", "error", err)
+	return c.writeError(ctx, conn, err)
+}
 
 func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux := wsrouter.New()
 
-	// mux.SetErrorHandler(c.handleWSNotFound)
+	mux.SetErrorHandler(c.handleError)
 
 	mux.Use(c.wsRequestIdWSMw())
 	mux.Use(c.loggerWSMw())

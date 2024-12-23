@@ -168,7 +168,7 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	}
 
 	return c.writeToConn(ctx, promoteMemberResp.PromotedMemberConn, &Output{
-		Type: "IS_ADMIN_CHANGED",
+		Type: "IS_ADMIN_UPDATED",
 		Payload: map[string]any{
 			"is_admin": promoteMemberResp.PromotedMember.IsAdmin,
 		},

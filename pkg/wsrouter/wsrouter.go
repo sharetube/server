@@ -21,13 +21,13 @@ type OutputMessage struct {
 type (
 	Middleware         func(HandlerFunc[any]) HandlerFunc[any]
 	HandlerFunc[T any] func(context.Context, *websocket.Conn, T) error
-	ErrorHandelFunc    func(context.Context, *websocket.Conn, error) error
+	ErrorHandlerFunc   func(context.Context, *websocket.Conn, error) error
 )
 
 type WSRouter struct {
 	handlers     map[string]handler
 	middlewares  []Middleware
-	errorHandler ErrorHandelFunc
+	errorHandler ErrorHandlerFunc
 }
 
 type handler interface {
@@ -57,6 +57,10 @@ func New() *WSRouter {
 			})
 		},
 	}
+}
+
+func (r *WSRouter) SetErrorHandler(f ErrorHandlerFunc) {
+	r.errorHandler = f
 }
 
 // Use adds middleware to the router
@@ -98,6 +102,9 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 
 		handler, exists := r.handlers[msg.Type]
 		if !exists {
+			if err := r.errorHandler(ctx, conn, err); err != nil {
+				return fmt.Errorf("failed to send error message: %w", err)
+			}
 			continue
 		}
 
@@ -105,8 +112,6 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 			if err := r.errorHandler(ctx, conn, err); err != nil {
 				return fmt.Errorf("failed to send error message: %w", err)
 			}
-
-			// return fmt.Errorf("handler error for type %s: %w", msg.Type, err)
 		}
 	}
 }

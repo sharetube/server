@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -93,19 +92,6 @@ func (c controller) broadcast(ctx context.Context, conns []*websocket.Conn, outp
 	}
 
 	return err
-}
-
-func (c controller) unmarshalJSONorError(ctx context.Context, conn *websocket.Conn, data json.RawMessage, v any) error {
-	if err := json.Unmarshal(data, &v); err != nil {
-		if err := c.writeError(ctx, conn, err); err != nil {
-			return err
-		}
-
-		c.logger.InfoContext(ctx, "failed to unmarshal json", "error", err)
-		return err
-	}
-
-	return nil
 }
 
 func (c controller) disconnect(ctx context.Context, roomId, memberId string) {

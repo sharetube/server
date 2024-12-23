@@ -431,7 +431,7 @@ null
 </tr>
 
 <tr>
-<td>IS_ADMIN_CHANGED</td>
+<td>IS_ADMIN_UPDATED</td>
 <td>
 
 ```json

@@ -118,14 +118,14 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}, nil
 }
 
-func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (string, *room.Member, error) {
+func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (*Member, error) {
 	if jwt == "" {
-		return "", nil, nil
+		return nil, nil
 	}
 
 	claims, err := s.parseJWT(jwt)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	// todo: add validation
 
@@ -135,13 +135,21 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (string
 	})
 	if err != nil {
 		if errors.Is(err, room.ErrMemberNotFound) {
-			return "", nil, nil
+			return nil, nil
 		}
 
-		return "", nil, err
+		return nil, err
 	}
 
-	return claims.MemberId, &member, nil
+	return &Member{
+		Id:        roomId,
+		Username:  member.Username,
+		Color:     member.Color,
+		AvatarURL: member.AvatarURL,
+		IsMuted:   member.IsMuted,
+		IsAdmin:   member.IsAdmin,
+		IsReady:   member.IsReady,
+	}, nil
 }
 
 type JoinRoomParams struct {
@@ -166,13 +174,14 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}
 
 	jwt := params.JWT
-	memberId, member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
+	member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
 		return JoinRoomResponse{}, fmt.Errorf("failed to get member: %w", err)
 	}
+
 	if member == nil {
 		// member not found, creating new one
-		memberId = uuid.NewString()
+		memberId := uuid.NewString()
 		setMemberParams := room.SetMemberParams{
 			MemberId:  memberId,
 			Username:  params.Username,
@@ -187,7 +196,8 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			return JoinRoomResponse{}, fmt.Errorf("failed to set member: %w", err)
 		}
 
-		member = &room.Member{
+		member = &Member{
+			Id:        memberId,
 			Username:  params.Username,
 			Color:     params.Color,
 			AvatarURL: params.AvatarURL,
@@ -195,7 +205,8 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			IsAdmin:   false,
 			IsReady:   false,
 		}
-		jwt, err = s.generateJWT(memberId)
+
+		jwt, err = s.generateJWT(member.Id)
 		if err != nil {
 			return JoinRoomResponse{}, fmt.Errorf("failed to generate jwt: %w", err)
 		}
@@ -203,27 +214,27 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		// member found, updating
 		if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
 			RoomId:   params.RoomId,
-			MemberId: memberId,
+			MemberId: member.Id,
 		}); err != nil {
 			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
 		}
 
 		if member.Username != params.Username {
-			if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, memberId, params.Username); err != nil {
+			if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, member.Id, params.Username); err != nil {
 				return JoinRoomResponse{}, fmt.Errorf("failed to update member username: %w", err)
 			}
 			member.Username = params.Username
 		}
 
 		if member.Color != params.Color {
-			if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, memberId, params.Color); err != nil {
+			if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, member.Id, params.Color); err != nil {
 				return JoinRoomResponse{}, fmt.Errorf("failed to update member color: %w", err)
 			}
 			member.Color = params.Color
 		}
 
 		if member.AvatarURL != params.AvatarURL {
-			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, memberId, params.AvatarURL); err != nil {
+			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, member.Id, params.AvatarURL); err != nil {
 				return JoinRoomResponse{}, fmt.Errorf("failed to update member avatar URL: %w", err)
 			}
 			member.AvatarURL = params.AvatarURL
@@ -236,18 +247,10 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}
 
 	return JoinRoomResponse{
-		JWT:     jwt,
-		Conns:   conns,
-		Members: members,
-		JoinedMember: Member{
-			Id:        memberId,
-			Username:  member.Username,
-			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
-			IsMuted:   member.IsMuted,
-			IsAdmin:   member.IsAdmin,
-			IsReady:   member.IsReady,
-		},
+		JWT:          jwt,
+		Conns:        conns,
+		Members:      members,
+		JoinedMember: *member,
 	}, nil
 }
 
