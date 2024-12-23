@@ -122,10 +122,6 @@ func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoF
 }
 
 func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) error {
-	if err := r.removeVideoFromList(ctx, params.RoomId, params.VideoId); err != nil {
-		return err
-	}
-
 	if err := r.rc.Del(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Err(); err != nil {
 		return err
 	}
