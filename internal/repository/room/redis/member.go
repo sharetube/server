@@ -83,11 +83,7 @@ func (r repo) removeMemberFromList(ctx context.Context, roomId, memberId string)
 }
 
 func (r repo) RemoveMemberFromList(ctx context.Context, params *room.RemoveMemberFromListParams) error {
-	if err := r.removeMemberFromList(ctx, params.RoomId, params.MemberId); err != nil {
-		return err
-	}
-
-	return nil
+	return r.removeMemberFromList(ctx, params.RoomId, params.MemberId)
 }
 
 func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams) error {

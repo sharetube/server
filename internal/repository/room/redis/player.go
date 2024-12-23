@@ -15,7 +15,7 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 	pipe := r.rc.TxPipeline()
 
 	player := room.Player{
-		VideoURL:     params.CurrentVideoURL,
+		VideoId:      params.VideoId,
 		IsPlaying:    params.IsPlaying,
 		CurrentTime:  params.CurrentTime,
 		PlaybackRate: params.PlaybackRate,
@@ -98,7 +98,7 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 	}
 
 	player := room.Player{
-		VideoURL:     params.VideoURL,
+		VideoId:      params.VideoId,
 		IsPlaying:    params.IsPlaying,
 		CurrentTime:  params.CurrentTime,
 		PlaybackRate: params.PlaybackRate,

@@ -34,10 +34,14 @@ type iRoomRepo interface {
 	// video
 	SetVideo(context.Context, *room.SetVideoParams) error
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
+	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
+	SetLastVideo(context.Context, *room.SetLastVideoParams) error
+	RemoveLastVideo(context.Context, string) error
 	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
 	GetLastVideoId(context.Context, string) (*string, error)
+	AddVideoToList(context.Context, *room.AddVideoToListParams) error
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)

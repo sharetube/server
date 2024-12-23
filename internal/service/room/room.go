@@ -92,16 +92,30 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		return nil, fmt.Errorf("failed to generate jwt: %w", err)
 	}
 
+	videoId := uuid.NewString()
+	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
+		VideoId: videoId,
+		RoomId:  roomId,
+		URL:     params.InitialVideoURL,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to set video: %w", err)
+	}
+
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
-		CurrentVideoURL: params.InitialVideoURL,
-		IsPlaying:       s.getDefaultPlayerIsPlaying(),
-		CurrentTime:     s.getDefaultPlayerCurrentTime(),
-		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
-		UpdatedAt:       int(time.Now().Unix()),
-		RoomId:          roomId,
+		VideoId:      videoId,
+		IsPlaying:    s.getDefaultPlayerIsPlaying(),
+		CurrentTime:  s.getDefaultPlayerCurrentTime(),
+		PlaybackRate: s.getDefaultPlayerPlaybackRate(),
+		UpdatedAt:    int(time.Now().Unix()),
+		RoomId:       roomId,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set player: %w", err)
 	}
+
+	// s.roomRepo.SetCurrentVideo(ctx, &room.SetCurrentVideoParams{
+	// 	VideoId: ,
+	// 	RoomId:  roomId,
+	// })
 
 	return &CreateRoomResponse{
 		JWT:    jwt,
@@ -260,6 +274,14 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		return Room{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
+	currentVideo, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+		VideoId: player.VideoId,
+		RoomId:  roomId,
+	})
+	if err != nil {
+		return Room{}, fmt.Errorf("failed to get current video: %w", err)
+	}
+
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
 		return Room{}, fmt.Errorf("failed to get member list: %w", err)
@@ -271,8 +293,12 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	}
 
 	return Room{
-		RoomId:   roomId,
-		Player:   Player(player),
+		RoomId: roomId,
+		Player: Player{
+			VideoURL:    currentVideo.URL,
+			IsPlaying:   player.IsPlaying,
+			CurrentTime: player.CurrentTime,
+		},
 		Members:  members,
 		Playlist: playlist,
 	}, nil

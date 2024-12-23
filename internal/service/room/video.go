@@ -113,6 +113,14 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
 	}
 
+	if err := s.roomRepo.AddVideoToList(ctx, &room.AddVideoToListParams{
+		RoomId:  params.RoomId,
+		VideoId: videoId,
+		URL:     params.VideoURL,
+	}); err != nil {
+		return AddVideoResponse{}, fmt.Errorf("failed to add video to list: %w", err)
+	}
+
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
