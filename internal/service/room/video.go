@@ -92,7 +92,7 @@ type AddVideoResponse struct {
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
+		return AddVideoResponse{}, err
 	}
 
 	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomId)

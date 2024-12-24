@@ -9,6 +9,11 @@ type RemoveVideoParams struct {
 	RoomId  string `json:"room_id"`
 }
 
+type ExpireVideoParams struct {
+	VideoId string `json:"video_id"`
+	RoomId  string `json:"room_id"`
+}
+
 type AddVideoToListParams struct {
 	RoomId  string `json:"room_id"`
 	VideoId string `json:"video_id"`

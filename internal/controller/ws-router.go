@@ -23,7 +23,9 @@ func (c controller) wsRequestIdWSMw() wsrouter.Middleware {
 func (c controller) loggerWSMw() wsrouter.Middleware {
 	return func(next wsrouter.HandlerFunc[any]) wsrouter.HandlerFunc[any] {
 		return func(ctx context.Context, conn *websocket.Conn, payload any) error {
-			c.logger.InfoContext(ctx, "websocket message received", "type", wsrouter.GetMessageTypeFromCtx(ctx), "payload", payload)
+			ctx = ctxlogger.AppendCtx(ctx, slog.String("ws_message_type", wsrouter.GetMessageTypeFromCtx(ctx)))
+			c.logger.InfoContext(ctx, "websocket message received", "payload", payload)
+
 			start := time.Now()
 
 			err := next(ctx, conn, payload)

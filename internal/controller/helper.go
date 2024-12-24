@@ -73,18 +73,6 @@ func (c controller) writeError(ctx context.Context, conn *websocket.Conn, err er
 }
 
 func (c controller) broadcast(ctx context.Context, conns []*websocket.Conn, output *Output) error {
-	// errors := make([]error, len(conns))
-	// for _, conn := range conns {
-	// 	if err := c.writeToConn(ctx, conn, output); err != nil {
-	// 		errors = append(errors, err)
-	// 	}
-	// }
-	// if len(errors) > 0 {
-	// 	c.logger.ErrorContext(ctx, "failed to broadcast", "errors", errors)
-	// 	// todo: return all errors
-	// 	return errors[0]
-	// }
-
 	c.logger.DebugContext(ctx, "broadcasting", "output", output)
 	var err error
 	for _, conn := range conns {
@@ -92,26 +80,6 @@ func (c controller) broadcast(ctx context.Context, conns []*websocket.Conn, outp
 	}
 
 	return err
-}
-
-func (c controller) disconnect(ctx context.Context, roomId, memberId string) {
-	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
-		MemberId: memberId,
-		RoomId:   roomId,
-	})
-	if err != nil {
-		c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
-	}
-
-	if !disconnectMemberResp.IsRoomDeleted {
-		c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
-			Type: "MEMBER_DISCONNECTED",
-			Payload: map[string]any{
-				"disconnected_member_id": memberId,
-				"members":                disconnectMemberResp.Members,
-			},
-		})
-	}
 }
 
 func (c controller) generateTimeBasedId() string {

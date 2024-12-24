@@ -23,7 +23,7 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 	}
 	playerKey := r.getPlayerKey(params.RoomId)
 	r.hSetIfNotExists(ctx, pipe, playerKey, player)
-	pipe.Expire(ctx, playerKey, r.expireDuration)
+	pipe.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		return fmt.Errorf("failed to set player: %w", err)
@@ -39,7 +39,7 @@ func (r repo) IsPlayerExists(ctx context.Context, roomId string) (bool, error) {
 		return false, fmt.Errorf("failed to check if player exists: %w", err)
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	exists := res > 0
 
@@ -53,7 +53,7 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 		return room.Player{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return player, nil
 }
@@ -65,7 +65,7 @@ func (r repo) GetPlayerVideoURL(ctx context.Context, roomId string) (string, err
 		return "", fmt.Errorf("failed to get player: %w", err)
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return videoURL, nil
 }
@@ -81,7 +81,20 @@ func (r repo) RemovePlayer(ctx context.Context, roomId string) error {
 		return room.ErrPlayerNotFound
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+
+	return nil
+}
+
+func (r repo) ExpirePlayer(ctx context.Context, roomId string) error {
+	res, err := r.rc.Expire(ctx, r.getPlayerKey(roomId), r.roomExpireDuration).Result()
+	if err != nil {
+		return fmt.Errorf("failed to expire player: %w", err)
+	}
+
+	if !res {
+		return room.ErrPlayerNotFound
+	}
 
 	return nil
 }
@@ -108,7 +121,7 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 		return err
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -133,7 +146,7 @@ func (r repo) UpdatePlayerState(ctx context.Context, params *room.UpdatePlayerSt
 		return err
 	}
 
-	r.rc.Expire(ctx, playerKey, r.expireDuration)
+	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return nil
 }

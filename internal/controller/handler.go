@@ -37,13 +37,17 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.InfoContext(r.Context(), "failed to create room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), createRoomResponse.RoomId, createRoomResponse.JoinedMember.Id)
 
 	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
+
+	conn.SetCloseHandler(func(code int, text string) error {
+		c.logger.DebugContext(r.Context(), "close handler: client disconnected", "code", code, "text", text)
+		return nil
+	})
 	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
@@ -79,7 +83,29 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("sender_id", createRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
-		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
+		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
+		// conn closed probably, expire member
+
+		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+			MemberId: createRoomResponse.JoinedMember.Id,
+			RoomId:   createRoomResponse.RoomId,
+		})
+		if err != nil {
+			c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
+		}
+
+		if !disconnectMemberResp.IsRoomDeleted {
+			if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
+				Type: "MEMBER_DISCONNECTED",
+				Payload: map[string]any{
+					"disconnected_member_id": createRoomResponse.JoinedMember.Id,
+					"members":                disconnectMemberResp.Members,
+				},
+			}); err != nil {
+				c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
+			}
+		}
+
 		return
 	}
 }
@@ -113,13 +139,18 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to join room", "error", err)
 		return
 	}
-	defer c.disconnect(r.Context(), roomId, joinRoomResponse.JoinedMember.Id)
 
 	conn, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
+
+	conn.SetCloseHandler(func(code int, text string) error {
+		c.logger.DebugContext(r.Context(), "close handler: client disconnected", "code", code, "text", text)
+		return nil
+	})
+
 	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
@@ -165,7 +196,29 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("sender_id", joinRoomResponse.JoinedMember.Id))
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
-		c.logger.InfoContext(r.Context(), "failed to serve conn", "error", err)
+		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
+		// conn closed probably, expire member
+
+		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+			MemberId: joinRoomResponse.JoinedMember.Id,
+			RoomId:   roomId,
+		})
+		if err != nil {
+			c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
+		}
+
+		if !disconnectMemberResp.IsRoomDeleted {
+			if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
+				Type: "MEMBER_DISCONNECTED",
+				Payload: map[string]any{
+					"disconnected_member_id": joinRoomResponse.JoinedMember.Id,
+					"members":                disconnectMemberResp.Members,
+				},
+			}); err != nil {
+				c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
+			}
+		}
+
 		return
 	}
 }

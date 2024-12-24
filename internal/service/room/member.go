@@ -50,12 +50,21 @@ type RemoveMemberParams struct {
 }
 
 type RemoveMemberResponse struct {
-	Conn *websocket.Conn
+	Conn    *websocket.Conn
+	Conns   []*websocket.Conn
+	Members []Member
 }
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
+		return RemoveMemberResponse{}, err
+	}
+
+	if err := s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
+		MemberId: params.RemovedMemberId,
+		RoomId:   params.RoomId,
+	}); err != nil {
+		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
 	}
 
 	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
@@ -70,8 +79,20 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, fmt.Errorf("failed to get conn: %w", err)
 	}
 
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	if err != nil {
+		return RemoveMemberResponse{}, fmt.Errorf("failed to get conns: %w", err)
+	}
+
+	members, err := s.getMembers(ctx, params.RoomId)
+	if err != nil {
+		return RemoveMemberResponse{}, fmt.Errorf("failed to get members: %w", err)
+	}
+
 	return RemoveMemberResponse{
-		Conn: conn,
+		Conn:    conn,
+		Conns:   conns,
+		Members: members,
 	}, nil
 }
 
@@ -90,7 +111,7 @@ type PromoteMemberResponse struct {
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return PromoteMemberResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
+		return PromoteMemberResponse{}, err
 	}
 
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
@@ -175,12 +196,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove member from list: %w", err)
 	}
 
-	conn, err := s.connRepo.RemoveByMemberId(params.MemberId)
-	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove conn by member id: %w", err)
+	if err := s.roomRepo.ExpireMember(ctx, &room.ExpireMemberParams{
+		MemberId: params.MemberId,
+		RoomId:   params.RoomId,
+	}); err != nil {
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to expire member: %w", err)
 	}
-
-	conn.Close()
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
@@ -189,6 +210,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	// delete room if no member left
 	if len(members) == 0 {
+		fmt.Printf("room %s is empty, deleting room\n", params.RoomId)
 		if err := s.deleteRoom(ctx, params.RoomId); err != nil {
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to delete room: %w", err)
 		}

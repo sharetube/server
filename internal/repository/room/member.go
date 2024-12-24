@@ -35,6 +35,11 @@ type RemoveMemberParams struct {
 	RoomId   string `json:"room_id"`
 }
 
+type ExpireMemberParams struct {
+	MemberId string `json:"member_id"`
+	RoomId   string `json:"room_id"`
+}
+
 type RemoveMemberFromListParams struct {
 	MemberId string `json:"member_id"`
 	RoomId   string `json:"room_id"`

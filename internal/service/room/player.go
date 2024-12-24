@@ -31,7 +31,7 @@ type UpdatePlayerStateResponse struct {
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
+		return UpdatePlayerStateResponse{}, err
 	}
 
 	if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
@@ -81,7 +81,7 @@ type UpdatePlayerVideoResponse struct {
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to check if member is admin: %w", err)
+		return UpdatePlayerVideoResponse{}, err
 	}
 
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{

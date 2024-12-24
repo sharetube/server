@@ -117,6 +117,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
+	// validation
 	if input.MemberId == uuid.Nil {
 		err := ErrValidationError
 		c.logger.DebugContext(ctx, "validation error", "error", err)
@@ -133,8 +134,26 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		return err
 	}
 
-	//? send message to removed member that he have been removed
+	if err := c.writeToConn(ctx, removeMemberResp.Conn, &Output{
+		Type:    "KICKED",
+		Payload: nil,
+	}); err != nil {
+		c.logger.DebugContext(ctx, "failed to write to conn", "error", err)
+		return err
+	}
+
 	removeMemberResp.Conn.Close()
+
+	if err := c.broadcast(ctx, removeMemberResp.Conns, &Output{
+		Type: "MEMBER_DISCONNECTED",
+		Payload: map[string]any{
+			"disconnected_member_id": input.MemberId,
+			"members":                removeMemberResp.Members,
+		},
+	}); err != nil {
+		c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
+		return err
+	}
 
 	return nil
 }

@@ -35,8 +35,8 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 }
 
 func (s service) deleteRoom(ctx context.Context, roomId string) error {
-	if err := s.roomRepo.RemovePlayer(ctx, roomId); err != nil {
-		return fmt.Errorf("failed to remove player: %w", err)
+	if err := s.roomRepo.ExpirePlayer(ctx, roomId); err != nil {
+		return fmt.Errorf("failed to expire player: %w", err)
 	}
 
 	videoIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
@@ -45,11 +45,11 @@ func (s service) deleteRoom(ctx context.Context, roomId string) error {
 	}
 
 	for _, videoId := range videoIds {
-		if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
+		if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{
 			VideoId: videoId,
 			RoomId:  roomId,
 		}); err != nil {
-			return fmt.Errorf("failed to remove video: %w", err)
+			return fmt.Errorf("failed to expire video: %w", err)
 		}
 	}
 
@@ -111,11 +111,6 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set player: %w", err)
 	}
-
-	// s.roomRepo.SetCurrentVideo(ctx, &room.SetCurrentVideoParams{
-	// 	VideoId: ,
-	// 	RoomId:  roomId,
-	// })
 
 	return &CreateRoomResponse{
 		JWT:    jwt,
@@ -295,9 +290,11 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	return Room{
 		RoomId: roomId,
 		Player: Player{
-			VideoURL:    currentVideo.URL,
-			IsPlaying:   player.IsPlaying,
-			CurrentTime: player.CurrentTime,
+			VideoURL:     currentVideo.URL,
+			IsPlaying:    player.IsPlaying,
+			CurrentTime:  player.CurrentTime,
+			PlaybackRate: player.PlaybackRate,
+			UpdatedAt:    player.UpdatedAt,
 		},
 		Members:  members,
 		Playlist: playlist,

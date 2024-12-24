@@ -21,6 +21,7 @@ type iRoomRepo interface {
 	SetMember(context.Context, *room.SetMemberParams) error
 	AddMemberToList(context.Context, *room.AddMemberToListParams) error
 	RemoveMember(context.Context, *room.RemoveMemberParams) error
+	ExpireMember(context.Context, *room.ExpireMemberParams) error
 	RemoveMemberFromList(context.Context, *room.RemoveMemberFromListParams) error
 	GetMember(context.Context, *room.GetMemberParams) (room.Member, error)
 	GetMemberIds(context.Context, string) ([]string, error)
@@ -34,6 +35,7 @@ type iRoomRepo interface {
 	// video
 	SetVideo(context.Context, *room.SetVideoParams) error
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
+	ExpireVideo(context.Context, *room.ExpireVideoParams) error
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
 	SetLastVideo(context.Context, *room.SetLastVideoParams) error
 	RemoveLastVideo(context.Context, string) error
@@ -47,6 +49,7 @@ type iRoomRepo interface {
 	GetPlayer(context.Context, string) (room.Player, error)
 	IsPlayerExists(context.Context, string) (bool, error)
 	RemovePlayer(context.Context, string) error
+	ExpirePlayer(context.Context, string) error
 	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
 	GetPlayerVideoURL(context.Context, string) (string, error)

@@ -11,10 +11,11 @@ type repo struct {
 	rc                    *redis.Client
 	hSetIfNotExistsScript string
 	maxScoreScript        string
-	expireDuration        time.Duration
+	maxExpireDuration     time.Duration
+	roomExpireDuration    time.Duration
 }
 
-func NewRepo(rc *redis.Client, expireDuration time.Duration) *repo {
+func NewRepo(rc *redis.Client, maxExpireDuration time.Duration, roomExpireDuration time.Duration) *repo {
 	return &repo{
 		rc: rc,
 		hSetIfNotExistsScript: rc.ScriptLoad(context.Background(), `
@@ -36,6 +37,7 @@ func NewRepo(rc *redis.Client, expireDuration time.Duration) *repo {
 			redis.call('ZADD', KEYS[1], nextScore, ARGV[1])
 			return nextScore
 		`).Val(),
-		expireDuration: expireDuration,
+		maxExpireDuration:  maxExpireDuration,
+		roomExpireDuration: roomExpireDuration,
 	}
 }

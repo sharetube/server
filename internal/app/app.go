@@ -81,7 +81,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
+	roomRepo := redis.NewRepo(rc, 24*14*time.Hour, 30*time.Second)
 	connectionRepo := inmemory.NewRepo(logger)
 	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret)
 	controller := controller.NewController(roomService, logger)
