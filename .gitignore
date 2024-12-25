@@ -1,4 +1,1 @@
 .vscode
-.env
-nginx.prod.conf
-compose.prod.yaml

@@ -21,4 +21,4 @@ COPY --from=build app/server .
 
 RUN mkdir -p /var/log/sharetube && chmod 777 /var/log/sharetube && touch /var/log/sharetube/server.log
 
-CMD ["./server"]
+ENTRYPOINT ["./server"]

@@ -72,7 +72,7 @@ var (
 )
 
 func loadAppConfig() *app.AppConfig {
-	// 1. Define flags
+	// todo: move to pkg
 	pflag.String(secret.flagKey, secret.defaultValue, "Server secret")
 	pflag.Int(port.flagKey, port.defaultValue, "Server port")
 	pflag.String(host.flagKey, host.defaultValue, "Server host")
@@ -85,36 +85,41 @@ func loadAppConfig() *app.AppConfig {
 	pflag.String(redisPassword.flagKey, redisPassword.defaultValue, "Redis password")
 	pflag.Parse()
 
-	// 2. Bind flags to viper
 	viper.BindPFlags(pflag.CommandLine)
 
-	// 3. Set up environment variables prefix and binding
-	viper.AutomaticEnv()
+	viper.BindEnv(secret.flagKey, secret.envKey)
+	viper.BindEnv(port.flagKey, port.envKey)
+	viper.BindEnv(host.flagKey, host.envKey)
+	viper.BindEnv(logLevel.flagKey, logLevel.envKey)
+	viper.BindEnv(logPath.flagKey, logPath.envKey)
+	viper.BindEnv(membersLimit.flagKey, membersLimit.envKey)
+	viper.BindEnv(playlistLimit.flagKey, playlistLimit.envKey)
+	viper.BindEnv(redisPort.flagKey, redisPort.envKey)
+	viper.BindEnv(redisHost.flagKey, redisHost.envKey)
+	viper.BindEnv(redisPassword.flagKey, redisPassword.envKey)
 
-	// 4. Set defaults (lowest priority)
-	viper.SetDefault(secret.envKey, secret.defaultValue)
-	viper.SetDefault(port.envKey, port.defaultValue)
-	viper.SetDefault(host.envKey, host.defaultValue)
-	viper.SetDefault(logLevel.envKey, logLevel.defaultValue)
-	viper.SetDefault(logPath.envKey, logPath.defaultValue)
-	viper.SetDefault(membersLimit.envKey, membersLimit.defaultValue)
-	viper.SetDefault(playlistLimit.envKey, playlistLimit.defaultValue)
-	viper.SetDefault(redisPort.envKey, redisPort.defaultValue)
-	viper.SetDefault(redisHost.envKey, redisHost.defaultValue)
-	viper.SetDefault(redisPassword.envKey, redisPassword.defaultValue)
+	viper.SetDefault(secret.flagKey, secret.defaultValue)
+	viper.SetDefault(port.flagKey, port.defaultValue)
+	viper.SetDefault(host.flagKey, host.defaultValue)
+	viper.SetDefault(logLevel.flagKey, logLevel.defaultValue)
+	viper.SetDefault(logPath.flagKey, logPath.defaultValue)
+	viper.SetDefault(membersLimit.flagKey, membersLimit.defaultValue)
+	viper.SetDefault(playlistLimit.flagKey, playlistLimit.defaultValue)
+	viper.SetDefault(redisPort.flagKey, redisPort.defaultValue)
+	viper.SetDefault(redisHost.flagKey, redisHost.defaultValue)
+	viper.SetDefault(redisPassword.flagKey, redisPassword.defaultValue)
 
-	// 5. Create config struct
 	config := &app.AppConfig{
-		Secret:        viper.GetString(secret.envKey),
-		Host:          viper.GetString(host.envKey),
-		Port:          viper.GetInt(port.envKey),
-		LogLevel:      viper.GetString(logLevel.envKey),
-		LogPath:       viper.GetString(logPath.envKey),
-		MembersLimit:  viper.GetInt(membersLimit.envKey),
-		PlaylistLimit: viper.GetInt(playlistLimit.envKey),
-		RedisPort:     viper.GetInt(redisPort.envKey),
-		RedisHost:     viper.GetString(redisHost.envKey),
-		RedisPassword: viper.GetString(redisPassword.envKey),
+		Secret:        viper.GetString(secret.flagKey),
+		Host:          viper.GetString(host.flagKey),
+		Port:          viper.GetInt(port.flagKey),
+		LogLevel:      viper.GetString(logLevel.flagKey),
+		LogPath:       viper.GetString(logPath.flagKey),
+		MembersLimit:  viper.GetInt(membersLimit.flagKey),
+		PlaylistLimit: viper.GetInt(playlistLimit.flagKey),
+		RedisPort:     viper.GetInt(redisPort.flagKey),
+		RedisHost:     viper.GetString(redisHost.flagKey),
+		RedisPassword: viper.GetString(redisPassword.flagKey),
 	}
 
 	return config
@@ -126,7 +131,6 @@ func main() {
 	appConfig := loadAppConfig()
 
 	jsonConfig, _ := json.MarshalIndent(appConfig, "", "  ")
-	// slog.InfoContext(ctx, "starting app with config", "config", string(jsonConfig))
 	fmt.Printf("starting app with config: %s\n", jsonConfig)
 
 	log.Fatal(app.Run(ctx, appConfig))
