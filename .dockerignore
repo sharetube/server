@@ -2,5 +2,5 @@
 .git
 README.md
 Makefile
-.env.example
-ROADMAP.md
+websocket-api.md
+.golangci.yaml

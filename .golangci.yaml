@@ -1,25 +1,24 @@
 # https://golangci-lint.run/usage/configuration/
 run:
-  # Lint only *.go files that were changed in the git commit range (default: HEAD~1..HEAD)
-  tests: false            # Don't lint _test.go files
-  concurrency: 4          # Max number of parallel linters to run
-  timeout: 5m             # Max run time for the linter
+  tests: false
+  concurrency: 4
+  timeout: 5m
 
 linters:
   enable:
-    - govet                 # Go vet for catching static issues
-    - staticcheck           # Replacement for deprecated megacheck suite
-    - revive                # Extensible, configurable, and faster alternative to golint
-    - gofumpt               # Enforces consistent formatting
-    - gocyclo               # Enforces complexity rules (default < 15)
-    - goimports             # Ensures properly ordered imports
-    - gosimple              # Reports simplifiable code
-    - unused                # Finds unused variables, constants, etc.
-    - prealloc              # Highlights preallocations for performance
-    - misspell              # Finds and fixes spelling mistakes
-    - exhaustruct           # Enforces initializing all struct fields
-    - unparam               # Identifies unused function parameters
-    - nolintlint            # Flags incorrect `nolint` comments
+    - govet
+    - staticcheck
+    - revive
+    - gofumpt
+    - gocyclo
+    - goimports
+    - gosimple
+    - unused
+    - prealloc
+    - misspell
+    - exhaustruct
+    - unparam
+    - nolintlint
   disable:
     - errcheck
 
@@ -31,9 +30,9 @@ linters-settings:
     parameters-are-used: true
     local-variables-are-used: false
   misspell:
-    locale: US              # Enforce American English spelling
+    locale: US
   revive:
-    severity: warning       # Set the default severity for all rules
+    severity: warning
   exhaustruct:
     exclude:
       - '^github\.com/redis/go-redis/v9\.Options$'
@@ -42,10 +41,10 @@ linters-settings:
       - '^log/slog\.HandlerOptions$'
 
 issues:
-  max-same-issues: 3        # Limits the number of identical issues
-  max-issues-per-linter: 20 # Limits the number of issues per linter
+  max-same-issues: 3
+  max-issues-per-linter: 20
 
 output:
   formats:
     - format: colored-line-number
-  print-issued-lines: true    # Print offending lines for issues
+  print-issued-lines: true
