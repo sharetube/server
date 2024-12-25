@@ -17,9 +17,9 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 		return nil, err
 	}
 
-	if len(memberIds) == 0 {
-		return nil, ErrRoomNotFound
-	}
+	// if len(memberIds) == 0 {
+	// 	return nil, ErrRoomNotFound
+	// }
 
 	conns := make([]*websocket.Conn, 0, len(memberIds))
 	for _, memberId := range memberIds {
@@ -32,28 +32,6 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 	}
 
 	return conns, nil
-}
-
-func (s service) deleteRoom(ctx context.Context, roomId string) error {
-	if err := s.roomRepo.ExpirePlayer(ctx, roomId); err != nil {
-		return fmt.Errorf("failed to expire player: %w", err)
-	}
-
-	videoIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
-	if err != nil {
-		return fmt.Errorf("failed to get video ids: %w", err)
-	}
-
-	for _, videoId := range videoIds {
-		if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{
-			VideoId: videoId,
-			RoomId:  roomId,
-		}); err != nil {
-			return fmt.Errorf("failed to expire video: %w", err)
-		}
-	}
-
-	return nil
 }
 
 type CreateRoomParams struct {
@@ -151,7 +129,7 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (*Membe
 	}
 
 	return &Member{
-		Id:        roomId,
+		Id:        claims.MemberId,
 		Username:  member.Username,
 		Color:     member.Color,
 		AvatarURL: member.AvatarURL,
@@ -189,6 +167,12 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}
 
 	if member == nil {
+		// check if room exists
+		_, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
+		if err != nil {
+			return JoinRoomResponse{}, errors.New("room not found")
+		}
+
 		// member not found, creating new one
 		memberId := uuid.NewString()
 		setMemberParams := room.SetMemberParams{
@@ -254,7 +238,6 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	if err != nil {
 		return JoinRoomResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
-
 	return JoinRoomResponse{
 		JWT:          jwt,
 		Conns:        conns,

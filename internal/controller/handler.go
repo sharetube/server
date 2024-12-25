@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service/room"
 	"github.com/sharetube/server/pkg/ctxlogger"
 )
@@ -84,6 +85,11 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
+		if e, ok := err.(*websocket.CloseError); ok {
+			if e.Code == 4001 {
+				return
+			}
+		}
 		// conn closed probably, expire member
 
 		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
@@ -150,7 +156,6 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.DebugContext(r.Context(), "close handler: client disconnected", "code", code, "text", text)
 		return nil
 	})
-
 	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
@@ -197,6 +202,11 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.wsmux.ServeConn(ctx, conn); err != nil {
 		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
+		if e, ok := err.(*websocket.CloseError); ok {
+			if e.Code == 4001 {
+				return
+			}
+		}
 		// conn closed probably, expire member
 
 		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{

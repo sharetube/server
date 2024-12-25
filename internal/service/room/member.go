@@ -74,9 +74,9 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
 	}
 
-	conn, err := s.connRepo.GetConn(params.RemovedMemberId)
+	conn, err := s.connRepo.RemoveByMemberId(params.RemovedMemberId)
 	if err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to get conn: %w", err)
+		return RemoveMemberResponse{}, fmt.Errorf("failed to remove conn: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
@@ -203,16 +203,54 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to expire member: %w", err)
 	}
 
-	members, err := s.getMembers(ctx, params.RoomId)
+	if _, err := s.connRepo.RemoveByMemberId(params.MemberId); err != nil {
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove conn: %w", err)
+	}
+
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	// delete room if no member left
-	if len(members) == 0 {
+	if len(conns) == 0 {
 		fmt.Printf("room %s is empty, deleting room\n", params.RoomId)
-		if err := s.deleteRoom(ctx, params.RoomId); err != nil {
-			return DisconnectMemberResponse{}, fmt.Errorf("failed to delete room: %w", err)
+		videoIds, err := s.roomRepo.GetVideoIds(ctx, params.RoomId)
+		if err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to get video ids: %w", err)
+		}
+
+		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
+		if err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to get last video id: %w", err)
+		}
+
+		if lastVideoId != nil {
+			videoIds = append(videoIds, *lastVideoId)
+		}
+
+		playerVideoId, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
+		if err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to get player video id: %w", err)
+		}
+
+		videoIds = append(videoIds, playerVideoId)
+
+		for _, videoId := range videoIds {
+			if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{
+				VideoId: videoId,
+				RoomId:  params.RoomId,
+			}); err != nil {
+				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire video: %w", err)
+			}
+		}
+
+		if err := s.roomRepo.ExpirePlayer(ctx, params.RoomId); err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire player: %w", err)
+		}
+
+		if err := s.roomRepo.ExpirePlaylist(ctx, params.RoomId); err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire playlist: %w", err)
 		}
 
 		return DisconnectMemberResponse{
@@ -220,9 +258,9 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		}, nil
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	return DisconnectMemberResponse{

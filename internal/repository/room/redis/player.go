@@ -58,16 +58,18 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 	return player, nil
 }
 
-func (r repo) GetPlayerVideoURL(ctx context.Context, roomId string) (string, error) {
+func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (string, error) {
 	playerKey := r.getPlayerKey(roomId)
-	videoURL, err := r.rc.HGet(ctx, playerKey, "video_url").Result()
+	videoId, err := r.rc.HGet(ctx, playerKey, "video_id").Result()
 	if err != nil {
-		return "", fmt.Errorf("failed to get player: %w", err)
+		return "", fmt.Errorf("failed to get player video id: %w", err)
 	}
+
+	fmt.Printf("videoId res: %s", videoId)
 
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
-	return videoURL, nil
+	return videoId, nil
 }
 
 func (r repo) RemovePlayer(ctx context.Context, roomId string) error {

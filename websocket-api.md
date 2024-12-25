@@ -431,16 +431,6 @@ null
 </tr>
 
 <tr>
-<td>KICKED</td>
-<td>
-
-```json
-null
-```
-</td>
-</tr>
-
-<tr>
 <td>IS_ADMIN_UPDATED</td>
 <td>
 

@@ -88,59 +88,11 @@ func Handle[T any](r *WSRouter, msgType string, handler HandlerFunc[T]) {
 	r.handlers[msgType] = typedHandler[T]{finalHandler}
 }
 
-// func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
-// 	// Create a done channel that will be closed when we need to stop
-// 	done := make(chan struct{})
-
-// 	// Use the context's Done channel to trigger cleanup
-// 	go func() {
-// 		<-ctx.Done()
-// 		close(done)
-// 	}()
-
-// 	for {
-// 		select {
-// 		case <-done:
-// 			return nil
-// 		default:
-// 			// Set read deadline to prevent blocking forever
-// 			if deadline, ok := ctx.Deadline(); ok {
-// 				conn.SetReadDeadline(deadline)
-// 			}
-
-// 			var msg Message
-// 			err := conn.ReadJSON(&msg)
-// 			if err != nil {
-// 				if err := r.errorHandler(ctx, conn, err); err != nil {
-// 					return err
-// 				}
-// 				continue
-// 			}
-
-// 			ctx = context.WithValue(ctx, messageTypeKey, msg.Type)
-// 			handler, exists := r.handlers[msg.Type]
-
-// 			if !exists {
-// 				if err := r.errorHandler(ctx, conn, err); err != nil {
-// 					return err
-// 				}
-// 				continue
-// 			}
-
-// 			if err := handler.handle(ctx, conn, msg.Payload); err != nil {
-// 				if err := r.errorHandler(ctx, conn, err); err != nil {
-// 					return err
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-
 func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 	for {
 		var msg Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				return err
 			}
 

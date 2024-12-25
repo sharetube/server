@@ -57,12 +57,7 @@ func (c controller) getUser(r *http.Request) (user, error) {
 
 func (c controller) writeToConn(ctx context.Context, conn *websocket.Conn, output *Output) error {
 	c.logger.DebugContext(ctx, "writing to conn", "output", output)
-	if err := conn.WriteJSON(output); err != nil {
-		c.logger.ErrorContext(ctx, "failed to write to conn", "error", err)
-		return err
-	}
-
-	return nil
+	return conn.WriteJSON(output)
 }
 
 func (c controller) writeError(ctx context.Context, conn *websocket.Conn, err error) error {

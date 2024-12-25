@@ -132,10 +132,21 @@ func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) e
 		return fmt.Errorf("failed to expire video: %w", err)
 	}
 
-	fmt.Printf("ExpireVideo res: %v\n", res)
-
 	if !res {
 		return room.ErrVideoNotFound
+	}
+
+	return nil
+}
+
+func (r repo) ExpirePlaylist(ctx context.Context, roomId string) error {
+	res, err := r.rc.Expire(ctx, r.getPlaylistKey(roomId), r.roomExpireDuration).Result()
+	if err != nil {
+		return fmt.Errorf("failed to expire playlist: %w", err)
+	}
+
+	if !res {
+		return room.ErrPlaylistNotFound
 	}
 
 	return nil

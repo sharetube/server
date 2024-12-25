@@ -44,9 +44,17 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player state: %w", err)
 	}
 
-	videoURL, err := s.roomRepo.GetPlayerVideoURL(ctx, params.RoomId)
+	videoId, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
 	if err != nil {
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player video url: %w", err)
+	}
+
+	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+		VideoId: videoId,
+		RoomId:  params.RoomId,
+	})
+	if err != nil {
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get video: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
@@ -56,7 +64,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	return UpdatePlayerStateResponse{
 		Player: Player{
-			VideoURL:     videoURL,
+			VideoURL:     video.URL,
 			IsPlaying:    params.IsPlaying,
 			CurrentTime:  params.CurrentTime,
 			PlaybackRate: params.PlaybackRate,

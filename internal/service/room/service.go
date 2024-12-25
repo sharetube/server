@@ -39,6 +39,7 @@ type iRoomRepo interface {
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
 	SetLastVideo(context.Context, *room.SetLastVideoParams) error
 	RemoveLastVideo(context.Context, string) error
+	ExpirePlaylist(context.Context, string) error
 	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
@@ -52,7 +53,7 @@ type iRoomRepo interface {
 	ExpirePlayer(context.Context, string) error
 	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
-	GetPlayerVideoURL(context.Context, string) (string, error)
+	GetPlayerVideoId(context.Context, string) (string, error)
 }
 
 type iConnRepo interface {

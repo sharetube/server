@@ -2,6 +2,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -44,11 +46,14 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 		RoomId:       roomId,
 	})
 	if err != nil {
-		c.logger.InfoContext(ctx, "failed to update player state", "error", err)
-		return err
+		return fmt.Errorf("failed to update player state: %w", err)
 	}
 
-	return c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player)
+	if err := c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player); err != nil {
+		return fmt.Errorf("failed to broadcast player updated: %w", err)
+	}
+
+	return nil
 }
 
 type UpdatePlayerVideoInput struct {
@@ -67,17 +72,20 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 		RoomId:    roomId,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
-		return err
+		return fmt.Errorf("failed to update player video: %w", err)
 	}
 
-	return c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
+	if err := c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
 		Type: "PLAYER_VIDEO_UPDATED",
 		Payload: map[string]any{
 			"player":   updatePlayerVideoResp.Player,
 			"playlist": updatePlayerVideoResp.Playlist,
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to broadcast player updated: %w", err)
+	}
+
+	return nil
 }
 
 type AddVideoInput struct {
@@ -96,17 +104,20 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, in
 		VideoURL: input.VideoURL,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to add video", "error", err)
-		return err
+		return fmt.Errorf("failed to add video: %w", err)
 	}
 
-	return c.broadcast(ctx, addVideoResponse.Conns, &Output{
+	if err := c.broadcast(ctx, addVideoResponse.Conns, &Output{
 		Type: "VIDEO_ADDED",
 		Payload: map[string]any{
 			"added_video": addVideoResponse.AddedVideo,
 			"playlist":    addVideoResponse.Playlist,
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to broadcast video added: %w", err)
+	}
+
+	return nil
 }
 
 type RemoveMemberInput struct {
@@ -119,9 +130,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 
 	// validation
 	if input.MemberId == uuid.Nil {
-		err := ErrValidationError
-		c.logger.DebugContext(ctx, "validation error", "error", err)
-		return err
+		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 
 	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
@@ -130,19 +139,11 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 		RoomId:          roomId,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to remove member", "error", err)
-		return err
+		return fmt.Errorf("failed to remove member: %w", err)
 	}
 
-	if err := c.writeToConn(ctx, removeMemberResp.Conn, &Output{
-		Type:    "KICKED",
-		Payload: nil,
-	}); err != nil {
-		c.logger.DebugContext(ctx, "failed to write to conn", "error", err)
-		return err
-	}
-
-	removeMemberResp.Conn.Close()
+	// close with specific code
+	removeMemberResp.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(4001, ""), time.Now().Add(time.Second*5))
 
 	if err := c.broadcast(ctx, removeMemberResp.Conns, &Output{
 		Type: "MEMBER_DISCONNECTED",
@@ -151,8 +152,7 @@ func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn
 			"members":                removeMemberResp.Members,
 		},
 	}); err != nil {
-		c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
-		return err
+		return fmt.Errorf("failed to broadcast member disconnected: %w", err)
 	}
 
 	return nil
@@ -167,9 +167,7 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	if input.MemberId == uuid.Nil {
-		err := ErrValidationError
-		c.logger.DebugContext(ctx, "validation error", "error", err)
-		return err
+		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 
 	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &room.PromoteMemberParams{
@@ -178,20 +176,23 @@ func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Con
 		RoomId:           roomId,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to promote member", "error", err)
-		return err
+		return fmt.Errorf("failed to promote member: %w", err)
 	}
 
 	if err := c.broadcastMemberUpdated(ctx, promoteMemberResp.Conns, &promoteMemberResp.PromotedMember, promoteMemberResp.Members); err != nil {
 		return err
 	}
 
-	return c.writeToConn(ctx, promoteMemberResp.PromotedMemberConn, &Output{
+	if err := c.writeToConn(ctx, promoteMemberResp.PromotedMemberConn, &Output{
 		Type: "IS_ADMIN_UPDATED",
 		Payload: map[string]any{
 			"is_admin": promoteMemberResp.PromotedMember.IsAdmin,
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to write to conn: %w", err)
+	}
+
+	return nil
 }
 
 type RemoveVideoInput struct {
@@ -208,17 +209,20 @@ func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn,
 		RoomId:   roomId,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to remove video", "error", err)
-		return err
+		return fmt.Errorf("failed to remove video: %w", err)
 	}
 
-	return c.broadcast(ctx, removeVideoResponse.Conns, &Output{
+	if err := c.broadcast(ctx, removeVideoResponse.Conns, &Output{
 		Type: "VIDEO_REMOVED",
 		Payload: map[string]any{
 			"removed_video_id": input.VideoId,
 			"playlist":         removeVideoResponse.Playlist,
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to broadcast video removed: %w", err)
+	}
+
+	return nil
 }
 
 type UpdateProfileInput struct {
@@ -232,9 +236,7 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	if input.Username == nil && input.Color == nil && !input.AvatarURL.Defined {
-		err := ErrValidationError
-		c.logger.DebugContext(ctx, "validation error", "error", err)
-		return err
+		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 	// todo: add validation
 
@@ -246,11 +248,14 @@ func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Con
 		RoomId:    roomId,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to update member", "error", err)
-		return err
+		return fmt.Errorf("failed to update member: %w", err)
 	}
 
-	return c.broadcastMemberUpdated(ctx, updateProfileResp.Conns, &updateProfileResp.UpdatedMember, updateProfileResp.Members)
+	if err := c.broadcastMemberUpdated(ctx, updateProfileResp.Conns, &updateProfileResp.UpdatedMember, updateProfileResp.Members); err != nil {
+		return fmt.Errorf("failed to broadcast member updated: %w", err)
+	}
+
+	return nil
 }
 
 type UpdateIsReadyInput struct {
@@ -268,16 +273,17 @@ func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Con
 		SenderConn: conn,
 	})
 	if err != nil {
-		c.logger.DebugContext(ctx, "failed to update player video", "error", err)
-		return err
+		return fmt.Errorf("failed to update player video: %w", err)
 	}
 
 	if err := c.broadcastMemberUpdated(ctx, updatePlayerVideoResp.Conns, &updatePlayerVideoResp.UpdatedMember, updatePlayerVideoResp.Members); err != nil {
-		return err
+		return fmt.Errorf("failed to broadcast member updated: %w", err)
 	}
 
 	if updatePlayerVideoResp.Player != nil {
-		return c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player)
+		if err := c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player); err != nil {
+			return fmt.Errorf("failed to broadcast player updated: %w", err)
+		}
 	}
 
 	return nil
