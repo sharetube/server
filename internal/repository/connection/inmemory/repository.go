@@ -1,7 +1,6 @@
 package inmemory
 
 import (
-	"fmt"
 	"log/slog"
 	"sync"
 
@@ -35,7 +34,6 @@ func (r *repo) Add(conn *websocket.Conn, memberId string) error {
 
 	r.connList[conn] = memberId
 	r.idList[memberId] = conn
-	fmt.Printf("conn length: %v, memberId: %v\n", len(r.connList), memberId)
 
 	return nil
 }
@@ -66,8 +64,6 @@ func (r *repo) RemoveByMemberId(memberId string) (*websocket.Conn, error) {
 
 	delete(r.connList, conn)
 	delete(r.idList, memberId)
-
-	fmt.Printf("remove conn memberId: %v\n", memberId)
 
 	return conn, nil
 }

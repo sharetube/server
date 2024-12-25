@@ -214,7 +214,6 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	// delete room if no member left
 	if len(conns) == 0 {
-		fmt.Printf("room %s is empty, deleting room\n", params.RoomId)
 		videoIds, err := s.roomRepo.GetVideoIds(ctx, params.RoomId)
 		if err != nil {
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to get video ids: %w", err)

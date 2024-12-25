@@ -65,8 +65,6 @@ func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (string, erro
 		return "", fmt.Errorf("failed to get player video id: %w", err)
 	}
 
-	fmt.Printf("videoId res: %s", videoId)
-
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return videoId, nil
