@@ -92,7 +92,7 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 	for {
 		var msg Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if _, ok := err.(*websocket.CloseError); ok {
 				return err
 			}
 

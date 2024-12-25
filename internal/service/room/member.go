@@ -71,7 +71,7 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		MemberId: params.RemovedMemberId,
 		RoomId:   params.RoomId,
 	}); err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
+		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member from list: %w", err)
 	}
 
 	conn, err := s.connRepo.RemoveByMemberId(params.RemovedMemberId)
@@ -207,13 +207,13 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove conn: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
 	}
 
 	// delete room if no member left
-	if len(conns) == 0 {
+	if len(members) == 0 {
 		videoIds, err := s.roomRepo.GetVideoIds(ctx, params.RoomId)
 		if err != nil {
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to get video ids: %w", err)
@@ -248,8 +248,16 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire player: %w", err)
 		}
 
+		if err := s.roomRepo.ExpireLastVideo(ctx, params.RoomId); err != nil {
+			if err != room.ErrLastVideoNotFound {
+				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire last video: %w", err)
+			}
+		}
+
 		if err := s.roomRepo.ExpirePlaylist(ctx, params.RoomId); err != nil {
-			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire playlist: %w", err)
+			if err != room.ErrPlaylistNotFound {
+				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire playlist: %w", err)
+			}
 		}
 
 		return DisconnectMemberResponse{
@@ -257,9 +265,9 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		}, nil
 	}
 
-	members, err := s.getMembers(ctx, params.RoomId)
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
+		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
 	}
 
 	return DisconnectMemberResponse{

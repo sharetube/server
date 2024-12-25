@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
@@ -58,39 +57,30 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	// 	return err
 	// }
 
-	video := room.Video{
-		URL: params.URL,
-	}
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
-	r.hSetIfNotExists(ctx, pipe, videoKey, video)
+	pipe.SetNX(ctx, videoKey, params.URL, r.maxExpireDuration)
 	pipe.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	return r.executePipe(ctx, pipe)
 }
 
-func (r repo) getVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
-	var video room.Video
+func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
-	if err := r.rc.HGetAll(ctx, videoKey).Scan(&video); err != nil {
+
+	videoUrl, err := r.rc.Get(ctx, videoKey).Result()
+	if err != nil {
 		return room.Video{}, err
 	}
 
-	if video.URL == "" {
+	if videoUrl == "" {
 		return room.Video{}, room.ErrVideoNotFound
 	}
 
 	r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
 
-	return video, nil
-}
-
-func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
-	video, err := r.getVideo(ctx, params)
-	if err != nil {
-		return room.Video{}, err
-	}
-
-	return video, nil
+	return room.Video{
+		URL: videoUrl,
+	}, nil
 }
 
 func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
@@ -105,8 +95,8 @@ func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) 
 	return videoIds, nil
 }
 
-func (r repo) removeVideoFromList(ctx context.Context, roomId, videoId string) error {
-	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(roomId), videoId).Result()
+func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoFromListParams) error {
+	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomId), params.VideoId).Result()
 	if err != nil {
 		return err
 	}
@@ -118,10 +108,6 @@ func (r repo) removeVideoFromList(ctx context.Context, roomId, videoId string) e
 	return nil
 }
 
-func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoFromListParams) error {
-	return r.removeVideoFromList(ctx, params.RoomId, params.VideoId)
-}
-
 func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) error {
 	return r.rc.Del(ctx, r.getVideoKey(params.RoomId, params.VideoId)).Err()
 }
@@ -129,7 +115,7 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) error {
 	res, err := r.rc.Expire(ctx, r.getVideoKey(params.RoomId, params.VideoId), r.roomExpireDuration).Result()
 	if err != nil {
-		return fmt.Errorf("failed to expire video: %w", err)
+		return err
 	}
 
 	if !res {
@@ -142,7 +128,7 @@ func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) e
 func (r repo) ExpirePlaylist(ctx context.Context, roomId string) error {
 	res, err := r.rc.Expire(ctx, r.getPlaylistKey(roomId), r.roomExpireDuration).Result()
 	if err != nil {
-		return fmt.Errorf("failed to expire playlist: %w", err)
+		return err
 	}
 
 	if !res {
@@ -179,6 +165,14 @@ func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams)
 	return nil
 }
 
-func (r repo) RemoveLastVideo(ctx context.Context, roomId string) error {
-	return r.rc.Del(ctx, r.getLastVideoKey(roomId)).Err()
+func (r repo) ExpireLastVideo(ctx context.Context, roomId string) error {
+	res, err := r.rc.Expire(ctx, r.getLastVideoKey(roomId), r.roomExpireDuration).Result()
+	if err != nil {
+		return err
+	}
+
+	if !res {
+		return room.ErrLastVideoNotFound
+	}
+	return nil
 }

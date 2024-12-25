@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
@@ -102,7 +101,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
 	res, err := r.rc.Expire(ctx, r.getMemberKey(params.RoomId, params.MemberId), r.roomExpireDuration).Result()
 	if err != nil {
-		return fmt.Errorf("failed to expire member: %w", err)
+		return err
 	}
 
 	if !res {

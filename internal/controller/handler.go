@@ -44,11 +44,6 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
-
-	conn.SetCloseHandler(func(code int, text string) error {
-		c.logger.DebugContext(r.Context(), "close handler: client disconnected", "code", code, "text", text)
-		return nil
-	})
 	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
@@ -90,7 +85,6 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		// conn closed probably, expire member
 
 		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
 			MemberId: createRoomResponse.JoinedMember.Id,
@@ -151,11 +145,6 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to upgrade to websocket", "error", err)
 		return
 	}
-
-	conn.SetCloseHandler(func(code int, text string) error {
-		c.logger.DebugContext(r.Context(), "close handler: client disconnected", "code", code, "text", text)
-		return nil
-	})
 	defer conn.Close()
 
 	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
@@ -207,7 +196,6 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		// conn closed probably, expire member
 
 		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
 			MemberId: joinRoomResponse.JoinedMember.Id,

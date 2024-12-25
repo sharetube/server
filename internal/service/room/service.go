@@ -38,7 +38,7 @@ type iRoomRepo interface {
 	ExpireVideo(context.Context, *room.ExpireVideoParams) error
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
 	SetLastVideo(context.Context, *room.SetLastVideoParams) error
-	RemoveLastVideo(context.Context, string) error
+	ExpireLastVideo(context.Context, string) error
 	ExpirePlaylist(context.Context, string) error
 	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
