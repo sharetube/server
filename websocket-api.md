@@ -5,10 +5,16 @@ Create room: `/api/v1/ws/room/create?username=<required>&color=<required>&avatar
 
 Join room: `/api/v1/ws/room/{room-id}/join?jwt=<optional>&username=<required>&color=<required>&avatar-url=<optional>`
 
+## Custom close message codes
+
+| Code | Description      |
+| ---- | ---------------- |
+| 4001 | Kicked from room |
+
 ## Message base structure
 ```json
 {
-  "type": "string",
+  "type": "[string]",
   "payload": "object"
 }
 ```
@@ -38,9 +44,9 @@ null
 
 ```json
 {
-  "username": "string",
-  "color": "string",
-  "avatar_url": "string",
+  "username": "[string]",
+  "color": "[string]",
+  "avatar_url": "[string]",
 }
 ```
 </td>
@@ -52,7 +58,7 @@ null
 
 ```json
 {
-  "member_id": "string"
+  "member_id": "[string]"
 }
 ```
 </td>
@@ -64,7 +70,7 @@ null
 
 ```json
 {
-  "member_id": "string"
+  "member_id": "[string]"
 }
 ```
 </td>
@@ -76,7 +82,7 @@ null
 
 ```json
 {
-  "video_url": "string"
+  "video_url": "[string]"
 }
 ```
 </td>
@@ -88,7 +94,7 @@ null
 
 ```json
 {
-  "video_id": "string"
+  "video_id": "[string]"
 }
 ```
 </td>
@@ -102,8 +108,8 @@ null
 {
   "videos": [
     {
-      "id": "string",
-      "url": "string"
+      "id": "[string]",
+      "url": "[string]"
     }
   ],
 }
@@ -117,7 +123,7 @@ null
 
 ```json
 {
-  "is_ready": "boolean"
+  "is_ready": "[boolean]"
 }
 ```
 </td>
@@ -129,7 +135,7 @@ null
 
 ```json
 {
-  "is_muted": "boolean"
+  "is_muted": "[boolean]"
 }
 ```
 </td>
@@ -141,10 +147,10 @@ null
 
 ```json
 {
-  "playback_rate": "number",
-  "is_playing": "boolean",
-  "current_time": "number",
-  "updated_at": "number"
+  "playback_rate": "[number]",
+  "is_playing": "[boolean]",
+  "current_time": "[number]",
+  "updated_at": "[number]"
 }
 ```
 </td>
@@ -156,8 +162,8 @@ null
 
 ```json
 {
-  "video_id": "string",
-  "updated_at": "number"
+  "video_id": "[string]",
+  "updated_at": "[number]"
 }
 ```
 </td>
@@ -177,46 +183,46 @@ null
 
 ```json
 {
-  "jwt": "string",
+  "jwt": "[string]",
   "joined_member": {
-    "id": "string",
-    "username": "string",
-    "color": "string",
-    "avatar_url": "string",
-    "is_ready": "boolean",
-    "is_admin": "boolean",
-    "is_muted": "boolean"
+    "id": "[string]",
+    "username": "[string]",
+    "color": "[string]",
+    "avatar_url": "[string]",
+    "is_ready": "[boolean]",
+    "is_admin": "[boolean]",
+    "is_muted": "[boolean]"
   },
   "room": {
-    "room_id": "string",
+    "room_id": "[string]",
     "player": {
-      "video_url": "string",
-      "playback_rate": "number",
-      "is_playing": "boolean",
-      "current_time": "number",
-      "updated_at": "number"
+      "video_url": "[string]",
+      "playback_rate": "[number]",
+      "is_playing": "[boolean]",
+      "current_time": "[number]",
+      "updated_at": "[number]"
     },
     "playlist":{
       "videos": [
         {
-          "id": "string",
-          "url": "string"
+          "id": "[string]",
+          "url": "[string]"
         }
       ],
       "last_video_id": {
-        "id": "string",
-        "url": "string"
+        "id": "[string]",
+        "url": "[string]"
       }
     },
     "members": [
       {
-        "id": "string",
-        "username": "string",
-        "color": "string",
-        "avatar_url": "string",
-        "is_ready": "boolean",
-        "is_admin": "boolean",
-        "is_muted": "boolean"
+        "id": "[string]",
+        "username": "[string]",
+        "color": "[string]",
+        "avatar_url": "[string]",
+        "is_ready": "[boolean]",
+        "is_admin": "[boolean]",
+        "is_muted": "[boolean]"
       }
     ]
   }
@@ -232,11 +238,11 @@ null
 ```json
 {
   "player": {
-    "video_url": "string",
-    "playback_rate": "number",
-    "is_playing": "boolean",
-    "current_time": "number",
-    "updated_at": "number"
+    "video_url": "[string]",
+    "playback_rate": "[number]",
+    "is_playing": "[boolean]",
+    "current_time": "[number]",
+    "updated_at": "[number]"
   }
 }
 ```
@@ -250,22 +256,22 @@ null
 ```json
 {
   "player": {
-    "video_url": "string",
-    "playback_rate": "number",
-    "is_playing": "boolean",
-    "current_time": "number",
-    "updated_at": "number"
+    "video_url": "[string]",
+    "playback_rate": "[number]",
+    "is_playing": "[boolean]",
+    "current_time": "[number]",
+    "updated_at": "[number]"
   },
   "playlist":{
     "videos": [
       {
-        "id": "string",
-        "url": "string"
+        "id": "[string]",
+        "url": "[string]"
       }
     ],
-    "last_video_id": {
-      "id": "string",
-      "url": "string"
+    "last_video": {
+      "id": "[string]",
+      "url": "[string]"
     }
   }
 }
@@ -280,19 +286,19 @@ null
 ```json
 {
   "added_video": {
-    "id": "string",
-    "url": "string"
+    "id": "[string]",
+    "url": "[string]"
   },
   "playlist":{
     "videos": [
       {
-        "id": "string",
-        "url": "string"
+        "id": "[string]",
+        "url": "[string]"
       }
     ],
-    "last_video_id": {
-      "id": "string",
-      "url": "string"
+    "last_video": {
+      "id": "[string]",
+      "url": "[string]"
     }
   }
 }
@@ -306,17 +312,17 @@ null
 
 ```json
 {
-  "removed_video_id": "string",
+  "removed_video_id": "[string]",
   "playlist":{
     "videos": [
       {
-        "id": "string",
-        "url": "string"
+        "id": "[string]",
+        "url": "[string]"
       }
     ],
-    "last_video_id": {
-      "id": "string",
-      "url": "string"
+    "last_video": {
+      "id": "[string]",
+      "url": "[string]"
     }
   }
 }
@@ -330,15 +336,17 @@ null
 
 ```json
 {
-  "videos": [
-    {
-      "id": "string",
-      "url": "string"
+  "playlist":{
+    "videos": [
+      {
+        "id": "[string]",
+        "url": "[string]"
+      }
+    ],
+    "last_video_id": {
+      "id": "[string]",
+      "url": "[string]"
     }
-  ],
-  "last_video_id": {
-    "id": "string",
-    "url": "string"
   }
 }
 ```
@@ -352,23 +360,23 @@ null
 ```json
 {
   "joined_member": {
-    "id": "string",
-    "username": "string",
-    "color": "string",
-    "avatar_url": "string",
-    "is_ready": "boolean",
-    "is_admin": "boolean",
-    "is_muted": "boolean"
+    "id": "[string]",
+    "username": "[string]",
+    "color": "[string]",
+    "avatar_url": "[string]",
+    "is_ready": "[boolean]",
+    "is_admin": "[boolean]",
+    "is_muted": "[boolean]"
   },
   "members": [
     {
-      "id": "string",
-      "username": "string",
-      "color": "string",
-      "avatar_url": "string",
-      "is_ready": "boolean",
-      "is_admin": "boolean",
-      "is_muted": "boolean"
+      "id": "[string]",
+      "username": "[string]",
+      "color": "[string]",
+      "avatar_url": "[string]",
+      "is_ready": "[boolean]",
+      "is_admin": "[boolean]",
+      "is_muted": "[boolean]"
     }
   ]
 }
@@ -382,16 +390,16 @@ null
 
 ```json
 {
-  "disconnected_member_id": "string",
+  "disconnected_member_id": "[string]",
   "members": [
     {
-      "id": "string",
-      "username": "string",
-      "color": "string",
-      "avatar_url": "string",
-      "is_ready": "boolean",
-      "is_admin": "boolean",
-      "is_muted": "boolean"
+      "id": "[string]",
+      "username": "[string]",
+      "color": "[string]",
+      "avatar_url": "[string]",
+      "is_ready": "[boolean]",
+      "is_admin": "[boolean]",
+      "is_muted": "[boolean]"
     }
   ]
 }
@@ -406,23 +414,23 @@ null
 ```json
 {
   "updated_member": {
-    "id": "string",
-    "username": "string",
-    "color": "string",
-    "avatar_url": "string",
-    "is_ready": "boolean",
-    "is_admin": "boolean",
-    "is_muted": "boolean"
+    "id": "[string]",
+    "username": "[string]",
+    "color": "[string]",
+    "avatar_url": "[string]",
+    "is_ready": "[boolean]",
+    "is_admin": "[boolean]",
+    "is_muted": "[boolean]"
   },
   "members": [
     {
-      "id": "string",
-      "username": "string",
-      "color": "string",
-      "avatar_url": "string",
-      "is_ready": "boolean",
-      "is_admin": "boolean",
-      "is_muted": "boolean"
+      "id": "[string]",
+      "username": "[string]",
+      "color": "[string]",
+      "avatar_url": "[string]",
+      "is_ready": "[boolean]",
+      "is_admin": "[boolean]",
+      "is_muted": "[boolean]"
     }
   ]
 }
@@ -436,7 +444,7 @@ null
 
 ```json
 {
-  "is_admin": "boolean"
+  "is_admin": "[boolean]"
 }
 ```
 </td>
