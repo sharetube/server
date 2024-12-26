@@ -1,5 +1,7 @@
 package room
 
+import "time"
+
 type Member struct {
 	Username  string  `redis:"username" json:"username"`
 	Color     string  `redis:"color" json:"color"`
@@ -36,8 +38,9 @@ type RemoveMemberParams struct {
 }
 
 type ExpireMemberParams struct {
-	MemberId string `json:"member_id"`
-	RoomId   string `json:"room_id"`
+	MemberId string    `json:"member_id"`
+	RoomId   string    `json:"room_id"`
+	ExpireAt time.Time `json:"expire_at"`
 }
 
 type RemoveMemberFromListParams struct {

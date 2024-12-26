@@ -1,5 +1,7 @@
 package room
 
+import "time"
+
 type Player struct {
 	VideoId           string  `redis:"video_id"`
 	IsPlaying         bool    `redis:"is_playing"`
@@ -16,6 +18,11 @@ type SetPlayerParams struct {
 	PlaybackRate float64 `json:"playback_rate"`
 	UpdatedAt    int     `json:"updated_at"`
 	RoomId       string  `json:"room_id"`
+}
+
+type ExpirePlayerParams struct {
+	RoomId   string    `json:"room_id"`
+	ExpireAt time.Time `json:"expire_at"`
 }
 
 type UpdatePlayerParams struct {

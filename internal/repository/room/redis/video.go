@@ -113,7 +113,7 @@ func (r repo) RemoveVideo(ctx context.Context, params *room.RemoveVideoParams) e
 }
 
 func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) error {
-	res, err := r.rc.Expire(ctx, r.getVideoKey(params.RoomId, params.VideoId), r.roomExpireDuration).Result()
+	res, err := r.rc.ExpireAt(ctx, r.getVideoKey(params.RoomId, params.VideoId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}
@@ -125,8 +125,8 @@ func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) e
 	return nil
 }
 
-func (r repo) ExpirePlaylist(ctx context.Context, roomId string) error {
-	res, err := r.rc.Expire(ctx, r.getPlaylistKey(roomId), r.roomExpireDuration).Result()
+func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getPlaylistKey(params.RoomId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}
@@ -165,8 +165,8 @@ func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams)
 	return nil
 }
 
-func (r repo) ExpireLastVideo(ctx context.Context, roomId string) error {
-	res, err := r.rc.Expire(ctx, r.getLastVideoKey(roomId), r.roomExpireDuration).Result()
+func (r repo) ExpireLastVideo(ctx context.Context, params *room.ExpireLastVideoParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getLastVideoKey(params.RoomId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}

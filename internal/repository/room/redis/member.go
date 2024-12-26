@@ -99,7 +99,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 }
 
 func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
-	res, err := r.rc.Expire(ctx, r.getMemberKey(params.RoomId, params.MemberId), r.roomExpireDuration).Result()
+	res, err := r.rc.ExpireAt(ctx, r.getMemberKey(params.RoomId, params.MemberId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}

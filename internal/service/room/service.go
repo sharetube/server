@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -39,8 +40,8 @@ type iRoomRepo interface {
 	ExpireVideo(context.Context, *room.ExpireVideoParams) error
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
 	SetLastVideo(context.Context, *room.SetLastVideoParams) error
-	ExpireLastVideo(context.Context, string) error
-	ExpirePlaylist(context.Context, string) error
+	ExpireLastVideo(context.Context, *room.ExpireLastVideoParams) error
+	ExpirePlaylist(context.Context, *room.ExpirePlaylistParams) error
 	GetVideoIds(context.Context, string) ([]string, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
@@ -51,7 +52,7 @@ type iRoomRepo interface {
 	GetPlayer(context.Context, string) (room.Player, error)
 	IsPlayerExists(context.Context, string) (bool, error)
 	RemovePlayer(context.Context, string) error
-	ExpirePlayer(context.Context, string) error
+	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
 	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
 	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
 	GetPlayerVideoId(context.Context, string) (string, error)
@@ -76,9 +77,11 @@ type service struct {
 	membersLimit  int
 	playlistLimit int
 	secret        []byte
+	roomExp       time.Duration
 }
 
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string) *service {
+// todo: create params struct
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string, roomExp time.Duration) *service {
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	return &service{
@@ -88,5 +91,6 @@ func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistL
 		playlistLimit: playlistLimit,
 		secret:        []byte(secret),
 		generator:     randstr.New(letterBytes),
+		roomExp:       roomExp,
 	}
 }

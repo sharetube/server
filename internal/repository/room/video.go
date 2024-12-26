@@ -1,5 +1,7 @@
 package room
 
+import "time"
+
 type Video struct {
 	URL string `redis:"url"`
 }
@@ -10,8 +12,19 @@ type RemoveVideoParams struct {
 }
 
 type ExpireVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId  string    `json:"video_id"`
+	RoomId   string    `json:"room_id"`
+	ExpireAt time.Time `json:"expire_at"`
+}
+
+type ExpireLastVideoParams struct {
+	RoomId   string    `json:"room_id"`
+	ExpireAt time.Time `json:"expire_at"`
+}
+
+type ExpirePlaylistParams struct {
+	RoomId   string    `json:"room_id"`
+	ExpireAt time.Time `json:"expire_at"`
 }
 
 type AddVideoToListParams struct {

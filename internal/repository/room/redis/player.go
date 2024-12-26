@@ -85,8 +85,8 @@ func (r repo) RemovePlayer(ctx context.Context, roomId string) error {
 	return nil
 }
 
-func (r repo) ExpirePlayer(ctx context.Context, roomId string) error {
-	res, err := r.rc.Expire(ctx, r.getPlayerKey(roomId), r.roomExpireDuration).Result()
+func (r repo) ExpirePlayer(ctx context.Context, params *room.ExpirePlayerParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getPlayerKey(params.RoomId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}

@@ -196,9 +196,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove member from list: %w", err)
 	}
 
+	expireAt := time.Now().Add(s.roomExp)
+
 	if err := s.roomRepo.ExpireMember(ctx, &room.ExpireMemberParams{
 		MemberId: params.MemberId,
 		RoomId:   params.RoomId,
+		ExpireAt: expireAt,
 	}); err != nil {
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to expire member: %w", err)
 	}
@@ -237,24 +240,34 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 		for _, videoId := range videoIds {
 			if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{
-				VideoId: videoId,
-				RoomId:  params.RoomId,
+				VideoId:  videoId,
+				RoomId:   params.RoomId,
+				ExpireAt: expireAt,
 			}); err != nil {
 				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire video: %w", err)
 			}
 		}
 
-		if err := s.roomRepo.ExpirePlayer(ctx, params.RoomId); err != nil {
+		if err := s.roomRepo.ExpirePlayer(ctx, &room.ExpirePlayerParams{
+			RoomId:   params.RoomId,
+			ExpireAt: expireAt,
+		}); err != nil {
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire player: %w", err)
 		}
 
-		if err := s.roomRepo.ExpireLastVideo(ctx, params.RoomId); err != nil {
+		if err := s.roomRepo.ExpireLastVideo(ctx, &room.ExpireLastVideoParams{
+			RoomId:   params.RoomId,
+			ExpireAt: expireAt,
+		}); err != nil {
 			if err != room.ErrLastVideoNotFound {
 				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire last video: %w", err)
 			}
 		}
 
-		if err := s.roomRepo.ExpirePlaylist(ctx, params.RoomId); err != nil {
+		if err := s.roomRepo.ExpirePlaylist(ctx, &room.ExpirePlaylistParams{
+			RoomId:   params.RoomId,
+			ExpireAt: expireAt,
+		}); err != nil {
 			if err != room.ErrPlaylistNotFound {
 				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire playlist: %w", err)
 			}
