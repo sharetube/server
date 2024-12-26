@@ -41,7 +41,7 @@ func (s service) mapMembers(ctx context.Context, roomId string, memberIds []stri
 func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error) {
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
-		return []Member{}, err
+		return []Member{}, fmt.Errorf("failed to get member ids: %w", err)
 	}
 
 	return s.mapMembers(ctx, roomId, memberIds)
@@ -85,12 +85,12 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return RemoveMemberResponse{}, err
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to get members: %w", err)
+		return RemoveMemberResponse{}, err
 	}
 
 	return RemoveMemberResponse{
@@ -139,12 +139,12 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	// todo: refactor by do not use getConnsByRoomId to save conn inside for
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return PromoteMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return PromoteMemberResponse{}, err
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return PromoteMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
+		return PromoteMemberResponse{}, err
 	}
 
 	promotedMemberConn, err := s.connRepo.GetConn(params.PromotedMemberId)
@@ -216,7 +216,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get member list: %w", err)
+		return DisconnectMemberResponse{}, err
 	}
 
 	// delete room if no member left
@@ -284,7 +284,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return DisconnectMemberResponse{}, err
 	}
 
 	return DisconnectMemberResponse{
@@ -344,12 +344,12 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	// todo: fix double get ids
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return UpdateProfileResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return UpdateProfileResponse{}, err
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return UpdateProfileResponse{}, fmt.Errorf("failed to get members: %w", err)
+		return UpdateProfileResponse{}, err
 	}
 
 	return UpdateProfileResponse{
@@ -415,12 +415,12 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	// todo: fix double get ids
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return UpdateIsReadyResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return UpdateIsReadyResponse{}, err
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return UpdateIsReadyResponse{}, fmt.Errorf("failed to get members: %w", err)
+		return UpdateIsReadyResponse{}, err
 	}
 
 	member.IsReady = params.IsReady
@@ -537,12 +537,12 @@ func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams)
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return UpdateIsMutedResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return UpdateIsMutedResponse{}, err
 	}
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return UpdateIsMutedResponse{}, fmt.Errorf("failed to get members: %w", err)
+		return UpdateIsMutedResponse{}, err
 	}
 
 	return UpdateIsMutedResponse{

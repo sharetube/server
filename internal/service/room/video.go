@@ -12,7 +12,7 @@ import (
 func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) {
 	videosIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
 	if err != nil {
-		return []Video{}, err
+		return []Video{}, fmt.Errorf("failed to get videos ids: %w", err)
 	}
 
 	playlist := make([]Video, 0, len(videosIds))
@@ -22,7 +22,7 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 			VideoId: videoId,
 		})
 		if err != nil {
-			return []Video{}, err
+			return []Video{}, fmt.Errorf("failed to get video: %w", err)
 		}
 
 		playlist = append(playlist, Video{
@@ -54,7 +54,7 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, erro
 func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error) {
 	lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get last video id: %w", err)
 	}
 
 	if lastVideoId == nil {
@@ -69,7 +69,7 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 		if err == room.ErrVideoNotFound {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get video: %w", err)
 	}
 
 	return &Video{
@@ -123,12 +123,12 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return AddVideoResponse{}, err
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+		return AddVideoResponse{}, err
 	}
 
 	return AddVideoResponse{
@@ -174,12 +174,12 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return RemoveVideoResponse{}, err
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+		return RemoveVideoResponse{}, err
 	}
 
 	return RemoveVideoResponse{

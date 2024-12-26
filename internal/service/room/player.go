@@ -57,9 +57,21 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get video: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return UpdatePlayerStateResponse{}, err
+	}
+
+	for i, memberId := range memberIds {
+		if memberId == params.SenderId {
+			memberIds = append(memberIds[:i], memberIds[i+1:]...)
+			break
+		}
+	}
+
+	conns, err := s.getConnsFromMemberIds(ctx, memberIds)
+	if err != nil {
+		return UpdatePlayerStateResponse{}, err
 	}
 
 	return UpdatePlayerStateResponse{
@@ -166,7 +178,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+		return UpdatePlayerVideoResponse{}, err
 	}
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
