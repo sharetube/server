@@ -200,38 +200,30 @@ type ReorderPlaylistResponse struct {
 	Playlist Playlist
 }
 
-func (s service) ReorderPlaylist(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
+func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (ReorderPlaylistResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return RemoveVideoResponse{}, err
+		return ReorderPlaylistResponse{}, err
 	}
 
-	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
-		VideoId: params.VideoId,
-		RoomId:  params.RoomId,
+	if err := s.roomRepo.ReorderList(ctx, &room.ReorderListParams{
+		VideoIds: params.VideoIds,
+		RoomId:   params.RoomId,
 	}); err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
-	}
-
-	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
-		VideoId: params.VideoId,
-		RoomId:  params.RoomId,
-	}); err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
+		return ReorderPlaylistResponse{}, fmt.Errorf("failed to reorder playlist: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, err
+		return ReorderPlaylistResponse{}, err
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, err
+		return ReorderPlaylistResponse{}, err
 	}
 
-	return RemoveVideoResponse{
-		Conns:          conns,
-		Playlist:       playlist,
-		RemovedVideoId: params.VideoId,
+	return ReorderPlaylistResponse{
+		Conns:    conns,
+		Playlist: playlist,
 	}, nil
 }

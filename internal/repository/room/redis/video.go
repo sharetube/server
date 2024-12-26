@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
@@ -83,7 +84,7 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 	}, nil
 }
 
-func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
+func (r repo) getVideoIds(ctx context.Context, roomId string) ([]string, error) {
 	playlistKey := r.getPlaylistKey(roomId)
 	videoIds, err := r.rc.ZRangeByScore(ctx, playlistKey, &redis.ZRangeBy{
 		Min: "-inf",
@@ -96,6 +97,38 @@ func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) 
 	r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
 
 	return videoIds, nil
+}
+
+func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
+	return r.getVideoIds(ctx, roomId)
+}
+
+func (r repo) ReorderList(ctx context.Context, params *room.ReorderListParams) error {
+	videoIds, err := r.getVideoIds(ctx, params.RoomId)
+	if err != nil {
+		return err
+	}
+
+	// todo: check that all params.VideoIds are in videoIds
+
+	if len(videoIds) != len(params.VideoIds) {
+		return errors.New("invalid video ids")
+	}
+
+	pipe := r.rc.TxPipeline()
+	playlistKey := r.getPlaylistKey(params.RoomId)
+	for i := 1; i <= len(videoIds); i++ {
+		if videoIds[i-1] != params.VideoIds[i-1] {
+			pipe.ZAdd(ctx, playlistKey, redis.Z{
+				Score:  float64(i),
+				Member: params.VideoIds[i-1],
+			})
+		}
+	}
+
+	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
+
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoFromListParams) error {

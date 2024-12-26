@@ -1,7 +1,6 @@
 .DEFAULT_GOAL := lint
 
-IMAGE_NAME = sharetube/server
-CONTAINER_NAME = sharetube-server
+IMAGE_NAME = sharetube-server-dev
 IMAGE_TAG = latest
 PORT = 8080
 
@@ -21,24 +20,8 @@ test:
 build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
-.PHONY: run
-run:
-	docker run --name $(CONTAINER_NAME) -p $(PORT):$(PORT) $(IMAGE_NAME):$(IMAGE_TAG)
-
-.PHONY: stop
-stop:
-	docker stop $(CONTAINER_NAME) || true
-	docker rm $(CONTAINER_NAME) || true
-
-.PHONY: restart
-restart: stop build run
-
 .PHONY: clean
 clean:
 	docker stop $(CONTAINER_NAME) || true
 	docker rm $(CONTAINER_NAME) || true
 	docker rmi $(IMAGE_NAME):$(IMAGE_TAG) || true
-
-.PHONY: logs
-logs:
-	docker logs -f $(CONTAINER_NAME)

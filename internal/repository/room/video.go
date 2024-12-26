@@ -55,6 +55,11 @@ type RemoveVideoFromListParams struct {
 	RoomId  string `json:"room_id"`
 }
 
+type ReorderListParams struct {
+	VideoIds []string `json:"video_id"`
+	RoomId   string   `json:"room_id"`
+}
+
 type GetVideoParams struct {
 	VideoId string `json:"video_id"`
 	RoomId  string `json:"room_id"`

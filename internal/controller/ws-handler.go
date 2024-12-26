@@ -33,7 +33,7 @@ type UpdatePlayerStateInput struct {
 	UpdatedAt    int     `json:"updated_at"`
 }
 
-func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, input UpdatePlayerStateInput) error {
+func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Conn, input UpdatePlayerStateInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -61,7 +61,7 @@ type UpdatePlayerVideoInput struct {
 	UpdatedAt int    `json:"updated_at"`
 }
 
-func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, input UpdatePlayerVideoInput) error {
+func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Conn, input UpdatePlayerVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -93,7 +93,7 @@ type AddVideoInput struct {
 	VideoURL string `json:"video_url"`
 }
 
-func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, input AddVideoInput) error {
+func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input AddVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -125,7 +125,7 @@ type RemoveMemberInput struct {
 	MemberId uuid.UUID `json:"member_id"`
 }
 
-func (c controller) handleRemoveMember(ctx context.Context, conn *websocket.Conn, input RemoveMemberInput) error {
+func (c controller) handleRemoveMember(ctx context.Context, _ *websocket.Conn, input RemoveMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -163,7 +163,7 @@ type PromotedMemberInput struct {
 	MemberId uuid.UUID `json:"member_id"`
 }
 
-func (c controller) handlePromoteMember(ctx context.Context, conn *websocket.Conn, input PromotedMemberInput) error {
+func (c controller) handlePromoteMember(ctx context.Context, _ *websocket.Conn, input PromotedMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -200,7 +200,7 @@ type RemoveVideoInput struct {
 	VideoId string `json:"video_id"`
 }
 
-func (c controller) handleRemoveVideo(ctx context.Context, conn *websocket.Conn, input RemoveVideoInput) error {
+func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, input RemoveVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -232,7 +232,7 @@ type UpdateProfileInput struct {
 	AvatarURL o.Field[string] `json:"avatar_url"`
 }
 
-func (c controller) handleUpdateProfile(ctx context.Context, conn *websocket.Conn, input UpdateProfileInput) error {
+func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, input UpdateProfileInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
@@ -319,28 +319,27 @@ type ReorderPlaylistInput struct {
 	VideoIds []string `json:"video_ids"`
 }
 
-// func (c controller) handleReorderPlaylist(ctx context.Context, conn *websocket.Conn, input ReorderPlaylistInput) error {
-// 	roomId := c.getRoomIdFromCtx(ctx)
-// 	memberId := c.getMemberIdFromCtx(ctx)
+func (c controller) handleReorderPlaylist(ctx context.Context, _ *websocket.Conn, input ReorderPlaylistInput) error {
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
 
-// 	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
-// 		VideoId:  input.VideoId,
-// 		SenderId: memberId,
-// 		RoomId:   roomId,
-// 	})
-// 	if err != nil {
-// 		return fmt.Errorf("failed to remove video: %w", err)
-// 	}
+	removeVideoResponse, err := c.roomService.ReorderPlaylist(ctx, &room.ReorderPlaylistParams{
+		VideoIds: input.VideoIds,
+		SenderId: memberId,
+		RoomId:   roomId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reorder playlist: %w", err)
+	}
 
-// 	if err := c.broadcast(ctx, removeVideoResponse.Conns, &Output{
-// 		Type: "VIDEO_REMOVED",
-// 		Payload: map[string]any{
-// 			"removed_video_id": input.VideoId,
-// 			"playlist":         removeVideoResponse.Playlist,
-// 		},
-// 	}); err != nil {
-// 		return fmt.Errorf("failed to broadcast video removed: %w", err)
-// 	}
+	if err := c.broadcast(ctx, removeVideoResponse.Conns, &Output{
+		Type: "PLAYLIST_REORDERED",
+		Payload: map[string]any{
+			"playlist": removeVideoResponse.Playlist,
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to broadcast playlist reordered: %w", err)
+	}
 
-// 	return nil
-// }
+	return nil
+}
