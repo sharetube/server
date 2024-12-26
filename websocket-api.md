@@ -232,7 +232,7 @@ null
 </tr>
 
 <tr>
-<td>PLAYER_STATE_UPDATED</td>
+<td>PLAYER_UPDATED</td>
 <td>
 
 ```json

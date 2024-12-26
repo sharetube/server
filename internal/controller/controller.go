@@ -25,6 +25,7 @@ type iRoomService interface {
 	PromoteMember(context.Context, *room.PromoteMemberParams) (room.PromoteMemberResponse, error)
 	UpdateProfile(context.Context, *room.UpdateProfileParams) (room.UpdateProfileResponse, error)
 	UpdateIsReady(context.Context, *room.UpdateIsReadyParams) (room.UpdateIsReadyResponse, error)
+	UpdateIsMuted(context.Context, *room.UpdateIsMutedParams) (room.UpdateIsMutedResponse, error)
 }
 
 type controller struct {

@@ -288,3 +288,28 @@ func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Con
 
 	return nil
 }
+
+type UpdateIsMutedInput struct {
+	IsMuted bool `json:"is_muted"`
+}
+
+func (c controller) handleUpdateIsMuted(ctx context.Context, conn *websocket.Conn, input UpdateIsMutedInput) error {
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
+
+	updatePlayerVideoResp, err := c.roomService.UpdateIsMuted(ctx, &room.UpdateIsMutedParams{
+		IsMuted:    input.IsMuted,
+		SenderId:   memberId,
+		RoomId:     roomId,
+		SenderConn: conn,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update is muted: %w", err)
+	}
+
+	if err := c.broadcastMemberUpdated(ctx, updatePlayerVideoResp.Conns, &updatePlayerVideoResp.UpdatedMember, updatePlayerVideoResp.Members); err != nil {
+		return fmt.Errorf("failed to broadcast member updated: %w", err)
+	}
+
+	return nil
+}

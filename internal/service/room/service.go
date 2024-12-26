@@ -26,6 +26,7 @@ type iRoomRepo interface {
 	GetMember(context.Context, *room.GetMemberParams) (room.Member, error)
 	GetMemberIds(context.Context, string) ([]string, error)
 	GetMemberIsAdmin(ctx context.Context, roomId string, memberId string) (bool, error)
+	GetMemberIsMuted(ctx context.Context, roomId, memberId string) (bool, error)
 	UpdateMemberIsAdmin(ctx context.Context, roomId string, memberId string, isAdmin bool) error
 	UpdateMemberIsMuted(ctx context.Context, roomId string, memberId string, isMuted bool) error
 	UpdateMemberIsReady(ctx context.Context, roomId string, memberId string, isReady bool) error

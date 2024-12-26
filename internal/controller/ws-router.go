@@ -36,7 +36,7 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 
 	// profile
 	wsrouter.Handle(mux, "UPDATE_PROFILE", c.handleUpdateProfile)
-	// mux.Handle("UPDATE_MUTED", c.handleUpdateMuted)
+	wsrouter.Handle(mux, "UPDATE_MUTED", c.handleUpdateIsMuted)
 	wsrouter.Handle(mux, "UPDATE_READY", c.handleUpdateIsReady)
 
 	return mux

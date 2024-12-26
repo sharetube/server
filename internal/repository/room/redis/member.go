@@ -111,6 +111,17 @@ func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams)
 	return nil
 }
 
+func (r repo) GetMemberIsMuted(ctx context.Context, roomId, memberId string) (bool, error) {
+	memberKey := r.getMemberKey(roomId, memberId)
+	isAdmin, err := r.rc.HGet(ctx, memberKey, "is_muted").Bool()
+	if err != nil {
+		return false, err
+	}
+	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+
+	return isAdmin, nil
+}
+
 func (r repo) GetMemberIsAdmin(ctx context.Context, roomId, memberId string) (bool, error) {
 	memberKey := r.getMemberKey(roomId, memberId)
 	isAdmin, err := r.rc.HGet(ctx, memberKey, "is_admin").Bool()

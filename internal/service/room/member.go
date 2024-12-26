@@ -464,3 +464,73 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		Members:       members,
 	}, nil
 }
+
+type UpdateIsMutedParams struct {
+	SenderConn *websocket.Conn
+	IsMuted    bool
+	SenderId   string
+	RoomId     string
+}
+
+type UpdateIsMutedResponse struct {
+	Conns         []*websocket.Conn
+	UpdatedMember Member
+	Members       []Member
+}
+
+func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams) (UpdateIsMutedResponse, error) {
+	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
+		MemberId: params.SenderId,
+		RoomId:   params.RoomId,
+	})
+	if err != nil {
+		return UpdateIsMutedResponse{}, fmt.Errorf("failed to get member: %w", err)
+	}
+
+	if member.IsMuted == params.IsMuted {
+		//? send error
+		member1 := Member{
+			Id:        params.SenderId,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   member.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsReady:   member.IsReady,
+		}
+
+		return UpdateIsMutedResponse{
+			UpdatedMember: member1,
+			Members:       []Member{member1},
+			Conns:         []*websocket.Conn{params.SenderConn},
+		}, nil
+	}
+
+	if err := s.roomRepo.UpdateMemberIsMuted(ctx, params.RoomId, params.SenderId, params.IsMuted); err != nil {
+		return UpdateIsMutedResponse{}, fmt.Errorf("failed to update member is muted: %w", err)
+	}
+
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	if err != nil {
+		return UpdateIsMutedResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+	}
+
+	members, err := s.getMembers(ctx, params.RoomId)
+	if err != nil {
+		return UpdateIsMutedResponse{}, fmt.Errorf("failed to get members: %w", err)
+	}
+
+	return UpdateIsMutedResponse{
+		Conns: conns,
+		UpdatedMember: Member{
+			Id:        params.SenderId,
+			Username:  member.Username,
+			Color:     member.Color,
+			AvatarURL: member.AvatarURL,
+			IsMuted:   params.IsMuted,
+			IsAdmin:   member.IsAdmin,
+			IsReady:   member.IsReady,
+		},
+		Members: members,
+	}, nil
+}
