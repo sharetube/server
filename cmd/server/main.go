@@ -32,7 +32,7 @@ var (
 	port = configVar[int]{
 		envKey:       "SERVER_PORT",
 		flagKey:      "port",
-		defaultValue: 80,
+		defaultValue: 8080,
 	}
 	host = configVar[string]{
 		envKey:       "SERVER_HOST",

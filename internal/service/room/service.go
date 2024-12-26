@@ -80,17 +80,24 @@ type service struct {
 	roomExp       time.Duration
 }
 
+type Config struct {
+	MembersLimit  int
+	PlaylistLimit int
+	Secret        string
+	RoomExp       time.Duration
+}
+
 // todo: create params struct
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, membersLimit, playlistLimit int, secret string, roomExp time.Duration) *service {
+func NewService(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	return &service{
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
-		membersLimit:  membersLimit,
-		playlistLimit: playlistLimit,
-		secret:        []byte(secret),
+		membersLimit:  cfg.MembersLimit,
+		playlistLimit: cfg.MembersLimit,
+		secret:        []byte(cfg.Secret),
 		generator:     randstr.New(letterBytes),
-		roomExp:       roomExp,
+		roomExp:       cfg.RoomExp,
 	}
 }

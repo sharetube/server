@@ -83,7 +83,12 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
 	connectionRepo := inmemory.NewRepo(logger)
-	roomService := room.NewService(roomRepo, connectionRepo, cfg.MembersLimit, cfg.PlaylistLimit, cfg.Secret, 30*time.Second)
+	roomService := room.NewService(roomRepo, connectionRepo, &room.Config{
+		MembersLimit:  cfg.MembersLimit,
+		PlaylistLimit: cfg.PlaylistLimit,
+		Secret:        cfg.Secret,
+		RoomExp:       30 * time.Second,
+	})
 	controller := controller.NewController(roomService, logger)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}
 
