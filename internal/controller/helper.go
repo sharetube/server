@@ -99,3 +99,27 @@ func (c controller) broadcastPlayerUpdated(ctx context.Context, conns []*websock
 		},
 	})
 }
+
+func (c controller) helperDisconn(ctx context.Context, roomId string, memberId string) error {
+	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+		MemberId: memberId,
+		RoomId:   roomId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to disconnect member: %w", err)
+	}
+
+	if !disconnectMemberResp.IsRoomDeleted {
+		if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
+			Type: "MEMBER_DISCONNECTED",
+			Payload: map[string]any{
+				"disconnected_member_id": memberId,
+				"members":                disconnectMemberResp.Members,
+			},
+		}); err != nil {
+			return fmt.Errorf("failed to broadcast member disconnected: %w", err)
+		}
+	}
+
+	return nil
+}

@@ -14,6 +14,7 @@ import (
 
 func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	c.logger.InfoContext(r.Context(), "create room")
+	deferDisconnect := true
 	start := time.Now()
 
 	user, err := c.getUser(r)
@@ -53,6 +54,13 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
+	defer func() {
+		if deferDisconnect {
+			if err := c.helperDisconn(r.Context(), createRoomResponse.RoomId, createRoomResponse.JoinedMember.Id); err != nil {
+				c.logger.DebugContext(r.Context(), "failed to disconnect member", "error", err)
+			}
+		}
+	}()
 
 	roomState, err := c.roomService.GetRoom(r.Context(), createRoomResponse.RoomId)
 	if err != nil {
@@ -82,36 +90,16 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
 		if e, ok := err.(*websocket.CloseError); ok {
 			if e.Code == 4001 {
+				deferDisconnect = false
 				return
 			}
 		}
-
-		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
-			MemberId: createRoomResponse.JoinedMember.Id,
-			RoomId:   createRoomResponse.RoomId,
-		})
-		if err != nil {
-			c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
-		}
-
-		if !disconnectMemberResp.IsRoomDeleted {
-			if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
-				Type: "MEMBER_DISCONNECTED",
-				Payload: map[string]any{
-					"disconnected_member_id": createRoomResponse.JoinedMember.Id,
-					"members":                disconnectMemberResp.Members,
-				},
-			}); err != nil {
-				c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
-			}
-		}
-
-		return
 	}
 }
 
 func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	c.logger.InfoContext(r.Context(), "join room")
+	deferDisconnect := true
 	start := time.Now()
 
 	roomId := chi.URLParam(r, "room-id")
@@ -154,6 +142,13 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "failed to connect member", "error", err)
 		return
 	}
+	defer func() {
+		if deferDisconnect {
+			if err := c.helperDisconn(r.Context(), roomId, joinRoomResponse.JoinedMember.Id); err != nil {
+				c.logger.DebugContext(r.Context(), "failed to disconnect member", "error", err)
+			}
+		}
+	}()
 
 	roomState, err := c.roomService.GetRoom(r.Context(), roomId)
 	if err != nil {
@@ -193,30 +188,9 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		c.logger.InfoContext(r.Context(), "serve conn error", "error", err)
 		if e, ok := err.(*websocket.CloseError); ok {
 			if e.Code == 4001 {
+				deferDisconnect = false
 				return
 			}
 		}
-
-		disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
-			MemberId: joinRoomResponse.JoinedMember.Id,
-			RoomId:   roomId,
-		})
-		if err != nil {
-			c.logger.DebugContext(ctx, "failed to disconnect member", "error", err)
-		}
-
-		if !disconnectMemberResp.IsRoomDeleted {
-			if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
-				Type: "MEMBER_DISCONNECTED",
-				Payload: map[string]any{
-					"disconnected_member_id": joinRoomResponse.JoinedMember.Id,
-					"members":                disconnectMemberResp.Members,
-				},
-			}); err != nil {
-				c.logger.DebugContext(ctx, "failed to broadcast member disconnected", "error", err)
-			}
-		}
-
-		return
 	}
 }
