@@ -17,10 +17,6 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 		return nil, err
 	}
 
-	// if len(memberIds) == 0 {
-	// 	return nil, ErrRoomNotFound
-	// }
-
 	conns := make([]*websocket.Conn, 0, len(memberIds))
 	for _, memberId := range memberIds {
 		conn, err := s.connRepo.GetConn(memberId)

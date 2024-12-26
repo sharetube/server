@@ -80,6 +80,7 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket
 		Payload: map[string]any{
 			"player":   updatePlayerVideoResp.Player,
 			"playlist": updatePlayerVideoResp.Playlist,
+			"members":  updatePlayerVideoResp.Members,
 		},
 	}); err != nil {
 		return fmt.Errorf("failed to broadcast player updated: %w", err)

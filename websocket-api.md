@@ -202,7 +202,7 @@ null
       "current_time": "[number]",
       "updated_at": "[number]"
     },
-    "playlist":{
+    "playlist": {
       "videos": [
         {
           "id": "[string]",
@@ -262,7 +262,7 @@ null
     "current_time": "[number]",
     "updated_at": "[number]"
   },
-  "playlist":{
+  "playlist": {
     "videos": [
       {
         "id": "[string]",
@@ -273,7 +273,18 @@ null
       "id": "[string]",
       "url": "[string]"
     }
-  }
+  },
+  "members": [
+    {
+      "id": "[string]",
+      "username": "[string]",
+      "color": "[string]",
+      "avatar_url": "[string]",
+      "is_ready": "[boolean]",
+      "is_admin": "[boolean]",
+      "is_muted": "[boolean]"
+    }
+  ]
 }
 ```
 </td>
@@ -289,7 +300,7 @@ null
     "id": "[string]",
     "url": "[string]"
   },
-  "playlist":{
+  "playlist": {
     "videos": [
       {
         "id": "[string]",
@@ -313,7 +324,7 @@ null
 ```json
 {
   "removed_video_id": "[string]",
-  "playlist":{
+  "playlist": {
     "videos": [
       {
         "id": "[string]",
@@ -336,7 +347,7 @@ null
 
 ```json
 {
-  "playlist":{
+  "playlist": {
     "videos": [
       {
         "id": "[string]",

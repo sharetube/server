@@ -13,12 +13,7 @@ import (
 
 var ErrMemberIsAlreadyAdmin = errors.New("member is already admin")
 
-func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error) {
-	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
-	if err != nil {
-		return []Member{}, err
-	}
-
+func (s service) mapMembers(ctx context.Context, roomId string, memberIds []string) ([]Member, error) {
 	members := make([]Member, 0, len(memberIds))
 	for _, memberId := range memberIds {
 		member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
@@ -26,7 +21,7 @@ func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error
 			RoomId:   roomId,
 		})
 		if err != nil {
-			return []Member{}, err
+			return []Member{}, fmt.Errorf("failed to get member: %w", err)
 		}
 
 		members = append(members, Member{
@@ -41,6 +36,15 @@ func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error
 	}
 
 	return members, nil
+}
+
+func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error) {
+	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
+	if err != nil {
+		return []Member{}, err
+	}
+
+	return s.mapMembers(ctx, roomId, memberIds)
 }
 
 type RemoveMemberParams struct {
@@ -444,6 +448,14 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 		if err != nil {
 			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
+		}
+
+		if player.IsPlaying == neededIsReady {
+			return UpdateIsReadyResponse{
+				Conns:         conns,
+				UpdatedMember: updatedMember,
+				Members:       members,
+			}, nil
 		}
 
 		updatePlayerStateParams := room.UpdatePlayerStateParams{

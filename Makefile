@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := lint
 
-IMAGE_NAME = sharetube-server
+IMAGE_NAME = sharetube/server
 CONTAINER_NAME = sharetube-server
 IMAGE_TAG = latest
 PORT = 8080

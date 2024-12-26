@@ -83,6 +83,7 @@ type UpdatePlayerVideoParams struct {
 
 type UpdatePlayerVideoResponse struct {
 	Player   Player
+	Members  []Member
 	Conns    []*websocket.Conn
 	Playlist Playlist
 }
@@ -99,7 +100,6 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		if err != room.ErrVideoNotFound {
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
 		}
-		// maybe video is last
 
 		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
 		if err != nil {
@@ -169,12 +169,34 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get conns by room id: %w", err)
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get member ids: %w", err)
+	}
+
+	for _, memberId := range memberIds {
+		if err := s.roomRepo.UpdateMemberIsReady(ctx, params.RoomId, memberId, false); err != nil {
+			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update member is ready: %w", err)
+		}
+	}
+
+	members, err := s.mapMembers(ctx, params.RoomId, memberIds)
+	if err != nil {
+		return UpdatePlayerVideoResponse{}, err
+	}
+
+	conns := make([]*websocket.Conn, 0, len(memberIds))
+	for _, memberId := range memberIds {
+		conn, err := s.connRepo.GetConn(memberId)
+		if err != nil {
+			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get conn: %w", err)
+		}
+
+		conns = append(conns, conn)
 	}
 
 	return UpdatePlayerVideoResponse{
+		Members: members,
 		Player: Player{
 			IsPlaying:    updatePlayerParams.IsPlaying,
 			CurrentTime:  updatePlayerParams.CurrentTime,
