@@ -391,20 +391,23 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	if member.IsReady == params.IsReady {
-		member1 := Member{
-			Id:        params.SenderId,
-			Username:  member.Username,
-			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
-			IsMuted:   member.IsMuted,
-			IsAdmin:   member.IsAdmin,
-			IsReady:   member.IsReady,
+		members, err := s.getMembers(ctx, params.RoomId)
+		if err != nil {
+			return UpdateIsReadyResponse{}, err
 		}
 
 		return UpdateIsReadyResponse{
-			UpdatedMember: member1,
-			Members:       []Member{member1},
-			Conns:         []*websocket.Conn{params.SenderConn},
+			UpdatedMember: Member{
+				Id:        params.SenderId,
+				Username:  member.Username,
+				Color:     member.Color,
+				AvatarURL: member.AvatarURL,
+				IsMuted:   member.IsMuted,
+				IsAdmin:   member.IsAdmin,
+				IsReady:   member.IsReady,
+			},
+			Members: members,
+			Conns:   []*websocket.Conn{params.SenderConn},
 		}, nil
 	}
 
@@ -513,21 +516,23 @@ func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams)
 	}
 
 	if member.IsMuted == params.IsMuted {
-		//? send error
-		member1 := Member{
-			Id:        params.SenderId,
-			Username:  member.Username,
-			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
-			IsMuted:   member.IsMuted,
-			IsAdmin:   member.IsAdmin,
-			IsReady:   member.IsReady,
+		members, err := s.getMembers(ctx, params.RoomId)
+		if err != nil {
+			return UpdateIsMutedResponse{}, err
 		}
 
 		return UpdateIsMutedResponse{
-			UpdatedMember: member1,
-			Members:       []Member{member1},
-			Conns:         []*websocket.Conn{params.SenderConn},
+			UpdatedMember: Member{
+				Id:        params.SenderId,
+				Username:  member.Username,
+				Color:     member.Color,
+				AvatarURL: member.AvatarURL,
+				IsMuted:   member.IsMuted,
+				IsAdmin:   member.IsAdmin,
+				IsReady:   member.IsReady,
+			},
+			Members: members,
+			Conns:   []*websocket.Conn{params.SenderConn},
 		}, nil
 	}
 

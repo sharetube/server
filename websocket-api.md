@@ -106,11 +106,8 @@ null
 
 ```json
 {
-  "videos": [
-    {
-      "id": "[string]",
-      "url": "[string]"
-    }
+  "video_ids": [
+    "[string]"
   ],
 }
 ```

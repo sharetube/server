@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -27,7 +26,6 @@ type AppConfig struct {
 	Port          int    `json:"port"`
 	MembersLimit  int    `json:"members_limit"`
 	PlaylistLimit int    `json:"playlist_limit"`
-	LogPath       string `json:"log_path"`
 	LogLevel      string `json:"log_level"`
 	RedisPort     int    `json:"redis_port"`
 	RedisHost     string `json:"redis_host"`
@@ -51,19 +49,8 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 		log.Fatal(err)
 	}
 
-	var writer io.Writer
-	logFile, err := os.OpenFile(cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		slog.Info("error opening log file for writing")
-		writer = os.Stdout
-	} else {
-		defer logFile.Close()
-		// todo: add config to disable stdout
-		writer = io.MultiWriter(os.Stdout, logFile)
-	}
-
 	h := ctxlogger.ContextHandler{
-		Handler: slog.NewJSONHandler(writer, &slog.HandlerOptions{
+		Handler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level:     logLevel,
 			AddSource: true,
 		}),

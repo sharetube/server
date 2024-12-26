@@ -24,7 +24,7 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	wsrouter.Handle(mux, "ALIVE", c.handleAlive)
 	wsrouter.Handle(mux, "ADD_VIDEO", c.handleAddVideo)
 	wsrouter.Handle(mux, "REMOVE_VIDEO", c.handleRemoveVideo)
-	// wsrouter.Handle(mux, "REORDER_PLAYLIST", c.handleRemoveVideo)
+	wsrouter.Handle(mux, "REORDER_PLAYLIST", c.handleRemoveVideo)
 
 	// member
 	wsrouter.Handle(mux, "PROMOTE_MEMBER", c.handlePromoteMember)

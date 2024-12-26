@@ -314,3 +314,33 @@ func (c controller) handleUpdateIsMuted(ctx context.Context, conn *websocket.Con
 
 	return nil
 }
+
+type ReorderPlaylistInput struct {
+	VideoIds []string `json:"video_ids"`
+}
+
+// func (c controller) handleReorderPlaylist(ctx context.Context, conn *websocket.Conn, input ReorderPlaylistInput) error {
+// 	roomId := c.getRoomIdFromCtx(ctx)
+// 	memberId := c.getMemberIdFromCtx(ctx)
+
+// 	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
+// 		VideoId:  input.VideoId,
+// 		SenderId: memberId,
+// 		RoomId:   roomId,
+// 	})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to remove video: %w", err)
+// 	}
+
+// 	if err := c.broadcast(ctx, removeVideoResponse.Conns, &Output{
+// 		Type: "VIDEO_REMOVED",
+// 		Payload: map[string]any{
+// 			"removed_video_id": input.VideoId,
+// 			"playlist":         removeVideoResponse.Playlist,
+// 		},
+// 	}); err != nil {
+// 		return fmt.Errorf("failed to broadcast video removed: %w", err)
+// 	}
+
+// 	return nil
+// }

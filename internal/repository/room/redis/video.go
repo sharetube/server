@@ -85,7 +85,10 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 
 func (r repo) GetVideoIds(ctx context.Context, roomId string) ([]string, error) {
 	playlistKey := r.getPlaylistKey(roomId)
-	videoIds, err := r.rc.ZRange(ctx, playlistKey, 0, -1).Result()
+	videoIds, err := r.rc.ZRangeByScore(ctx, playlistKey, &redis.ZRangeBy{
+		Min: "-inf",
+		Max: "+inf",
+	}).Result()
 	if err != nil {
 		return nil, err
 	}

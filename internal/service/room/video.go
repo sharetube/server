@@ -188,3 +188,50 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		RemovedVideoId: params.VideoId,
 	}, nil
 }
+
+type ReorderPlaylistParams struct {
+	VideoIds []string
+	SenderId string
+	RoomId   string
+}
+
+type ReorderPlaylistResponse struct {
+	Conns    []*websocket.Conn
+	Playlist Playlist
+}
+
+func (s service) ReorderPlaylist(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+		return RemoveVideoResponse{}, err
+	}
+
+	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
+		VideoId: params.VideoId,
+		RoomId:  params.RoomId,
+	}); err != nil {
+		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
+	}
+
+	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
+		VideoId: params.VideoId,
+		RoomId:  params.RoomId,
+	}); err != nil {
+		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
+	}
+
+	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	if err != nil {
+		return RemoveVideoResponse{}, err
+	}
+
+	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	if err != nil {
+		return RemoveVideoResponse{}, err
+	}
+
+	return RemoveVideoResponse{
+		Conns:          conns,
+		Playlist:       playlist,
+		RemovedVideoId: params.VideoId,
+	}, nil
+}

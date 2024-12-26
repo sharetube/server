@@ -24,11 +24,6 @@ var (
 		flagKey:      "secret",
 		defaultValue: "",
 	}
-	logPath = configVar[string]{
-		envKey:       "SERVER_LOG_PATH",
-		flagKey:      "log-path",
-		defaultValue: "/var/log/sharetube/server.log",
-	}
 	port = configVar[int]{
 		envKey:       "SERVER_PORT",
 		flagKey:      "port",
@@ -77,7 +72,6 @@ func loadAppConfig() *app.AppConfig {
 	pflag.Int(port.flagKey, port.defaultValue, "Server port")
 	pflag.String(host.flagKey, host.defaultValue, "Server host")
 	pflag.String(logLevel.flagKey, logLevel.defaultValue, "Logging level")
-	pflag.String(logPath.flagKey, logPath.defaultValue, "Log file path")
 	pflag.Int(membersLimit.flagKey, membersLimit.defaultValue, "Maximum number of members in the room")
 	pflag.Int(playlistLimit.flagKey, playlistLimit.defaultValue, "Maximum number of videos in the playlist")
 	pflag.Int(redisPort.flagKey, redisPort.defaultValue, "Redis port")
@@ -91,7 +85,6 @@ func loadAppConfig() *app.AppConfig {
 	viper.BindEnv(port.flagKey, port.envKey)
 	viper.BindEnv(host.flagKey, host.envKey)
 	viper.BindEnv(logLevel.flagKey, logLevel.envKey)
-	viper.BindEnv(logPath.flagKey, logPath.envKey)
 	viper.BindEnv(membersLimit.flagKey, membersLimit.envKey)
 	viper.BindEnv(playlistLimit.flagKey, playlistLimit.envKey)
 	viper.BindEnv(redisPort.flagKey, redisPort.envKey)
@@ -102,7 +95,6 @@ func loadAppConfig() *app.AppConfig {
 	viper.SetDefault(port.flagKey, port.defaultValue)
 	viper.SetDefault(host.flagKey, host.defaultValue)
 	viper.SetDefault(logLevel.flagKey, logLevel.defaultValue)
-	viper.SetDefault(logPath.flagKey, logPath.defaultValue)
 	viper.SetDefault(membersLimit.flagKey, membersLimit.defaultValue)
 	viper.SetDefault(playlistLimit.flagKey, playlistLimit.defaultValue)
 	viper.SetDefault(redisPort.flagKey, redisPort.defaultValue)
@@ -114,7 +106,6 @@ func loadAppConfig() *app.AppConfig {
 		Host:          viper.GetString(host.flagKey),
 		Port:          viper.GetInt(port.flagKey),
 		LogLevel:      viper.GetString(logLevel.flagKey),
-		LogPath:       viper.GetString(logPath.flagKey),
 		MembersLimit:  viper.GetInt(membersLimit.flagKey),
 		PlaylistLimit: viper.GetInt(playlistLimit.flagKey),
 		RedisPort:     viper.GetInt(redisPort.flagKey),
