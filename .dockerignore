@@ -1,6 +1,7 @@
-.gitignore
-.git
-README.md
-Makefile
-websocket-api.md
-.golangci.yaml
+*
+
+!cmd/
+!internal/
+!pkg/
+!go.mod
+!go.sum

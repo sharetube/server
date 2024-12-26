@@ -7,7 +7,7 @@ import (
 	"github.com/sharetube/server/pkg/wsrouter"
 )
 
-func (c controller) handleError(ctx context.Context, conn *websocket.Conn, err error) error {
+func (c controller) handleWSError(ctx context.Context, conn *websocket.Conn, err error) error {
 	c.logger.InfoContext(ctx, "websocket handler error", "error", err)
 	return c.writeError(ctx, conn, err)
 }
@@ -15,7 +15,7 @@ func (c controller) handleError(ctx context.Context, conn *websocket.Conn, err e
 func (c controller) getWSRouter() *wsrouter.WSRouter {
 	mux := wsrouter.New()
 
-	mux.SetErrorHandler(c.handleError)
+	mux.SetErrorHandler(c.handleWSError)
 
 	mux.Use(c.wsRequestIdWSMw())
 	mux.Use(c.loggerWSMw())

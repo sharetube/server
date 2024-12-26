@@ -23,7 +23,7 @@ build:
 
 .PHONY: run
 run:
-	docker run -d --name $(CONTAINER_NAME) -p $(PORT):$(PORT) $(IMAGE_NAME):$(IMAGE_TAG)
+	docker run --name $(CONTAINER_NAME) -p $(PORT):$(PORT) $(IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: stop
 stop:
