@@ -7,60 +7,60 @@ type Video struct {
 }
 
 type RemoveVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId string
+	RoomId  string
 }
 
 type ExpireVideoParams struct {
-	VideoId  string    `json:"video_id"`
-	RoomId   string    `json:"room_id"`
-	ExpireAt time.Time `json:"expire_at"`
+	VideoId  string
+	RoomId   string
+	ExpireAt time.Time
 }
 
 type ExpireLastVideoParams struct {
-	RoomId   string    `json:"room_id"`
-	ExpireAt time.Time `json:"expire_at"`
+	RoomId   string
+	ExpireAt time.Time
 }
 
 type ExpirePlaylistParams struct {
-	RoomId   string    `json:"room_id"`
-	ExpireAt time.Time `json:"expire_at"`
+	RoomId   string
+	ExpireAt time.Time
 }
 
 type AddVideoToListParams struct {
-	RoomId  string `json:"room_id"`
-	VideoId string `json:"video_id"`
-	URL     string `json:"url"`
+	RoomId  string
+	VideoId string
+	URL     string
 }
 
 type SetVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
-	URL     string `json:"url"`
+	VideoId string
+	RoomId  string
+	URL     string
 	// Version   int
 }
 
 type SetLastVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId string
+	RoomId  string
 }
 
 type SetCurrentVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId string
+	RoomId  string
 }
 
 type RemoveVideoFromListParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId string
+	RoomId  string
 }
 
 type ReorderListParams struct {
-	VideoIds []string `json:"video_id"`
-	RoomId   string   `json:"room_id"`
+	VideoIds []string
+	RoomId   string
 }
 
 type GetVideoParams struct {
-	VideoId string `json:"video_id"`
-	RoomId  string `json:"room_id"`
+	VideoId string
+	RoomId  string
 }

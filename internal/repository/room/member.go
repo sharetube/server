@@ -3,47 +3,47 @@ package room
 import "time"
 
 type Member struct {
-	Username  string  `redis:"username" json:"username"`
-	Color     string  `redis:"color" json:"color"`
-	AvatarURL *string `redis:"avatar_url" json:"avatar_url"`
-	IsMuted   bool    `redis:"is_muted" json:"is_muted"`
-	IsAdmin   bool    `redis:"is_admin" json:"is_admin"`
-	IsReady   bool    `redis:"is_ready" json:"is_ready"`
+	Username  string  `redis:"username"`
+	Color     string  `redis:"color"`
+	AvatarURL *string `redis:"avatar_url"`
+	IsMuted   bool    `redis:"is_muted"`
+	IsAdmin   bool    `redis:"is_admin"`
+	IsReady   bool    `redis:"is_ready"`
 }
 
 type AddMemberToListParams struct {
-	MemberId string `json:"member_id"`
-	RoomId   string `json:"room_id"`
+	MemberId string
+	RoomId   string
 }
 
 type GetMemberParams struct {
-	MemberId string `json:"member_id"`
-	RoomId   string `json:"room_id"`
+	MemberId string
+	RoomId   string
 }
 
 type SetMemberParams struct {
-	MemberId  string  `json:"member_id"`
-	Username  string  `json:"username"`
-	Color     string  `json:"color"`
-	AvatarURL *string `json:"avatar_url"`
-	IsMuted   bool    `json:"is_muted"`
-	IsAdmin   bool    `json:"is_admin"`
-	IsReady   bool    `json:"is_ready"`
-	RoomId    string  `json:"room_id"`
+	MemberId  string
+	Username  string
+	Color     string
+	AvatarURL *string
+	IsMuted   bool
+	IsAdmin   bool
+	IsReady   bool
+	RoomId    string
 }
 
 type RemoveMemberParams struct {
-	MemberId string `json:"member_id"`
-	RoomId   string `json:"room_id"`
+	MemberId string
+	RoomId   string
 }
 
 type ExpireMemberParams struct {
-	MemberId string    `json:"member_id"`
-	RoomId   string    `json:"room_id"`
-	ExpireAt time.Time `json:"expire_at"`
+	MemberId string
+	RoomId   string
+	ExpireAt time.Time
 }
 
 type RemoveMemberFromListParams struct {
-	MemberId string `json:"member_id"`
-	RoomId   string `json:"room_id"`
+	MemberId string
+	RoomId   string
 }

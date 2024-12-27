@@ -448,7 +448,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	if ok {
-		player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+		player, err := s.getPlayer(ctx, params.RoomId)
 		if err != nil {
 			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
 		}
@@ -476,13 +476,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 			Conns:         conns,
 			UpdatedMember: updatedMember,
 			Members:       members,
-			Player: &Player{
-				VideoURL:     player.VideoId,
-				IsPlaying:    updatePlayerStateParams.IsPlaying,
-				CurrentTime:  player.CurrentTime,
-				PlaybackRate: player.PlaybackRate,
-				UpdatedAt:    player.UpdatedAt,
-			},
+			Player:        &player,
 		}, nil
 	}
 

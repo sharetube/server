@@ -12,32 +12,32 @@ type Player struct {
 }
 
 type SetPlayerParams struct {
-	VideoId      string  `json:"video_id"`
-	IsPlaying    bool    `json:"is_playing"`
-	CurrentTime  int     `json:"current_time"`
-	PlaybackRate float64 `json:"playback_rate"`
-	UpdatedAt    int     `json:"updated_at"`
-	RoomId       string  `json:"room_id"`
+	VideoId      string
+	IsPlaying    bool
+	CurrentTime  int
+	PlaybackRate float64
+	UpdatedAt    int
+	RoomId       string
 }
 
 type ExpirePlayerParams struct {
-	RoomId   string    `json:"room_id"`
-	ExpireAt time.Time `json:"expire_at"`
+	RoomId   string
+	ExpireAt time.Time
 }
 
 type UpdatePlayerParams struct {
-	VideoId      string  `json:"video_id"`
-	IsPlaying    bool    `json:"is_playing"`
-	CurrentTime  int     `json:"current_time"`
-	PlaybackRate float64 `json:"playback_rate"`
-	UpdatedAt    int     `json:"updated_at"`
-	RoomId       string  `json:"room_id"`
+	VideoId      string
+	IsPlaying    bool
+	CurrentTime  int
+	PlaybackRate float64
+	UpdatedAt    int
+	RoomId       string
 }
 
 type UpdatePlayerStateParams struct {
-	IsPlaying    bool    `json:"is_playing"`
-	CurrentTime  int     `json:"current_time"`
-	PlaybackRate float64 `json:"playback_rate"`
-	UpdatedAt    int     `json:"updated_at"`
-	RoomId       string  `json:"room_id"`
+	IsPlaying    bool
+	CurrentTime  int
+	PlaybackRate float64
+	UpdatedAt    int
+	RoomId       string
 }
