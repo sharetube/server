@@ -271,7 +271,7 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	}
 
 	return Room{
-		RoomId: roomId,
+		Id: roomId,
 		Player: Player{
 			VideoURL:     currentVideo.URL,
 			IsPlaying:    player.IsPlaying,

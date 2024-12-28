@@ -191,7 +191,7 @@ null
     "is_muted": "[boolean]"
   },
   "room": {
-    "room_id": "[string]",
+    "id": "[string]",
     "player": {
       "video_url": "[string]",
       "playback_rate": "[number]",

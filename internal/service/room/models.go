@@ -29,7 +29,7 @@ type Player struct {
 }
 
 type Room struct {
-	RoomId   string   `json:"room_id"`
+	Id       string   `json:"id"`
 	Player   Player   `json:"player"`
 	Members  []Member `json:"members"`
 	Playlist Playlist `json:"playlist"`
