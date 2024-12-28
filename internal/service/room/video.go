@@ -27,7 +27,7 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 
 		playlist = append(playlist, Video{
 			Id:  videoId,
-			URL: video.URL,
+			Url: video.Url,
 		})
 	}
 
@@ -74,14 +74,14 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 
 	return &Video{
 		Id:  *lastVideoId,
-		URL: video.URL,
+		Url: video.Url,
 	}, nil
 }
 
 type AddVideoParams struct {
 	SenderId string
 	RoomId   string
-	VideoURL string
+	VideoUrl string
 }
 
 type AddVideoResponse struct {
@@ -108,7 +108,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
 		VideoId: videoId,
 		RoomId:  params.RoomId,
-		URL:     params.VideoURL,
+		Url:     params.VideoUrl,
 	}); err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
 	}
@@ -116,7 +116,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	if err := s.roomRepo.AddVideoToList(ctx, &room.AddVideoToListParams{
 		RoomId:  params.RoomId,
 		VideoId: videoId,
-		URL:     params.VideoURL,
+		Url:     params.VideoUrl,
 	}); err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to add video to list: %w", err)
 	}
@@ -134,7 +134,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	return AddVideoResponse{
 		AddedVideo: Video{
 			Id:  videoId,
-			URL: params.VideoURL,
+			Url: params.VideoUrl,
 		},
 		Conns:    conns,
 		Playlist: playlist,

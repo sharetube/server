@@ -59,7 +59,7 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) error {
 	// }
 
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
-	pipe.SetNX(ctx, videoKey, params.URL, r.maxExpireDuration)
+	pipe.SetNX(ctx, videoKey, params.Url, r.maxExpireDuration)
 	pipe.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	return r.executePipe(ctx, pipe)
@@ -80,7 +80,7 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 	r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	return room.Video{
-		URL: videoUrl,
+		Url: videoUrl,
 	}, nil
 }
 

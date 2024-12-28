@@ -90,7 +90,7 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 }
 
 type AddVideoInput struct {
-	VideoURL string `json:"video_url"`
+	VideoUrl string `json:"video_url"`
 }
 
 func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input AddVideoInput) error {
@@ -102,7 +102,7 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
 		SenderId: memberId,
 		RoomId:   roomId,
-		VideoURL: input.VideoURL,
+		VideoUrl: input.VideoUrl,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add video: %w", err)
@@ -229,14 +229,14 @@ func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, in
 type UpdateProfileInput struct {
 	Username  *string         `json:"username"`
 	Color     *string         `json:"color"`
-	AvatarURL o.Field[string] `json:"avatar_url"`
+	AvatarUrl o.Field[string] `json:"avatar_url"`
 }
 
 func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, input UpdateProfileInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	if input.Username == nil && input.Color == nil && !input.AvatarURL.Defined {
+	if input.Username == nil && input.Color == nil && !input.AvatarUrl.Defined {
 		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 	// todo: add validation
@@ -244,7 +244,7 @@ func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, 
 	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &room.UpdateProfileParams{
 		Username:  input.Username,
 		Color:     input.Color,
-		AvatarURL: input.AvatarURL,
+		AvatarUrl: input.AvatarUrl,
 		SenderId:  memberId,
 		RoomId:    roomId,
 	})

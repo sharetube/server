@@ -28,7 +28,7 @@ func (s service) mapMembers(ctx context.Context, roomId string, memberIds []stri
 			Id:        memberId,
 			Username:  member.Username,
 			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
+			AvatarUrl: member.AvatarUrl,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
 			IsReady:   member.IsReady,
@@ -159,7 +159,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 			Id:        params.PromotedMemberId,
 			Username:  member.Username,
 			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
+			AvatarUrl: member.AvatarUrl,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
 			IsReady:   member.IsReady,
@@ -297,7 +297,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 type UpdateProfileParams struct {
 	Username  *string
 	Color     *string
-	AvatarURL o.Field[string]
+	AvatarUrl o.Field[string]
 	SenderId  string
 	RoomId    string
 }
@@ -332,12 +332,12 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 		member.Color = *params.Color
 	}
 
-	if params.AvatarURL.Defined {
-		if member.AvatarURL != params.AvatarURL.Value {
-			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, params.SenderId, params.AvatarURL.Value); err != nil {
+	if params.AvatarUrl.Defined {
+		if member.AvatarUrl != params.AvatarUrl.Value {
+			if err := s.roomRepo.UpdateMemberAvatarUrl(ctx, params.RoomId, params.SenderId, params.AvatarUrl.Value); err != nil {
 				return UpdateProfileResponse{}, fmt.Errorf("failed to update member avatar url: %w", err)
 			}
-			member.AvatarURL = params.AvatarURL.Value
+			member.AvatarUrl = params.AvatarUrl.Value
 		}
 	}
 
@@ -358,7 +358,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 			Id:        params.SenderId,
 			Username:  member.Username,
 			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
+			AvatarUrl: member.AvatarUrl,
 			IsMuted:   member.IsMuted,
 			IsAdmin:   member.IsAdmin,
 			IsReady:   member.IsReady,
@@ -401,7 +401,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 				Id:        params.SenderId,
 				Username:  member.Username,
 				Color:     member.Color,
-				AvatarURL: member.AvatarURL,
+				AvatarUrl: member.AvatarUrl,
 				IsMuted:   member.IsMuted,
 				IsAdmin:   member.IsAdmin,
 				IsReady:   member.IsReady,
@@ -432,7 +432,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		Id:        params.SenderId,
 		Username:  member.Username,
 		Color:     member.Color,
-		AvatarURL: member.AvatarURL,
+		AvatarUrl: member.AvatarUrl,
 		IsMuted:   member.IsMuted,
 		IsAdmin:   member.IsAdmin,
 		IsReady:   member.IsReady,
@@ -489,7 +489,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 				UpdatedMember: updatedMember,
 				Members:       members,
 				Player: &Player{
-					VideoURL:     video.URL,
+					VideoUrl:     video.Url,
 					IsPlaying:    player.IsPlaying,
 					CurrentTime:  player.CurrentTime,
 					PlaybackRate: player.PlaybackRate,
@@ -539,7 +539,7 @@ func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams)
 				Id:        params.SenderId,
 				Username:  member.Username,
 				Color:     member.Color,
-				AvatarURL: member.AvatarURL,
+				AvatarUrl: member.AvatarUrl,
 				IsMuted:   member.IsMuted,
 				IsAdmin:   member.IsAdmin,
 				IsReady:   member.IsReady,
@@ -569,7 +569,7 @@ func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams)
 			Id:        params.SenderId,
 			Username:  member.Username,
 			Color:     member.Color,
-			AvatarURL: member.AvatarURL,
+			AvatarUrl: member.AvatarUrl,
 			IsMuted:   params.IsMuted,
 			IsAdmin:   member.IsAdmin,
 			IsReady:   member.IsReady,

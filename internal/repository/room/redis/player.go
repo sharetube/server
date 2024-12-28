@@ -14,11 +14,12 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 	pipe := r.rc.TxPipeline()
 
 	player := room.Player{
-		VideoId:      params.VideoId,
-		IsPlaying:    params.IsPlaying,
-		CurrentTime:  params.CurrentTime,
-		PlaybackRate: params.PlaybackRate,
-		UpdatedAt:    params.UpdatedAt,
+		WaitingForReady: params.WaitingForReady,
+		VideoId:         params.VideoId,
+		IsPlaying:       params.IsPlaying,
+		CurrentTime:     params.CurrentTime,
+		PlaybackRate:    params.PlaybackRate,
+		UpdatedAt:       params.UpdatedAt,
 	}
 	playerKey := r.getPlayerKey(params.RoomId)
 	r.hSetIfNotExists(ctx, pipe, playerKey, player)

@@ -23,7 +23,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	initialVideoURL, err := c.getQueryParam(r, "video-url")
+	initialVideoUrl, err := c.getQueryParam(r, "video-url")
 	if err != nil {
 		c.logger.DebugContext(r.Context(), "failed to get query param", "error", err)
 		return
@@ -32,8 +32,8 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	createRoomResponse, err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
 		Username:        user.username,
 		Color:           user.color,
-		AvatarURL:       user.avatarURL,
-		InitialVideoURL: initialVideoURL,
+		AvatarUrl:       user.avatarUrl,
+		InitialVideoUrl: initialVideoUrl,
 	})
 	if err != nil {
 		c.logger.InfoContext(r.Context(), "failed to create room", "error", err)
@@ -120,7 +120,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		JWT:       userJWT,
 		Username:  user.username,
 		Color:     user.color,
-		AvatarURL: user.avatarURL,
+		AvatarUrl: user.avatarUrl,
 		RoomId:    roomId,
 	})
 	if err != nil {

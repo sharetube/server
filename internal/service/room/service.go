@@ -33,7 +33,7 @@ type iRoomRepo interface {
 	UpdateMemberIsReady(ctx context.Context, roomId string, memberId string, isReady bool) error
 	UpdateMemberUsername(ctx context.Context, roomId string, memberId string, username string) error
 	UpdateMemberColor(ctx context.Context, roomId string, memberId string, color string) error
-	UpdateMemberAvatarURL(ctx context.Context, roomId string, memberId string, avatarURL *string) error
+	UpdateMemberAvatarUrl(ctx context.Context, roomId string, memberId string, avatarUrl *string) error
 	// video
 	SetVideo(context.Context, *room.SetVideoParams) error
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error

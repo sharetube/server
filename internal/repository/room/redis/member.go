@@ -28,7 +28,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 	member := room.Member{
 		Username:  params.Username,
 		Color:     params.Color,
-		AvatarURL: params.AvatarURL,
+		AvatarUrl: params.AvatarUrl,
 		IsMuted:   params.IsMuted,
 		IsAdmin:   params.IsAdmin,
 		IsReady:   params.IsReady,
@@ -241,7 +241,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomId, memberId, color str
 	return nil
 }
 
-func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomId, memberId string, avatarURL *string) error {
+func (r repo) UpdateMemberAvatarUrl(ctx context.Context, roomId, memberId string, avatarUrl *string) error {
 	memberKey := r.getMemberKey(roomId, memberId)
 	existsCmd := r.rc.Exists(ctx, memberKey)
 	if err := existsCmd.Err(); err != nil {
@@ -252,12 +252,12 @@ func (r repo) UpdateMemberAvatarURL(ctx context.Context, roomId, memberId string
 		return room.ErrMemberNotFound
 	}
 
-	if avatarURL == nil {
+	if avatarUrl == nil {
 		if err := r.rc.HDel(ctx, memberKey, "avatar_url").Err(); err != nil {
 			return err
 		}
 	} else {
-		if err := r.rc.HSet(ctx, memberKey, "avatar_url", avatarURL).Err(); err != nil {
+		if err := r.rc.HSet(ctx, memberKey, "avatar_url", avatarUrl).Err(); err != nil {
 			return err
 		}
 	}

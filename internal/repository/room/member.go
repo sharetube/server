@@ -5,7 +5,7 @@ import "time"
 type Member struct {
 	Username  string  `redis:"username"`
 	Color     string  `redis:"color"`
-	AvatarURL *string `redis:"avatar_url"`
+	AvatarUrl *string `redis:"avatar_url"`
 	IsMuted   bool    `redis:"is_muted"`
 	IsAdmin   bool    `redis:"is_admin"`
 	IsReady   bool    `redis:"is_ready"`
@@ -25,7 +25,7 @@ type SetMemberParams struct {
 	MemberId  string
 	Username  string
 	Color     string
-	AvatarURL *string
+	AvatarUrl *string
 	IsMuted   bool
 	IsAdmin   bool
 	IsReady   bool

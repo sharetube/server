@@ -36,8 +36,8 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 type CreateRoomParams struct {
 	Username        string
 	Color           string
-	AvatarURL       *string
-	InitialVideoURL string
+	AvatarUrl       *string
+	InitialVideoUrl string
 }
 
 type CreateRoomResponse struct {
@@ -54,7 +54,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		MemberId:  memberId,
 		Username:  params.Username,
 		Color:     params.Color,
-		AvatarURL: params.AvatarURL,
+		AvatarUrl: params.AvatarUrl,
 		IsMuted:   false,
 		IsAdmin:   true,
 		IsReady:   false,
@@ -73,7 +73,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
 		VideoId: videoId,
 		RoomId:  roomId,
-		URL:     params.InitialVideoURL,
+		Url:     params.InitialVideoUrl,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set video: %w", err)
 	}
@@ -97,7 +97,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 			Id:        memberId,
 			Username:  setMemberParams.Username,
 			Color:     setMemberParams.Color,
-			AvatarURL: setMemberParams.AvatarURL,
+			AvatarUrl: setMemberParams.AvatarUrl,
 			IsMuted:   setMemberParams.IsMuted,
 			IsAdmin:   setMemberParams.IsAdmin,
 			IsReady:   setMemberParams.IsReady,
@@ -132,7 +132,7 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (*Membe
 		Id:        claims.MemberId,
 		Username:  member.Username,
 		Color:     member.Color,
-		AvatarURL: member.AvatarURL,
+		AvatarUrl: member.AvatarUrl,
 		IsMuted:   member.IsMuted,
 		IsAdmin:   member.IsAdmin,
 		IsReady:   member.IsReady,
@@ -143,7 +143,7 @@ type JoinRoomParams struct {
 	JWT       string
 	Username  string
 	Color     string
-	AvatarURL *string
+	AvatarUrl *string
 	RoomId    string
 }
 
@@ -179,7 +179,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			MemberId:  memberId,
 			Username:  params.Username,
 			Color:     params.Color,
-			AvatarURL: params.AvatarURL,
+			AvatarUrl: params.AvatarUrl,
 			IsMuted:   false,
 			IsAdmin:   false,
 			IsReady:   false,
@@ -193,7 +193,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			Id:        memberId,
 			Username:  params.Username,
 			Color:     params.Color,
-			AvatarURL: params.AvatarURL,
+			AvatarUrl: params.AvatarUrl,
 			IsMuted:   false,
 			IsAdmin:   false,
 			IsReady:   false,
@@ -226,11 +226,11 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			member.Color = params.Color
 		}
 
-		if member.AvatarURL != params.AvatarURL {
-			if err := s.roomRepo.UpdateMemberAvatarURL(ctx, params.RoomId, member.Id, params.AvatarURL); err != nil {
+		if member.AvatarUrl != params.AvatarUrl {
+			if err := s.roomRepo.UpdateMemberAvatarUrl(ctx, params.RoomId, member.Id, params.AvatarUrl); err != nil {
 				return JoinRoomResponse{}, fmt.Errorf("failed to update member avatar URL: %w", err)
 			}
-			member.AvatarURL = params.AvatarURL
+			member.AvatarUrl = params.AvatarUrl
 		}
 	}
 
@@ -273,7 +273,7 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	return Room{
 		Id: roomId,
 		Player: Player{
-			VideoURL:     currentVideo.URL,
+			VideoUrl:     currentVideo.Url,
 			IsPlaying:    player.IsPlaying,
 			CurrentTime:  player.CurrentTime,
 			PlaybackRate: player.PlaybackRate,

@@ -3,7 +3,7 @@ package room
 import "time"
 
 type Video struct {
-	URL string `redis:"url"`
+	Url string `redis:"url"`
 }
 
 type RemoveVideoParams struct {
@@ -30,13 +30,13 @@ type ExpirePlaylistParams struct {
 type AddVideoToListParams struct {
 	RoomId  string
 	VideoId string
-	URL     string
+	Url     string
 }
 
 type SetVideoParams struct {
 	VideoId string
 	RoomId  string
-	URL     string
+	Url     string
 	// Version   int
 }
 

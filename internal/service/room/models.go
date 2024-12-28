@@ -2,14 +2,14 @@ package room
 
 type Video struct {
 	Id  string `json:"id"`
-	URL string `json:"url"`
+	Url string `json:"url"`
 }
 
 type Member struct {
 	Id        string  `json:"id"`
 	Username  string  `json:"username"`
 	Color     string  `json:"color"`
-	AvatarURL *string `json:"avatar_url"`
+	AvatarUrl *string `json:"avatar_url"`
 	IsMuted   bool    `json:"is_muted"`
 	IsAdmin   bool    `json:"is_admin"`
 	IsReady   bool    `json:"is_ready"`
@@ -21,7 +21,7 @@ type Playlist struct {
 }
 
 type Player struct {
-	VideoURL     string  `json:"video_url"`
+	VideoUrl     string  `json:"video_url"`
 	IsPlaying    bool    `json:"is_playing"`
 	CurrentTime  int     `json:"current_time"`
 	PlaybackRate float64 `json:"playback_rate"`

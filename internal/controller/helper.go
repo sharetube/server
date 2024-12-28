@@ -32,7 +32,7 @@ func (c controller) getQueryParam(r *http.Request, key string) (string, error) {
 type user struct {
 	username  string
 	color     string
-	avatarURL *string
+	avatarUrl *string
 }
 
 func (c controller) getUser(r *http.Request) (user, error) {
@@ -46,12 +46,12 @@ func (c controller) getUser(r *http.Request) (user, error) {
 		return user{}, err
 	}
 
-	avatarURL := c.getOptQueryParam(r, "avatar-url")
+	avatarUrl := c.getOptQueryParam(r, "avatar-url")
 
 	return user{
 		username:  username,
 		color:     color,
-		avatarURL: avatarURL,
+		avatarUrl: avatarUrl,
 	}, nil
 }
 

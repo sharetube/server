@@ -9,29 +9,6 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (s service) getPlayer(ctx context.Context, roomId string) (Player, error) {
-	player, err := s.roomRepo.GetPlayer(ctx, roomId)
-	if err != nil {
-		return Player{}, fmt.Errorf("failed to get player: %w", err)
-	}
-
-	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		VideoId: player.VideoId,
-		RoomId:  roomId,
-	})
-	if err != nil {
-		return Player{}, fmt.Errorf("failed to get video: %w", err)
-	}
-
-	return Player{
-		VideoURL:     video.URL,
-		IsPlaying:    player.IsPlaying,
-		CurrentTime:  player.CurrentTime,
-		PlaybackRate: player.PlaybackRate,
-		UpdatedAt:    player.UpdatedAt,
-	}, nil
-}
-
 type UpdatePlayerStateParams struct {
 	IsPlaying    bool
 	CurrentTime  int
@@ -57,11 +34,12 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	}
 
 	updatePlayerStateParams := room.UpdatePlayerStateParams{
-		IsPlaying:    params.IsPlaying,
-		CurrentTime:  params.CurrentTime,
-		PlaybackRate: params.PlaybackRate,
-		UpdatedAt:    params.UpdatedAt,
-		RoomId:       params.RoomId,
+		IsPlaying:       params.IsPlaying,
+		CurrentTime:     params.CurrentTime,
+		PlaybackRate:    params.PlaybackRate,
+		UpdatedAt:       params.UpdatedAt,
+		RoomId:          params.RoomId,
+		WaitingForReady: player.WaitingForReady,
 	}
 
 	if player.WaitingForReady && params.IsPlaying {
@@ -104,7 +82,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	return UpdatePlayerStateResponse{
 		Player: Player{
-			VideoURL:     video.URL,
+			VideoUrl:     video.Url,
 			IsPlaying:    params.IsPlaying,
 			CurrentTime:  params.CurrentTime,
 			PlaybackRate: params.PlaybackRate,
@@ -242,7 +220,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			IsPlaying:    updatePlayerParams.IsPlaying,
 			CurrentTime:  updatePlayerParams.CurrentTime,
 			PlaybackRate: updatePlayerParams.PlaybackRate,
-			VideoURL:     video.URL,
+			VideoUrl:     video.Url,
 			UpdatedAt:    updatePlayerParams.UpdatedAt,
 		},
 		Playlist: playlist,
