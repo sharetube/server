@@ -91,9 +91,9 @@ func (c controller) broadcastMemberUpdated(ctx context.Context, conns []*websock
 	})
 }
 
-func (c controller) broadcastPlayerUpdated(ctx context.Context, conns []*websocket.Conn, player *room.Player) error {
+func (c controller) broadcastPlayerStateUpdated(ctx context.Context, conns []*websocket.Conn, player *room.Player) error {
 	return c.broadcast(ctx, conns, &Output{
-		Type: "PLAYER_UPDATED",
+		Type: "PLAYER_STATE_UPDATED",
 		Payload: map[string]any{
 			"player": player,
 		},

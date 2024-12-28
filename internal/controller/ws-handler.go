@@ -49,7 +49,7 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Co
 		return fmt.Errorf("failed to update player state: %w", err)
 	}
 
-	if err := c.broadcastPlayerUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player); err != nil {
+	if err := c.broadcastPlayerStateUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.Player); err != nil {
 		return fmt.Errorf("failed to broadcast player updated: %w", err)
 	}
 
@@ -282,7 +282,7 @@ func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Con
 	}
 
 	if updatePlayerVideoResp.Player != nil {
-		if err := c.broadcastPlayerUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player); err != nil {
+		if err := c.broadcastPlayerStateUpdated(ctx, updatePlayerVideoResp.Conns, updatePlayerVideoResp.Player); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
 		}
 	}
