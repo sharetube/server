@@ -51,13 +51,24 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, err
 	}
 
-	if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
+	player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+	if err != nil {
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player: %w", err)
+	}
+
+	updatePlayerStateParams := room.UpdatePlayerStateParams{
 		IsPlaying:    params.IsPlaying,
 		CurrentTime:  params.CurrentTime,
 		PlaybackRate: params.PlaybackRate,
 		UpdatedAt:    params.UpdatedAt,
 		RoomId:       params.RoomId,
-	}); err != nil {
+	}
+
+	if player.WaitingForReady && params.IsPlaying {
+		updatePlayerStateParams.IsPlaying = false
+	}
+
+	if err := s.roomRepo.UpdatePlayerState(ctx, &updatePlayerStateParams); err != nil {
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player state: %w", err)
 	}
 
@@ -182,12 +193,13 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	}
 
 	updatePlayerParams := room.UpdatePlayerParams{
-		VideoId:      params.VideoId,
-		IsPlaying:    s.getDefaultPlayerIsPlaying(),
-		CurrentTime:  s.getDefaultPlayerCurrentTime(),
-		PlaybackRate: s.getDefaultPlayerPlaybackRate(),
-		UpdatedAt:    params.UpdatedAt,
-		RoomId:       params.RoomId,
+		VideoId:         params.VideoId,
+		IsPlaying:       s.getDefaultPlayerIsPlaying(),
+		CurrentTime:     s.getDefaultPlayerCurrentTime(),
+		WaitingForReady: true,
+		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
+		UpdatedAt:       params.UpdatedAt,
+		RoomId:          params.RoomId,
 	}
 	if err := s.roomRepo.UpdatePlayer(ctx, &updatePlayerParams); err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player: %w", err)

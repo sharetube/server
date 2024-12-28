@@ -448,7 +448,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	if ok {
-		player, err := s.getPlayer(ctx, params.RoomId)
+		player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 		if err != nil {
 			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
 		}
@@ -461,23 +461,42 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 			}, nil
 		}
 
-		updatePlayerStateParams := room.UpdatePlayerStateParams{
-			IsPlaying:    neededIsReady,
-			CurrentTime:  player.CurrentTime,
-			PlaybackRate: player.PlaybackRate,
-			UpdatedAt:    int(time.Now().Unix()),
-			RoomId:       params.RoomId,
-		}
-		if err := s.roomRepo.UpdatePlayerState(ctx, &updatePlayerStateParams); err != nil {
-			return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player state: %w", err)
-		}
+		if player.WaitingForReady == neededIsReady {
+			player.IsPlaying = neededIsReady
+			player.UpdatedAt = int(time.Now().UnixMicro())
 
-		return UpdateIsReadyResponse{
-			Conns:         conns,
-			UpdatedMember: updatedMember,
-			Members:       members,
-			Player:        &player,
-		}, nil
+			if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
+				IsPlaying:       params.IsReady,
+				CurrentTime:     player.CurrentTime,
+				PlaybackRate:    player.PlaybackRate,
+				WaitingForReady: !player.WaitingForReady,
+				UpdatedAt:       player.UpdatedAt,
+				RoomId:          params.RoomId,
+			}); err != nil {
+				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player state: %w", err)
+			}
+
+			video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+				VideoId: player.VideoId,
+				RoomId:  params.RoomId,
+			})
+			if err != nil {
+				return UpdateIsReadyResponse{}, fmt.Errorf("failed to get video: %w", err)
+			}
+
+			return UpdateIsReadyResponse{
+				Conns:         conns,
+				UpdatedMember: updatedMember,
+				Members:       members,
+				Player: &Player{
+					VideoURL:     video.URL,
+					IsPlaying:    player.IsPlaying,
+					CurrentTime:  player.CurrentTime,
+					PlaybackRate: player.PlaybackRate,
+					UpdatedAt:    player.UpdatedAt,
+				},
+			}, nil
+		}
 	}
 
 	return UpdateIsReadyResponse{

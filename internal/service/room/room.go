@@ -79,12 +79,13 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}
 
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
-		VideoId:      videoId,
-		IsPlaying:    s.getDefaultPlayerIsPlaying(),
-		CurrentTime:  s.getDefaultPlayerCurrentTime(),
-		PlaybackRate: s.getDefaultPlayerPlaybackRate(),
-		UpdatedAt:    int(time.Now().Unix()),
-		RoomId:       roomId,
+		VideoId:         videoId,
+		IsPlaying:       s.getDefaultPlayerIsPlaying(),
+		WaitingForReady: false,
+		CurrentTime:     s.getDefaultPlayerCurrentTime(),
+		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
+		UpdatedAt:       int(time.Now().Unix()),
+		RoomId:          roomId,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set player: %w", err)
 	}

@@ -110,11 +110,12 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 	}
 
 	player := room.Player{
-		VideoId:      params.VideoId,
-		IsPlaying:    params.IsPlaying,
-		CurrentTime:  params.CurrentTime,
-		PlaybackRate: params.PlaybackRate,
-		UpdatedAt:    params.UpdatedAt,
+		VideoId:         params.VideoId,
+		IsPlaying:       params.IsPlaying,
+		CurrentTime:     params.CurrentTime,
+		WaitingForReady: params.WaitingForReady,
+		PlaybackRate:    params.PlaybackRate,
+		UpdatedAt:       params.UpdatedAt,
 	}
 	if err := r.rc.HSet(ctx, playerKey, player).Err(); err != nil {
 		return err
@@ -137,6 +138,7 @@ func (r repo) UpdatePlayerState(ctx context.Context, params *room.UpdatePlayerSt
 	}
 
 	if err := r.rc.HSet(ctx, playerKey,
+		"waiting_for_ready", params.WaitingForReady,
 		"current_time", params.CurrentTime,
 		"is_playing", params.IsPlaying,
 		"playback_rate", params.PlaybackRate,
