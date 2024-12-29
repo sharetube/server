@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service"
 )
 
 func (c controller) getOptQueryParam(r *http.Request, key string) *string {
@@ -81,7 +81,7 @@ func (c controller) generateTimeBasedId() string {
 	return fmt.Sprintf("%d-%s", time.Now().Unix(), uuid.NewString())
 }
 
-func (c controller) broadcastMemberUpdated(ctx context.Context, conns []*websocket.Conn, updatedMember *room.Member, members []room.Member) error {
+func (c controller) broadcastMemberUpdated(ctx context.Context, conns []*websocket.Conn, updatedMember *service.Member, members []service.Member) error {
 	return c.broadcast(ctx, conns, &Output{
 		Type: "MEMBER_UPDATED",
 		Payload: map[string]any{
@@ -91,7 +91,7 @@ func (c controller) broadcastMemberUpdated(ctx context.Context, conns []*websock
 	})
 }
 
-func (c controller) broadcastPlayerStateUpdated(ctx context.Context, conns []*websocket.Conn, player *room.Player) error {
+func (c controller) broadcastPlayerStateUpdated(ctx context.Context, conns []*websocket.Conn, player *service.Player) error {
 	return c.broadcast(ctx, conns, &Output{
 		Type: "PLAYER_STATE_UPDATED",
 		Payload: map[string]any{
@@ -101,7 +101,7 @@ func (c controller) broadcastPlayerStateUpdated(ctx context.Context, conns []*we
 }
 
 func (c controller) helperDisconn(ctx context.Context, roomId string, memberId string) error {
-	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &room.DisconnectMemberParams{
+	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &service.DisconnectMemberParams{
 		MemberId: memberId,
 		RoomId:   roomId,
 	})

@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service"
 	"github.com/sharetube/server/pkg/ctxlogger"
 )
 
@@ -29,7 +29,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createRoomResponse, err := c.roomService.CreateRoom(r.Context(), &room.CreateRoomParams{
+	createRoomResponse, err := c.roomService.CreateRoom(r.Context(), &service.CreateRoomParams{
 		Username:        user.username,
 		Color:           user.color,
 		AvatarUrl:       user.avatarUrl,
@@ -47,7 +47,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
+	if err := c.roomService.ConnectMember(r.Context(), &service.ConnectMemberParams{
 		Conn:     conn,
 		MemberId: createRoomResponse.JoinedMember.Id,
 	}); err != nil {
@@ -116,7 +116,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 
 	userJWT, _ := c.getQueryParam(r, "jwt")
 
-	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &room.JoinRoomParams{
+	joinRoomResponse, err := c.roomService.JoinRoom(r.Context(), &service.JoinRoomParams{
 		JWT:       userJWT,
 		Username:  user.username,
 		Color:     user.color,
@@ -135,7 +135,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	if err := c.roomService.ConnectMember(r.Context(), &room.ConnectMemberParams{
+	if err := c.roomService.ConnectMember(r.Context(), &service.ConnectMemberParams{
 		Conn:     conn,
 		MemberId: joinRoomResponse.JoinedMember.Id,
 	}); err != nil {

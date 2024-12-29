@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service"
 	o "github.com/skewb1k/optional"
 )
 
@@ -37,7 +37,7 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Co
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
+	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &service.UpdatePlayerStateParams{
 		IsPlaying:    input.IsPlaying,
 		CurrentTime:  input.CurrentTime,
 		PlaybackRate: input.PlaybackRate,
@@ -65,7 +65,7 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &room.UpdatePlayerVideoParams{
+	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &service.UpdatePlayerVideoParams{
 		VideoId:   input.VideoId,
 		UpdatedAt: input.UpdatedAt,
 		SenderId:  memberId,
@@ -99,7 +99,7 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 
 	// todo: add validation
 
-	addVideoResponse, err := c.roomService.AddVideo(ctx, &room.AddVideoParams{
+	addVideoResponse, err := c.roomService.AddVideo(ctx, &service.AddVideoParams{
 		SenderId: memberId,
 		RoomId:   roomId,
 		VideoUrl: input.VideoUrl,
@@ -134,7 +134,7 @@ func (c controller) handleRemoveMember(ctx context.Context, _ *websocket.Conn, i
 		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 
-	removeMemberResp, err := c.roomService.RemoveMember(ctx, &room.RemoveMemberParams{
+	removeMemberResp, err := c.roomService.RemoveMember(ctx, &service.RemoveMemberParams{
 		RemovedMemberId: input.MemberId.String(),
 		SenderId:        memberId,
 		RoomId:          roomId,
@@ -171,7 +171,7 @@ func (c controller) handlePromoteMember(ctx context.Context, _ *websocket.Conn, 
 		return fmt.Errorf("validation error: %w", ErrValidationError)
 	}
 
-	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &room.PromoteMemberParams{
+	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &service.PromoteMemberParams{
 		PromotedMemberId: input.MemberId.String(),
 		SenderId:         memberId,
 		RoomId:           roomId,
@@ -204,7 +204,7 @@ func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, in
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &room.RemoveVideoParams{
+	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &service.RemoveVideoParams{
 		VideoId:  input.VideoId,
 		SenderId: memberId,
 		RoomId:   roomId,
@@ -241,7 +241,7 @@ func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, 
 	}
 	// todo: add validation
 
-	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &room.UpdateProfileParams{
+	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &service.UpdateProfileParams{
 		Username:  input.Username,
 		Color:     input.Color,
 		AvatarUrl: input.AvatarUrl,
@@ -267,7 +267,7 @@ func (c controller) handleUpdateIsReady(ctx context.Context, conn *websocket.Con
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	updatePlayerVideoResp, err := c.roomService.UpdateIsReady(ctx, &room.UpdateIsReadyParams{
+	updatePlayerVideoResp, err := c.roomService.UpdateIsReady(ctx, &service.UpdateIsReadyParams{
 		IsReady:    input.IsReady,
 		SenderId:   memberId,
 		RoomId:     roomId,
@@ -298,7 +298,7 @@ func (c controller) handleUpdateIsMuted(ctx context.Context, conn *websocket.Con
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	updatePlayerVideoResp, err := c.roomService.UpdateIsMuted(ctx, &room.UpdateIsMutedParams{
+	updatePlayerVideoResp, err := c.roomService.UpdateIsMuted(ctx, &service.UpdateIsMutedParams{
 		IsMuted:    input.IsMuted,
 		SenderId:   memberId,
 		RoomId:     roomId,
@@ -323,7 +323,7 @@ func (c controller) handleReorderPlaylist(ctx context.Context, _ *websocket.Conn
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	removeVideoResponse, err := c.roomService.ReorderPlaylist(ctx, &room.ReorderPlaylistParams{
+	removeVideoResponse, err := c.roomService.ReorderPlaylist(ctx, &service.ReorderPlaylistParams{
 		VideoIds: input.VideoIds,
 		SenderId: memberId,
 		RoomId:   roomId,

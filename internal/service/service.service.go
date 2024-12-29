@@ -1,4 +1,4 @@
-package room
+package service
 
 import (
 	"context"
@@ -94,7 +94,7 @@ type Config struct {
 }
 
 // todo: create params struct
-func NewService(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
+func New(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	return &service{

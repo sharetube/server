@@ -1,4 +1,4 @@
-package room
+package service
 
 type Video struct {
 	Id  string `json:"id"`

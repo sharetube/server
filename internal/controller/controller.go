@@ -6,27 +6,27 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service"
 	"github.com/sharetube/server/pkg/validator"
 	"github.com/sharetube/server/pkg/wsrouter"
 )
 
 type iRoomService interface {
-	CreateRoom(context.Context, *room.CreateRoomParams) (*room.CreateRoomResponse, error)
-	ConnectMember(context.Context, *room.ConnectMemberParams) error
-	DisconnectMember(context.Context, *room.DisconnectMemberParams) (room.DisconnectMemberResponse, error)
-	GetRoom(context.Context, string) (room.Room, error)
-	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) (room.UpdatePlayerStateResponse, error)
-	UpdatePlayerVideo(context.Context, *room.UpdatePlayerVideoParams) (room.UpdatePlayerVideoResponse, error)
-	JoinRoom(context.Context, *room.JoinRoomParams) (room.JoinRoomResponse, error)
-	AddVideo(context.Context, *room.AddVideoParams) (room.AddVideoResponse, error)
-	RemoveVideo(context.Context, *room.RemoveVideoParams) (room.RemoveVideoResponse, error)
-	RemoveMember(context.Context, *room.RemoveMemberParams) (room.RemoveMemberResponse, error)
-	PromoteMember(context.Context, *room.PromoteMemberParams) (room.PromoteMemberResponse, error)
-	UpdateProfile(context.Context, *room.UpdateProfileParams) (room.UpdateProfileResponse, error)
-	UpdateIsReady(context.Context, *room.UpdateIsReadyParams) (room.UpdateIsReadyResponse, error)
-	UpdateIsMuted(context.Context, *room.UpdateIsMutedParams) (room.UpdateIsMutedResponse, error)
-	ReorderPlaylist(context.Context, *room.ReorderPlaylistParams) (room.ReorderPlaylistResponse, error)
+	CreateRoom(context.Context, *service.CreateRoomParams) (*service.CreateRoomResponse, error)
+	ConnectMember(context.Context, *service.ConnectMemberParams) error
+	DisconnectMember(context.Context, *service.DisconnectMemberParams) (service.DisconnectMemberResponse, error)
+	GetRoom(context.Context, string) (service.Room, error)
+	UpdatePlayerState(context.Context, *service.UpdatePlayerStateParams) (service.UpdatePlayerStateResponse, error)
+	UpdatePlayerVideo(context.Context, *service.UpdatePlayerVideoParams) (service.UpdatePlayerVideoResponse, error)
+	JoinRoom(context.Context, *service.JoinRoomParams) (service.JoinRoomResponse, error)
+	AddVideo(context.Context, *service.AddVideoParams) (service.AddVideoResponse, error)
+	RemoveVideo(context.Context, *service.RemoveVideoParams) (service.RemoveVideoResponse, error)
+	RemoveMember(context.Context, *service.RemoveMemberParams) (service.RemoveMemberResponse, error)
+	PromoteMember(context.Context, *service.PromoteMemberParams) (service.PromoteMemberResponse, error)
+	UpdateProfile(context.Context, *service.UpdateProfileParams) (service.UpdateProfileResponse, error)
+	UpdateIsReady(context.Context, *service.UpdateIsReadyParams) (service.UpdateIsReadyResponse, error)
+	UpdateIsMuted(context.Context, *service.UpdateIsMutedParams) (service.UpdateIsMutedResponse, error)
+	ReorderPlaylist(context.Context, *service.ReorderPlaylistParams) (service.ReorderPlaylistResponse, error)
 }
 
 type controller struct {

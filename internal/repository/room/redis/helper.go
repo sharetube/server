@@ -12,38 +12,6 @@ func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string
 	c.EvalSha(ctx, r.maxScoreScript, []string{key}, value)
 }
 
-func (r repo) HSetStruct(ctx context.Context, c redis.Pipeliner, key string, value interface{}) error {
-	v := reflect.ValueOf(value)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	fields := make(map[string]interface{})
-	t := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		tag := t.Field(i).Tag.Get("redis")
-		if tag == "" {
-			tag = t.Field(i).Name
-		}
-
-		// Handle nil pointer fields
-		if field.Kind() == reflect.Ptr && field.IsNil() {
-			continue
-		}
-
-		// Get the actual value for pointer fields
-		if field.Kind() == reflect.Ptr {
-			fields[tag] = field.Elem().Interface()
-		} else {
-			fields[tag] = field.Interface()
-		}
-	}
-
-	return c.HSet(ctx, key, fields).Err()
-}
-
 func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
 	cmds, err := pipe.Exec(ctx)
 	if err != nil {

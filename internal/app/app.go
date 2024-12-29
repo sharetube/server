@@ -15,7 +15,7 @@ import (
 	"github.com/sharetube/server/internal/controller"
 	"github.com/sharetube/server/internal/repository/connection/inmemory"
 	"github.com/sharetube/server/internal/repository/room/redis"
-	"github.com/sharetube/server/internal/service/room"
+	"github.com/sharetube/server/internal/service"
 	"github.com/sharetube/server/pkg/ctxlogger"
 	"github.com/sharetube/server/pkg/redisclient"
 )
@@ -70,7 +70,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
 	connectionRepo := inmemory.NewRepo()
-	roomService := room.NewService(roomRepo, connectionRepo, &room.Config{
+	roomService := service.New(roomRepo, connectionRepo, &service.Config{
 		MembersLimit:  cfg.MembersLimit,
 		PlaylistLimit: cfg.PlaylistLimit,
 		Secret:        cfg.Secret,
