@@ -33,21 +33,28 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
-	updatePlayerStateParams := room.UpdatePlayerStateParams{
-		IsPlaying:       params.IsPlaying,
-		CurrentTime:     params.CurrentTime,
-		PlaybackRate:    params.PlaybackRate,
-		UpdatedAt:       params.UpdatedAt,
-		RoomId:          params.RoomId,
-		WaitingForReady: player.WaitingForReady,
+	// todo: wrap in transaction
+	if player.CurrentTime != params.CurrentTime {
+		if err := s.roomRepo.UpdatePlayerCurrentTime(ctx, params.RoomId, params.CurrentTime); err != nil {
+			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player current time: %w", err)
+		}
 	}
 
-	if player.WaitingForReady && params.IsPlaying {
-		updatePlayerStateParams.IsPlaying = false
+	isPlaying := params.IsPlaying && !player.WaitingForReady
+	if player.IsPlaying != isPlaying {
+		if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, isPlaying); err != nil {
+			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+		}
 	}
 
-	if err := s.roomRepo.UpdatePlayerState(ctx, &updatePlayerStateParams); err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player state: %w", err)
+	if player.PlaybackRate != params.PlaybackRate {
+		if err := s.roomRepo.UpdatePlayerPlaybackRate(ctx, params.RoomId, params.PlaybackRate); err != nil {
+			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
+		}
+	}
+
+	if err := s.roomRepo.UpdatePlayerUpdatedAt(ctx, params.RoomId, params.UpdatedAt); err != nil {
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player updated at: %w", err)
 	}
 
 	videoId, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
@@ -170,17 +177,32 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get video:%w", err)
 	}
 
-	updatePlayerParams := room.UpdatePlayerParams{
-		VideoId:         params.VideoId,
-		IsPlaying:       s.getDefaultPlayerIsPlaying(),
-		CurrentTime:     s.getDefaultPlayerCurrentTime(),
-		WaitingForReady: true,
-		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
-		UpdatedAt:       params.UpdatedAt,
-		RoomId:          params.RoomId,
+	if err := s.roomRepo.UpdatePlayerVideoId(ctx, params.RoomId, params.VideoId); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player video id: %w", err)
 	}
-	if err := s.roomRepo.UpdatePlayer(ctx, &updatePlayerParams); err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player: %w", err)
+
+	if err := s.roomRepo.UpdatePlayerUpdatedAt(ctx, params.RoomId, params.UpdatedAt); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player updated at: %w", err)
+	}
+
+	isPlaying := s.getDefaultPlayerIsPlaying()
+	if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, isPlaying); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+	}
+
+	currentTime := s.getDefaultPlayerCurrentTime()
+	if err := s.roomRepo.UpdatePlayerCurrentTime(ctx, params.RoomId, currentTime); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player current time: %w", err)
+	}
+
+	playbackRate := s.getDefaultPlayerPlaybackRate()
+	if err := s.roomRepo.UpdatePlayerPlaybackRate(ctx, params.RoomId, playbackRate); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
+	}
+
+	waitingForReady := true
+	if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, waitingForReady); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, params.RoomId)
@@ -217,11 +239,11 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	return UpdatePlayerVideoResponse{
 		Members: members,
 		Player: Player{
-			IsPlaying:    updatePlayerParams.IsPlaying,
-			CurrentTime:  updatePlayerParams.CurrentTime,
-			PlaybackRate: updatePlayerParams.PlaybackRate,
+			IsPlaying:    isPlaying,
+			CurrentTime:  currentTime,
+			PlaybackRate: playbackRate,
 			VideoUrl:     video.Url,
-			UpdatedAt:    updatePlayerParams.UpdatedAt,
+			UpdatedAt:    params.UpdatedAt,
 		},
 		Playlist: playlist,
 		Conns:    conns,

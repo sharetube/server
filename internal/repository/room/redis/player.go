@@ -6,6 +6,16 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
+const (
+	videoIdKey         = "video_id"
+	isPlayingKey       = "is_playing"
+	waitingForReadyKey = "waiting_for_ready"
+	isEndedKey         = "is_ended"
+	currentTimeKey     = "current_time"
+	playbackRateKey    = "playback_rate"
+	updatedAtKey       = "updated_at"
+)
+
 func (r repo) getPlayerKey(roomId string) string {
 	return "room:" + roomId + ":player"
 }
@@ -13,16 +23,16 @@ func (r repo) getPlayerKey(roomId string) string {
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {
 	pipe := r.rc.TxPipeline()
 
-	player := room.Player{
-		WaitingForReady: params.WaitingForReady,
-		VideoId:         params.VideoId,
-		IsPlaying:       params.IsPlaying,
-		CurrentTime:     params.CurrentTime,
-		PlaybackRate:    params.PlaybackRate,
-		UpdatedAt:       params.UpdatedAt,
-	}
 	playerKey := r.getPlayerKey(params.RoomId)
-	r.hSetIfNotExists(ctx, pipe, playerKey, player)
+	pipe.HSet(ctx, playerKey, map[string]any{
+		videoIdKey:         params.VideoId,
+		isPlayingKey:       params.IsPlaying,
+		waitingForReadyKey: params.WaitingForReady,
+		isEndedKey:         params.IsEnded,
+		currentTimeKey:     params.CurrentTime,
+		playbackRateKey:    params.PlaybackRate,
+		updatedAtKey:       params.UpdatedAt,
+	})
 	pipe.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
@@ -48,19 +58,27 @@ func (r repo) IsPlayerExists(ctx context.Context, roomId string) (bool, error) {
 
 func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error) {
 	playerKey := r.getPlayerKey(roomId)
-	var player room.Player
-	if err := r.rc.HGetAll(ctx, playerKey).Scan(&player); err != nil {
+	playerMap, err := r.rc.HGetAll(ctx, playerKey).Result()
+	if err != nil {
 		return room.Player{}, err
 	}
 
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
-	return player, nil
+	return room.Player{
+		VideoId:         playerMap[videoIdKey],
+		IsPlaying:       r.fieldToBool(playerMap[isPlayingKey]),
+		WaitingForReady: r.fieldToBool(playerMap[waitingForReadyKey]),
+		IsEnded:         r.fieldToBool(playerMap[isEndedKey]),
+		CurrentTime:     r.fieldToInt(playerMap[currentTimeKey]),
+		PlaybackRate:    r.fieldToFload64(playerMap[playbackRateKey]),
+		UpdatedAt:       r.fieldToInt(playerMap[updatedAtKey]),
+	}, nil
 }
 
 func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (string, error) {
 	playerKey := r.getPlayerKey(roomId)
-	videoId, err := r.rc.HGet(ctx, playerKey, "video_id").Result()
+	videoId, err := r.rc.HGet(ctx, playerKey, videoIdKey).Result()
 	if err != nil {
 		return "", err
 	}
@@ -99,8 +117,8 @@ func (r repo) ExpirePlayer(ctx context.Context, params *room.ExpirePlayerParams)
 	return nil
 }
 
-func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams) error {
-	playerKey := r.getPlayerKey(params.RoomId)
+func (r repo) updatePlayerValue(ctx context.Context, roomId string, key string, value any) error {
+	playerKey := r.getPlayerKey(roomId)
 	cmd := r.rc.Exists(ctx, playerKey)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -110,15 +128,7 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 		return room.ErrPlayerNotFound
 	}
 
-	player := room.Player{
-		VideoId:         params.VideoId,
-		IsPlaying:       params.IsPlaying,
-		CurrentTime:     params.CurrentTime,
-		WaitingForReady: params.WaitingForReady,
-		PlaybackRate:    params.PlaybackRate,
-		UpdatedAt:       params.UpdatedAt,
-	}
-	if err := r.rc.HSet(ctx, playerKey, player).Err(); err != nil {
+	if err := r.rc.HSet(ctx, playerKey, key, value).Err(); err != nil {
 		return err
 	}
 
@@ -127,28 +137,30 @@ func (r repo) UpdatePlayer(ctx context.Context, params *room.UpdatePlayerParams)
 	return nil
 }
 
-func (r repo) UpdatePlayerState(ctx context.Context, params *room.UpdatePlayerStateParams) error {
-	playerKey := r.getPlayerKey(params.RoomId)
-	cmd := r.rc.Exists(ctx, playerKey)
-	if err := cmd.Err(); err != nil {
-		return err
-	}
+func (r repo) UpdatePlayerVideoId(ctx context.Context, roomId, videoId string) error {
+	return r.updatePlayerValue(ctx, roomId, videoIdKey, videoId)
+}
 
-	if cmd.Val() == 0 {
-		return room.ErrPlayerNotFound
-	}
+func (r repo) UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error {
+	return r.updatePlayerValue(ctx, roomId, isPlayingKey, isPlaying)
+}
 
-	if err := r.rc.HSet(ctx, playerKey,
-		"waiting_for_ready", params.WaitingForReady,
-		"current_time", params.CurrentTime,
-		"is_playing", params.IsPlaying,
-		"playback_rate", params.PlaybackRate,
-		"updated_at", params.UpdatedAt,
-	).Err(); err != nil {
-		return err
-	}
+func (r repo) UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error {
+	return r.updatePlayerValue(ctx, roomId, waitingForReadyKey, waitingForReady)
+}
 
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+func (r repo) UpdatePlayerIsEnded(ctx context.Context, roomId string, isEnded bool) error {
+	return r.updatePlayerValue(ctx, roomId, isEndedKey, isEnded)
+}
 
-	return nil
+func (r repo) UpdatePlayerCurrentTime(ctx context.Context, roomId string, currentTime int) error {
+	return r.updatePlayerValue(ctx, roomId, currentTimeKey, currentTime)
+}
+
+func (r repo) UpdatePlayerPlaybackRate(ctx context.Context, roomId string, playbackRate float64) error {
+	return r.updatePlayerValue(ctx, roomId, playbackRateKey, playbackRate)
+}
+
+func (r repo) UpdatePlayerUpdatedAt(ctx context.Context, roomId string, updatedAt int) error {
+	return r.updatePlayerValue(ctx, roomId, updatedAtKey, updatedAt)
 }

@@ -43,6 +43,7 @@ func (h typedHandler[T]) handle(ctx context.Context, conn *websocket.Conn, paylo
 	if err := json.Unmarshal(payload, &data); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
+
 	return h.fn(ctx, conn, data)
 }
 

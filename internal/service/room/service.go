@@ -52,11 +52,16 @@ type iRoomRepo interface {
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
 	IsPlayerExists(context.Context, string) (bool, error)
+	GetPlayerVideoId(context.Context, string) (string, error)
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
-	UpdatePlayer(context.Context, *room.UpdatePlayerParams) error
-	UpdatePlayerState(context.Context, *room.UpdatePlayerStateParams) error
-	GetPlayerVideoId(context.Context, string) (string, error)
+	UpdatePlayerVideoId(ctx context.Context, roomId string, videoId string) error
+	UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error
+	UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error
+	UpdatePlayerIsEnded(ctx context.Context, roomId string, isEnded bool) error
+	UpdatePlayerCurrentTime(ctx context.Context, roomId string, currentTime int) error
+	UpdatePlayerPlaybackRate(ctx context.Context, roomId string, playbackRate float64) error
+	UpdatePlayerUpdatedAt(ctx context.Context, roomId string, updatedAt int) error
 }
 
 type iConnRepo interface {

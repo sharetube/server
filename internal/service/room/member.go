@@ -465,15 +465,12 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 			player.IsPlaying = neededIsReady
 			player.UpdatedAt = int(time.Now().UnixMicro())
 
-			if err := s.roomRepo.UpdatePlayerState(ctx, &room.UpdatePlayerStateParams{
-				IsPlaying:       params.IsReady,
-				CurrentTime:     player.CurrentTime,
-				PlaybackRate:    player.PlaybackRate,
-				WaitingForReady: !player.WaitingForReady,
-				UpdatedAt:       player.UpdatedAt,
-				RoomId:          params.RoomId,
-			}); err != nil {
-				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player state: %w", err)
+			if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, !player.WaitingForReady); err != nil {
+				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
+			}
+
+			if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, params.IsReady); err != nil {
+				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
 			}
 
 			video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{

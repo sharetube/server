@@ -114,6 +114,7 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (*Membe
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse jwt: %w", err)
 	}
+
 	// todo: add validation
 
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{

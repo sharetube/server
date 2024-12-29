@@ -15,6 +15,15 @@ func (r repo) getMemberListKey(roomId string) string {
 	return "room:" + roomId + ":memberlist"
 }
 
+const (
+	usernameKey  = "username"
+	colorKey     = "color"
+	avatarUrlKey = "avatar_url"
+	isMutedKey   = "is_muted"
+	isAdminKey   = "is_admin"
+	isReadyKey   = "is_ready"
+)
+
 func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomId, memberId string) {
 	memberListKey := r.getMemberListKey(roomId)
 
@@ -25,18 +34,15 @@ func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomId,
 func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error {
 	pipe := r.rc.TxPipeline()
 
-	member := room.Member{
-		Username:  params.Username,
-		Color:     params.Color,
-		AvatarUrl: params.AvatarUrl,
-		IsMuted:   params.IsMuted,
-		IsAdmin:   params.IsAdmin,
-		IsReady:   params.IsReady,
-	}
-
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	//? replace with hsetifnotexists
-	r.HSetStruct(ctx, pipe, memberKey, member)
+	pipe.HSet(ctx, memberKey, r.omitPointers(map[string]any{
+		usernameKey:  params.Username,
+		avatarUrlKey: params.AvatarUrl,
+		colorKey:     params.Color,
+		isMutedKey:   params.IsMuted,
+		isAdminKey:   params.IsAdmin,
+		isReadyKey:   params.IsReady,
+	}))
 	pipe.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
@@ -146,18 +152,26 @@ func (r repo) GetMemberIds(ctx context.Context, roomId string) ([]string, error)
 
 func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room.Member, error) {
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	var member room.Member
-	err := r.rc.HGetAll(ctx, memberKey).Scan(&member)
+	memberMap, err := r.rc.HGetAll(ctx, memberKey).Result()
 	if err != nil {
 		return room.Member{}, err
 	}
 
-	if member.Username == "" {
+	if len(memberMap) == 0 {
 		return room.Member{}, room.ErrMemberNotFound
 	}
+
 	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
-	return member, nil
+	avatarUrl := memberMap[avatarUrlKey]
+	return room.Member{
+		Username:  memberMap[usernameKey],
+		Color:     memberMap[colorKey],
+		AvatarUrl: &avatarUrl,
+		IsMuted:   r.fieldToBool(memberMap[isMutedKey]),
+		IsAdmin:   r.fieldToBool(memberMap[isAdminKey]),
+		IsReady:   r.fieldToBool(memberMap[isReadyKey]),
+	}, nil
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, isAdmin bool) error {

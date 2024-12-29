@@ -3,7 +3,7 @@ package room
 import "time"
 
 type Video struct {
-	Url string `redis:"url"`
+	Url string
 }
 
 type RemoveVideoParams struct {

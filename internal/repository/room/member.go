@@ -3,12 +3,12 @@ package room
 import "time"
 
 type Member struct {
-	Username  string  `redis:"username"`
-	Color     string  `redis:"color"`
-	AvatarUrl *string `redis:"avatar_url"`
-	IsMuted   bool    `redis:"is_muted"`
-	IsAdmin   bool    `redis:"is_admin"`
-	IsReady   bool    `redis:"is_ready"`
+	Username  string
+	Color     string
+	AvatarUrl *string
+	IsMuted   bool
+	IsAdmin   bool
+	IsReady   bool
 }
 
 type AddMemberToListParams struct {
