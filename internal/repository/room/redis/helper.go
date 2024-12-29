@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"reflect"
 	"strconv"
 
@@ -11,42 +10,6 @@ import (
 
 func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) {
 	c.EvalSha(ctx, r.maxScoreScript, []string{key}, value)
-}
-
-// Same as HSet, but returns error if key already exists (implemented with lua script)
-func (r repo) hSetIfNotExists(ctx context.Context, c redis.Scripter, key string, value interface{}) {
-	v := reflect.ValueOf(value)
-	t := v.Type()
-
-	// Create args slice with capacity for all field-value pairs
-	args := make([]interface{}, 0, v.NumField()*2)
-
-	// Iterate through struct fields
-	for i := 0; i < v.NumField(); i++ {
-		field := t.Field(i)
-		// Get redis tag or use field name
-		redisKey := field.Tag.Get("redis")
-		if redisKey == "" {
-			redisKey = field.Name
-		}
-
-		var strValue string
-		if v.Field(i).Kind() == reflect.String {
-			strValue = v.Field(i).String()
-		} else {
-			// Convert field value to string
-			fieldValue := v.Field(i).Interface()
-
-			b, _ := json.Marshal(fieldValue)
-
-			strValue = string(b)
-		}
-
-		args = append(args, redisKey, string(strValue))
-
-	}
-
-	c.EvalSha(ctx, r.hSetIfNotExistsScript, []string{key}, args...)
 }
 
 func (r repo) HSetStruct(ctx context.Context, c redis.Pipeliner, key string, value interface{}) error {

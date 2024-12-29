@@ -11,7 +11,7 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (s service) getConnsFromMemberIds(ctx context.Context, memberIds []string) ([]*websocket.Conn, error) {
+func (s service) getConnsFromMemberIds(_ context.Context, memberIds []string) ([]*websocket.Conn, error) {
 	conns := make([]*websocket.Conn, 0, len(memberIds))
 	for _, memberId := range memberIds {
 		conn, err := s.connRepo.GetConn(memberId)

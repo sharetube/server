@@ -8,25 +8,14 @@ import (
 )
 
 type repo struct {
-	rc                    *redis.Client
-	hSetIfNotExistsScript string
-	maxScoreScript        string
-	maxExpireDuration     time.Duration
+	rc                *redis.Client
+	maxScoreScript    string
+	maxExpireDuration time.Duration
 }
 
 func NewRepo(rc *redis.Client, maxExpireDuration time.Duration) *repo {
 	return &repo{
 		rc: rc,
-		hSetIfNotExistsScript: rc.ScriptLoad(context.Background(), `
-			local key = KEYS[1]
-			if redis.call('EXISTS', key) == 0 then
-				for i = 1, #ARGV, 2 do
-					redis.call('HSET', key, ARGV[i], ARGV[i + 1])
-				end
-				return 1
-			end
-			return 0
-		`).Val(),
 		maxScoreScript: rc.ScriptLoad(context.Background(), `
 			local maxScore = redis.call('ZREVRANGE', KEYS[1], 0, 0, 'WITHSCORES')
 			local nextScore = 1

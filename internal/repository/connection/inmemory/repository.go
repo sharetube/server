@@ -1,7 +1,6 @@
 package inmemory
 
 import (
-	"log/slog"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -12,14 +11,12 @@ type repo struct {
 	connList map[*websocket.Conn]string
 	idList   map[string]*websocket.Conn
 	mu       sync.RWMutex
-	logger   *slog.Logger
 }
 
-func NewRepo(logger *slog.Logger) *repo {
+func NewRepo() *repo {
 	return &repo{
 		connList: make(map[*websocket.Conn]string),
 		idList:   make(map[string]*websocket.Conn),
-		logger:   logger,
 		mu:       sync.RWMutex{},
 	}
 }
