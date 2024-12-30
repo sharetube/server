@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      IMAGE_NAME: ${{ github.env.DOCKER_IMAGE_NAME }}
+      IMAGE_NAME: ${{ github.env.DOCKER_IMAGE_NAME || 'sharetube/server' }}
 
     steps:
       - name: Checkout repository
