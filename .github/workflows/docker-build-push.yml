@@ -31,17 +31,17 @@ jobs:
 
       - name: Check if image with tag already exists
         run: |
-          if docker manifest inspect ${{ github.repository }}:${{ github.ref_name }} &> /dev/null; then
-            echo "Image with tag ${{ github.ref_name }} already exists, skipping push"
+          if docker manifest inspect ${{ github.repository }}:${{ env.tag }} &> /dev/null; then
+            echo "Image with tag ${{ env.tag }} already exists, skipping push"
             exit 0
           fi
-          echo "tag=latest" >> $GITHUB_ENV
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ github.repository }}:${{ env.tag }} -t sharetube/server:latest .
+          docker build -t ${{ github.repository }}:${{ env.tag }} -t ${{ github.repository }}:latest .
+          docker images ls
 
       - name: Push Docker Image
         run: |
-          docker push ${{ github.repository }}:${{ github.ref_name }}
+          docker push ${{ github.repository }}:${{ env.tag }}
           docker push ${{ github.repository }}:latest
