@@ -11,6 +11,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      IMAGE_NAME: ${{ github.env.DOCKER_IMAGE_NAME }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -31,16 +34,16 @@ jobs:
 
       - name: Check if image with tag already exists
         run: |
-          if docker manifest inspect ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }} &> /dev/null; then
+          if docker manifest inspect "$IMAGE_NAME:${{ github.ref_name }}" &> /dev/null; then
             echo "Image with tag ${{ github.ref_name }} already exists, skipping push"
             exit 0
           fi
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }} -t sharetube/server:latest .
+          docker build -t "$IMAGE_NAME:${{ github.ref_name }}" -t sharetube/server:latest .
 
       - name: Push Docker Image
         run: |
-          docker push ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}
-          docker push ${{ env.DOCKER_IMAGE_NAME }}:latest
+          docker push "$IMAGE_NAME:${{ github.ref_name }}"
+          docker push "$IMAGE_NAME:latest"
