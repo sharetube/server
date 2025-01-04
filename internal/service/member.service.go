@@ -426,8 +426,6 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		return UpdateIsReadyResponse{}, err
 	}
 
-	member.IsReady = params.IsReady
-
 	updatedMember := Member{
 		Id:        params.SenderId,
 		Username:  member.Username,
@@ -435,64 +433,66 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 		AvatarUrl: member.AvatarUrl,
 		IsMuted:   member.IsMuted,
 		IsAdmin:   member.IsAdmin,
-		IsReady:   member.IsReady,
+		IsReady:   params.IsReady,
 	}
 
-	ok := true
 	neededIsReady := members[0].IsReady
-	for i := 1; i < len(members); i++ {
-		if members[i].IsReady != neededIsReady {
-			ok = false
-			break
-		}
-	}
-
-	if ok {
-		player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
-		if err != nil {
-			return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
-		}
-
-		if player.IsPlaying == neededIsReady {
-			return UpdateIsReadyResponse{
-				Conns:         conns,
-				UpdatedMember: updatedMember,
-				Members:       members,
-			}, nil
-		}
-
-		if player.WaitingForReady == neededIsReady {
-			player.IsPlaying = neededIsReady
-			player.UpdatedAt = int(time.Now().UnixMicro())
-
-			if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, !player.WaitingForReady); err != nil {
-				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
+	if neededIsReady {
+		ok := true
+		for i := 1; i < len(members); i++ {
+			if members[i].IsReady != neededIsReady {
+				ok = false
+				break
 			}
+		}
 
-			if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, params.IsReady); err != nil {
-				return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
-			}
-
-			video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-				VideoId: player.VideoId,
-				RoomId:  params.RoomId,
-			})
+		if ok {
+			player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 			if err != nil {
-				return UpdateIsReadyResponse{}, fmt.Errorf("failed to get video: %w", err)
+				return UpdateIsReadyResponse{}, fmt.Errorf("failed to get player: %w", err)
 			}
 
-			return UpdateIsReadyResponse{
-				Conns:         conns,
-				UpdatedMember: updatedMember,
-				Members:       members,
-				Player: &Player{
-					VideoUrl:     video.Url,
-					IsPlaying:    player.IsPlaying,
-					CurrentTime:  player.CurrentTime,
-					PlaybackRate: player.PlaybackRate,
-					UpdatedAt:    player.UpdatedAt,
-				},
-			}, nil
+			if player.IsPlaying == neededIsReady {
+				return UpdateIsReadyResponse{
+					Conns:         conns,
+					UpdatedMember: updatedMember,
+					Members:       members,
+				}, nil
+			}
+
+			if player.WaitingForReady == neededIsReady {
+				player.IsPlaying = neededIsReady
+				player.UpdatedAt = int(time.Now().UnixMicro())
+
+				if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, !player.WaitingForReady); err != nil {
+					return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
+				}
+
+				if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, params.IsReady); err != nil {
+					return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+				}
+
+				video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+					VideoId: player.VideoId,
+					RoomId:  params.RoomId,
+				})
+				if err != nil {
+					return UpdateIsReadyResponse{}, fmt.Errorf("failed to get video: %w", err)
+				}
+
+				return UpdateIsReadyResponse{
+					Conns:         conns,
+					UpdatedMember: updatedMember,
+					Members:       members,
+					Player: &Player{
+						VideoUrl:     video.Url,
+						IsPlaying:    player.IsPlaying,
+						CurrentTime:  player.CurrentTime,
+						PlaybackRate: player.PlaybackRate,
+						UpdatedAt:    player.UpdatedAt,
+					},
+				}, nil
+			}
 		}
 	}
 

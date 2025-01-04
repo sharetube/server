@@ -158,18 +158,18 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		return RemoveVideoResponse{}, err
 	}
 
-	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
-		VideoId: params.VideoId,
-		RoomId:  params.RoomId,
-	}); err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
-	}
-
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
 	}); err != nil {
 		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
+	}
+
+	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
+		VideoId: params.VideoId,
+		RoomId:  params.RoomId,
+	}); err != nil {
+		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
 	}
 
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)

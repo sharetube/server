@@ -11,6 +11,7 @@ import (
 
 type UpdatePlayerStateParams struct {
 	IsPlaying    bool
+	IsEnded      bool
 	CurrentTime  int
 	PlaybackRate float64
 	UpdatedAt    int
@@ -50,6 +51,12 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	if player.PlaybackRate != params.PlaybackRate {
 		if err := s.roomRepo.UpdatePlayerPlaybackRate(ctx, params.RoomId, params.PlaybackRate); err != nil {
 			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
+		}
+	}
+
+	if player.IsEnded != params.IsEnded {
+		if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, params.IsEnded); err != nil {
+			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
 		}
 	}
 
@@ -188,6 +195,10 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	isPlaying := s.getDefaultPlayerIsPlaying()
 	if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, isPlaying); err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+	}
+
+	if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, false); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
 	}
 
 	currentTime := s.getDefaultPlayerCurrentTime()
