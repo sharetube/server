@@ -17,6 +17,22 @@ func (s service) getDefaultPlayerIsPlaying() bool {
 	return false
 }
 
+func (s service) getDefaultPlayerIsEnded() bool {
+	return false
+}
+
+func (s service) getDefaultPlayerWaitingForReady() bool {
+	return false
+}
+
+func (s service) getDefaultMemberIsMuted() bool {
+	return false
+}
+
+func (s service) getDefaultMemberIsReady() bool {
+	return false
+}
+
 func (s service) checkIfMemberAdmin(ctx context.Context, roomId, memberId string) error {
 	isAdmin, err := s.roomRepo.GetMemberIsAdmin(ctx, roomId, memberId)
 	if err != nil {

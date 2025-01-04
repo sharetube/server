@@ -28,6 +28,7 @@ func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, input
 
 type UpdatePlayerStateInput struct {
 	IsPlaying    bool    `json:"is_playing"`
+	IsEnded      bool    `json:"is_ended"`
 	CurrentTime  int     `json:"current_time"`
 	PlaybackRate float64 `json:"playback_rate"`
 	UpdatedAt    int     `json:"updated_at"`
@@ -39,6 +40,7 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Co
 
 	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &service.UpdatePlayerStateParams{
 		IsPlaying:    input.IsPlaying,
+		IsEnded:      input.IsEnded,
 		CurrentTime:  input.CurrentTime,
 		PlaybackRate: input.PlaybackRate,
 		UpdatedAt:    input.UpdatedAt,

@@ -55,9 +55,9 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		Username:  params.Username,
 		Color:     params.Color,
 		AvatarUrl: params.AvatarUrl,
-		IsMuted:   false,
+		IsMuted:   s.getDefaultMemberIsMuted(),
 		IsAdmin:   true,
-		IsReady:   false,
+		IsReady:   s.getDefaultMemberIsReady(),
 		RoomId:    roomId,
 	}
 	if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
@@ -81,7 +81,8 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
 		VideoId:         videoId,
 		IsPlaying:       s.getDefaultPlayerIsPlaying(),
-		WaitingForReady: false,
+		IsEnded:         s.getDefaultPlayerIsEnded(),
+		WaitingForReady: s.getDefaultPlayerWaitingForReady(),
 		CurrentTime:     s.getDefaultPlayerCurrentTime(),
 		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
 		UpdatedAt:       int(time.Now().Unix()),

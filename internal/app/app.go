@@ -51,8 +51,7 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 
 	h := ctxlogger.ContextHandler{
 		Handler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level:     logLevel,
-			AddSource: true,
+			Level: logLevel,
 		}),
 	}
 
