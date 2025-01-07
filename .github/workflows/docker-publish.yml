@@ -28,8 +28,8 @@ jobs:
           context: . # Current directory as build context
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ github.repository }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ github.repository }}:${{ github.sha }} # Tag with the commit SHA
+            ${{ github.repository }}:latest
+            ${{ github.repository }}:${{ github.sha }} # Tag with the commit SHA
           build-args: | # optional build arguments
             BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           cache-from: type=local,src=/tmp/.buildx-cache
