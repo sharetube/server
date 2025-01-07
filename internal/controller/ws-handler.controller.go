@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -146,7 +145,7 @@ func (c controller) handleRemoveMember(ctx context.Context, _ *websocket.Conn, i
 	}
 
 	// close with specific code
-	removeMemberResp.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(4001, ""), time.Now().Add(time.Second*5))
+	removeMemberResp.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(4001, "kicked"))
 
 	if err := c.broadcast(ctx, removeMemberResp.Conns, &Output{
 		Type: "MEMBER_DISCONNECTED",

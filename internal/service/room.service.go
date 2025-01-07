@@ -85,7 +85,7 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		WaitingForReady: s.getDefaultPlayerWaitingForReady(),
 		CurrentTime:     s.getDefaultPlayerCurrentTime(),
 		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
-		UpdatedAt:       int(time.Now().Unix()),
+		UpdatedAt:       int(time.Now().UnixMicro()),
 		RoomId:          roomId,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set player: %w", err)
