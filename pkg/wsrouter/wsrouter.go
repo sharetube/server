@@ -113,6 +113,7 @@ func (r *WSRouter) ServeConn(ctx context.Context, conn *websocket.Conn) error {
 			continue
 		}
 
+		// todo: run handler in goroutine
 		if err := handler.handle(ctx, conn, msg.Payload); err != nil {
 			if err := r.errorHandler(ctx, conn, err); err != nil {
 				return err

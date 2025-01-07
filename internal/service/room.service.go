@@ -277,6 +277,7 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		Player: Player{
 			VideoUrl:     currentVideo.Url,
 			IsPlaying:    player.IsPlaying,
+			IsEnded:      player.IsEnded,
 			CurrentTime:  player.CurrentTime,
 			PlaybackRate: player.PlaybackRate,
 			UpdatedAt:    player.UpdatedAt,

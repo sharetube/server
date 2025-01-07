@@ -98,6 +98,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		Player: Player{
 			VideoUrl:     video.Url,
 			IsPlaying:    params.IsPlaying,
+			IsEnded:      params.IsEnded,
 			CurrentTime:  params.CurrentTime,
 			PlaybackRate: params.PlaybackRate,
 			UpdatedAt:    params.UpdatedAt,
@@ -197,7 +198,8 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
 	}
 
-	if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, false); err != nil {
+	isEnded := s.getDefaultPlayerIsEnded()
+	if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, isEnded); err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
 	}
 
@@ -250,8 +252,9 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	return UpdatePlayerVideoResponse{
 		Members: members,
 		Player: Player{
-			IsPlaying:    isPlaying,
 			CurrentTime:  currentTime,
+			IsPlaying:    isPlaying,
+			IsEnded:      isEnded,
 			PlaybackRate: playbackRate,
 			VideoUrl:     video.Url,
 			UpdatedAt:    params.UpdatedAt,
