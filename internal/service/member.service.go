@@ -487,6 +487,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 					Player: &Player{
 						VideoUrl:     video.Url,
 						IsPlaying:    player.IsPlaying,
+						IsEnded:      player.IsEnded,
 						CurrentTime:  player.CurrentTime,
 						PlaybackRate: player.PlaybackRate,
 						UpdatedAt:    player.UpdatedAt,
