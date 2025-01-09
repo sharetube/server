@@ -119,7 +119,7 @@ func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams)
 
 func (r repo) GetMemberIsMuted(ctx context.Context, roomId, memberId string) (bool, error) {
 	memberKey := r.getMemberKey(roomId, memberId)
-	isAdmin, err := r.rc.HGet(ctx, memberKey, "is_muted").Bool()
+	isAdmin, err := r.rc.HGet(ctx, memberKey, isMutedKey).Bool()
 	if err != nil {
 		return false, err
 	}
@@ -130,7 +130,7 @@ func (r repo) GetMemberIsMuted(ctx context.Context, roomId, memberId string) (bo
 
 func (r repo) GetMemberIsAdmin(ctx context.Context, roomId, memberId string) (bool, error) {
 	memberKey := r.getMemberKey(roomId, memberId)
-	isAdmin, err := r.rc.HGet(ctx, memberKey, "is_admin").Bool()
+	isAdmin, err := r.rc.HGet(ctx, memberKey, isAdminKey).Bool()
 	if err != nil {
 		return false, err
 	}
@@ -186,7 +186,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, 
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, memberKey, "is_admin", isAdmin).Err(); err != nil {
+	if err := r.rc.HSet(ctx, memberKey, isAdminKey, isAdmin).Err(); err != nil {
 		return err
 	}
 
@@ -206,7 +206,7 @@ func (r repo) UpdateMemberIsReady(ctx context.Context, roomId, memberId string, 
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, memberKey, "is_ready", isReady).Err(); err != nil {
+	if err := r.rc.HSet(ctx, memberKey, isReadyKey, isReady).Err(); err != nil {
 		return err
 	}
 
@@ -226,7 +226,7 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, roomId, memberId string, 
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, memberKey, "is_muted", isMuted).Err(); err != nil {
+	if err := r.rc.HSet(ctx, memberKey, isMutedKey, isMuted).Err(); err != nil {
 		return err
 	}
 
@@ -246,7 +246,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomId, memberId, color str
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, memberKey, "color", color).Err(); err != nil {
+	if err := r.rc.HSet(ctx, memberKey, colorKey, color).Err(); err != nil {
 		return err
 	}
 
@@ -267,11 +267,11 @@ func (r repo) UpdateMemberAvatarUrl(ctx context.Context, roomId, memberId string
 	}
 
 	if avatarUrl == nil {
-		if err := r.rc.HDel(ctx, memberKey, "avatar_url").Err(); err != nil {
+		if err := r.rc.HDel(ctx, memberKey, avatarUrlKey).Err(); err != nil {
 			return err
 		}
 	} else {
-		if err := r.rc.HSet(ctx, memberKey, "avatar_url", avatarUrl).Err(); err != nil {
+		if err := r.rc.HSet(ctx, memberKey, avatarUrlKey, avatarUrl).Err(); err != nil {
 			return err
 		}
 	}
@@ -292,7 +292,7 @@ func (r repo) UpdateMemberUsername(ctx context.Context, roomId, memberId, userna
 		return room.ErrMemberNotFound
 	}
 
-	if err := r.rc.HSet(ctx, memberKey, "username", username).Err(); err != nil {
+	if err := r.rc.HSet(ctx, memberKey, usernameKey, username).Err(); err != nil {
 		return err
 	}
 

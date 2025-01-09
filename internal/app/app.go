@@ -67,13 +67,13 @@ func Run(ctx context.Context, cfg *AppConfig) error {
 	}
 	defer rc.Close()
 
-	roomRepo := redis.NewRepo(rc, 24*14*time.Hour)
+	roomRepo := redis.NewRepo(rc, 14*24*time.Hour)
 	connectionRepo := inmemory.NewRepo()
 	roomService := service.New(roomRepo, connectionRepo, &service.Config{
 		MembersLimit:  cfg.MembersLimit,
 		PlaylistLimit: cfg.PlaylistLimit,
 		Secret:        cfg.Secret,
-		RoomExp:       30 * time.Second,
+		RoomExp:       5 * time.Minute,
 	})
 	controller := controller.NewController(roomService, logger)
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: controller.GetMux()}

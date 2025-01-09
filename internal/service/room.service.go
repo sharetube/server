@@ -79,12 +79,11 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		return nil, fmt.Errorf("failed to generate jwt: %w", err)
 	}
 
-	videoId := uuid.NewString()
-	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		VideoId: videoId,
-		RoomId:  roomId,
-		Url:     params.InitialVideoUrl,
-	}); err != nil {
+	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
+		RoomId: roomId,
+		Url:    params.InitialVideoUrl,
+	})
+	if err != nil {
 		return nil, fmt.Errorf("failed to set video: %w", err)
 	}
 

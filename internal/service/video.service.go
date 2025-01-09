@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
 )
@@ -111,12 +110,11 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
-	videoId := uuid.NewString()
-	if err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		VideoId: videoId,
-		RoomId:  params.RoomId,
-		Url:     params.VideoUrl,
-	}); err != nil {
+	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
+		RoomId: params.RoomId,
+		Url:    params.VideoUrl,
+	})
+	if err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
 	}
 

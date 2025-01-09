@@ -35,11 +35,7 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 	})
 	pipe.Expire(ctx, playerKey, r.maxExpireDuration)
 
-	if err := r.executePipe(ctx, pipe); err != nil {
-		return err
-	}
-
-	return nil
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) IsPlayerExists(ctx context.Context, roomId string) (bool, error) {
