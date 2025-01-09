@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -79,9 +80,9 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 }
 
 type AddVideoParams struct {
-	SenderId string
-	RoomId   string
-	VideoUrl string
+	SenderId string `json:"sender_id"`
+	RoomId   string `json:"room_id"`
+	VideoUrl string `json:"video_url"`
 }
 
 type AddVideoResponse struct {
@@ -91,6 +92,12 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoUrl, VideoUrlRule...),
+	); err != nil {
+		return AddVideoResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return AddVideoResponse{}, err
 	}
@@ -142,9 +149,9 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 }
 
 type RemoveVideoParams struct {
-	SenderId string
-	VideoId  string
-	RoomId   string
+	SenderId string `json:"sender_id"`
+	VideoId  string `json:"video_id"`
+	RoomId   string `json:"room_id"`
 }
 
 type RemoveVideoResponse struct {
@@ -154,6 +161,12 @@ type RemoveVideoResponse struct {
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoId, VideoIdRule...),
+	); err != nil {
+		return RemoveVideoResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveVideoResponse{}, err
 	}
@@ -190,9 +203,9 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 }
 
 type ReorderPlaylistParams struct {
-	VideoIds []string
-	SenderId string
-	RoomId   string
+	VideoIds []string `json:"video_ids"`
+	SenderId string   `json:"sender_id"`
+	RoomId   string   `json:"room_id"`
 }
 
 type ReorderPlaylistResponse struct {
@@ -201,6 +214,12 @@ type ReorderPlaylistResponse struct {
 }
 
 func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (ReorderPlaylistResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoIds, validation.Each(VideoIdRule...)),
+	); err != nil {
+		return ReorderPlaylistResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return ReorderPlaylistResponse{}, err
 	}

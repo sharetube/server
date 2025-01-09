@@ -7,7 +7,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service"
-	"github.com/sharetube/server/pkg/validator"
 	"github.com/sharetube/server/pkg/wsrouter"
 )
 
@@ -33,7 +32,6 @@ type controller struct {
 	roomService iRoomService
 	upgrader    websocket.Upgrader
 	wsmux       *wsrouter.WSRouter
-	validate    *validator.Validator
 	logger      *slog.Logger
 }
 
@@ -45,7 +43,6 @@ func NewController(roomService iRoomService, logger *slog.Logger) *controller {
 			},
 		},
 		roomService: roomService,
-		validate:    validator.NewValidator(),
 		logger:      logger,
 	}
 	c.wsmux = c.getWSRouter()

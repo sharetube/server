@@ -11,6 +11,12 @@ import (
 	"github.com/sharetube/server/internal/service"
 )
 
+type EmptyStruct struct{}
+
+func (es *EmptyStruct) UnmarshalJSON([]byte) error {
+	return nil
+}
+
 func (c controller) getOptQueryParam(r *http.Request, key string) *string {
 	value := r.URL.Query().Get(key)
 	if value == "" {

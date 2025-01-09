@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
@@ -34,10 +35,10 @@ func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websoc
 }
 
 type CreateRoomParams struct {
-	Username        string
-	Color           string
-	AvatarUrl       *string
-	InitialVideoUrl string
+	Username        string  `json:"username"`
+	Color           string  `json:"color"`
+	AvatarUrl       *string `json:"avatar_url"`
+	InitialVideoUrl string  `json:"initial_video_url"`
 }
 
 type CreateRoomResponse struct {
@@ -47,6 +48,15 @@ type CreateRoomResponse struct {
 }
 
 func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*CreateRoomResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.Username, UsernameRule...),
+		validation.Field(&params.Color, ColorRule...),
+		validation.Field(&params.AvatarUrl, AvatarUrlRule...),
+		validation.Field(&params.InitialVideoUrl, VideoUrlRule...),
+	); err != nil {
+		return nil, err
+	}
+
 	roomId := s.generator.GenerateRandomString(8)
 
 	memberId := uuid.NewString()
@@ -142,11 +152,11 @@ func (s service) getMemberByJWT(ctx context.Context, roomId, jwt string) (*Membe
 }
 
 type JoinRoomParams struct {
-	JWT       string
-	Username  string
-	Color     string
-	AvatarUrl *string
-	RoomId    string
+	JWT       string  `json:"jwt"`
+	Username  string  `json:"username"`
+	Color     string  `json:"color"`
+	AvatarUrl *string `json:"avatar_url"`
+	RoomId    string  `json:"room_id"`
 }
 
 type JoinRoomResponse struct {
@@ -157,6 +167,15 @@ type JoinRoomResponse struct {
 }
 
 func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.Username, UsernameRule...),
+		validation.Field(&params.Color, ColorRule...),
+		validation.Field(&params.AvatarUrl, AvatarUrlRule...),
+		validation.Field(&params.RoomId, RoomIdRule...),
+	); err != nil {
+		return JoinRoomResponse{}, err
+	}
+
 	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
 	if err != nil {
 		return JoinRoomResponse{}, err

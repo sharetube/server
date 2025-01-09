@@ -15,12 +15,6 @@ type Output struct {
 	Payload any    `json:"payload"`
 }
 
-type EmptyStruct struct{}
-
-func (es *EmptyStruct) UnmarshalJSON([]byte) error {
-	return nil
-}
-
 func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, input EmptyStruct) error {
 	return nil
 }
@@ -98,8 +92,6 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	// todo: add validation
-
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &service.AddVideoParams{
 		SenderId: memberId,
 		RoomId:   roomId,
@@ -129,11 +121,6 @@ type RemoveMemberInput struct {
 func (c controller) handleRemoveMember(ctx context.Context, _ *websocket.Conn, input RemoveMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
-
-	// validation
-	if input.MemberId == uuid.Nil {
-		return fmt.Errorf("validation error: %w", ErrValidationError)
-	}
 
 	removeMemberResp, err := c.roomService.RemoveMember(ctx, &service.RemoveMemberParams{
 		RemovedMemberId: input.MemberId.String(),
@@ -167,10 +154,6 @@ type PromotedMemberInput struct {
 func (c controller) handlePromoteMember(ctx context.Context, _ *websocket.Conn, input PromotedMemberInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
-
-	if input.MemberId == uuid.Nil {
-		return fmt.Errorf("validation error: %w", ErrValidationError)
-	}
 
 	promoteMemberResp, err := c.roomService.PromoteMember(ctx, &service.PromoteMemberParams{
 		PromotedMemberId: input.MemberId.String(),
@@ -236,11 +219,6 @@ type UpdateProfileInput struct {
 func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, input UpdateProfileInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
-
-	if input.Username == nil && input.Color == nil && !input.AvatarUrl.Defined {
-		return fmt.Errorf("validation error: %w", ErrValidationError)
-	}
-	// todo: add validation
 
 	updateProfileResp, err := c.roomService.UpdateProfile(ctx, &service.UpdateProfileParams{
 		Username:  input.Username,
