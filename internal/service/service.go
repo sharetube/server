@@ -35,7 +35,7 @@ type iRoomRepo interface {
 	UpdateMemberColor(ctx context.Context, roomId string, memberId string, color string) error
 	UpdateMemberAvatarUrl(ctx context.Context, roomId string, memberId string, avatarUrl *string) error
 	// video
-	SetVideo(context.Context, *room.SetVideoParams) error
+	SetVideo(context.Context, *room.SetVideoParams) (string, error)
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
 	ExpireVideo(context.Context, *room.ExpireVideoParams) error
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error

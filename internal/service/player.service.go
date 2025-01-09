@@ -5,18 +5,19 @@ import (
 	"errors"
 	"fmt"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
 )
 
 type UpdatePlayerStateParams struct {
-	IsPlaying    bool
-	IsEnded      bool
-	CurrentTime  int
-	PlaybackRate float64
-	UpdatedAt    int
-	SenderId     string
-	RoomId       string
+	IsPlaying    bool    `json:"is_playing"`
+	IsEnded      bool    `json:"is_ended"`
+	CurrentTime  int     `json:"current_time"`
+	PlaybackRate float64 `json:"playback_rate"`
+	UpdatedAt    int     `json:"updated_at"`
+	SenderId     string  `json:"sender_id"`
+	RoomId       string  `json:"room_id"`
 }
 
 type UpdatePlayerStateResponse struct {
@@ -108,10 +109,10 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoId   string
-	UpdatedAt int
-	SenderId  string
-	RoomId    string
+	VideoId   string `json:"video_id"`
+	UpdatedAt int    `json:"updated_at"`
+	SenderId  string `json:"sender_id"`
+	RoomId    string `json:"room_id"`
 }
 
 type UpdatePlayerVideoResponse struct {
@@ -122,6 +123,12 @@ type UpdatePlayerVideoResponse struct {
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoId, VideoIdRule...),
+	); err != nil {
+		return UpdatePlayerVideoResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}

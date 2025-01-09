@@ -34,9 +34,8 @@ type AddVideoToListParams struct {
 }
 
 type SetVideoParams struct {
-	VideoId string
-	RoomId  string
-	Url     string
+	RoomId string
+	Url    string
 	// Version   int
 }
 

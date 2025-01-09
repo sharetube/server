@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
 	o "github.com/skewb1k/optional"
@@ -48,9 +49,9 @@ func (s service) getMembers(ctx context.Context, roomId string) ([]Member, error
 }
 
 type RemoveMemberParams struct {
-	RemovedMemberId string
-	SenderId        string
-	RoomId          string
+	RemovedMemberId string `json:"member_id"`
+	SenderId        string `json:"sender_id"`
+	RoomId          string `json:"room_id"`
 }
 
 type RemoveMemberResponse struct {
@@ -60,6 +61,12 @@ type RemoveMemberResponse struct {
 }
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.RemovedMemberId, MemberIdRule...),
+	); err != nil {
+		return RemoveMemberResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveMemberResponse{}, err
 	}
@@ -101,9 +108,9 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 }
 
 type PromoteMemberParams struct {
-	PromotedMemberId string
-	SenderId         string
-	RoomId           string
+	PromotedMemberId string `json:"promoted_member_id"`
+	SenderId         string `json:"sender_id"`
+	RoomId           string `json:"room_id"`
 }
 
 type PromoteMemberResponse struct {
@@ -114,6 +121,12 @@ type PromoteMemberResponse struct {
 }
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.PromotedMemberId, MemberIdRule...),
+	); err != nil {
+		return PromoteMemberResponse{}, err
+	}
+
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return PromoteMemberResponse{}, err
 	}
@@ -295,11 +308,11 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 }
 
 type UpdateProfileParams struct {
-	Username  *string
-	Color     *string
-	AvatarUrl o.Field[string]
-	SenderId  string
-	RoomId    string
+	Username  *string         `json:"username"`
+	Color     *string         `json:"color"`
+	AvatarUrl o.Field[string] `json:"avatar_url"`
+	SenderId  string          `json:"sender_id"`
+	RoomId    string          `json:"room_id"`
 }
 
 type UpdateProfileResponse struct {
@@ -309,6 +322,15 @@ type UpdateProfileResponse struct {
 }
 
 func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams) (UpdateProfileResponse, error) {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.Username, UsernameRule...),
+		validation.Field(&params.Color, ColorRule...),
+		// todo: add validation
+		// validation.Field(&params.AvatarUrl, AvatarUrlRule...),
+	); err != nil {
+		return UpdateProfileResponse{}, err
+	}
+
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
 		MemberId: params.SenderId,
 		RoomId:   params.RoomId,
@@ -368,10 +390,10 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 }
 
 type UpdateIsReadyParams struct {
-	SenderConn *websocket.Conn
-	IsReady    bool
-	SenderId   string
-	RoomId     string
+	SenderConn *websocket.Conn `json:"sender_conn"`
+	IsReady    bool            `json:"is_ready"`
+	SenderId   string          `json:"sender_id"`
+	RoomId     string          `json:"room_id"`
 }
 
 type UpdateIsReadyResponse struct {
@@ -505,10 +527,10 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 }
 
 type UpdateIsMutedParams struct {
-	SenderConn *websocket.Conn
-	IsMuted    bool
-	SenderId   string
-	RoomId     string
+	SenderConn *websocket.Conn `json:"sender_conn"`
+	IsMuted    bool            `json:"is_muted"`
+	SenderId   string          `json:"sender_id"`
+	RoomId     string          `json:"room_id"`
 }
 
 type UpdateIsMutedResponse struct {
