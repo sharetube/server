@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func (r repo) addWithIncrement(ctx context.Context, c redis.Scripter, key string, value interface{}) {
+func (r repo) addWithIncrement(ctx context.Context, c redis.Cmdable, key string, value interface{}) {
 	c.EvalSha(ctx, r.maxScoreScript, []string{key}, value)
 }
 

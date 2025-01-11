@@ -24,7 +24,7 @@ const (
 	isReadyKey   = "is_ready"
 )
 
-func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomId, memberId string) {
+func (r repo) addMemberToList(ctx context.Context, pipe redis.Cmdable, roomId, memberId string) {
 	memberListKey := r.getMemberListKey(roomId)
 
 	r.addWithIncrement(ctx, pipe, memberListKey, memberId)
@@ -47,10 +47,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
-	if err := r.executePipe(ctx, pipe); err != nil {
-		return err
-	}
-	return nil
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListParams) error {
@@ -64,11 +61,7 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
-	if err := r.executePipe(ctx, pipe); err != nil {
-		return err
-	}
-
-	return nil
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) removeMember(ctx context.Context, roomId, memberId string) error {
@@ -97,11 +90,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 		return err
 	}
 
-	if err := r.removeMember(ctx, params.RoomId, params.MemberId); err != nil {
-		return err
-	}
-
-	return nil
+	return r.removeMember(ctx, params.RoomId, params.MemberId)
 }
 
 func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
