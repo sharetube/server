@@ -180,6 +180,10 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		return JoinRoomResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
+	if len(conns) >= s.membersLimit {
+		return JoinRoomResponse{}, errors.New("room is full")
+	}
+
 	jwt := params.JWT
 	member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {

@@ -102,7 +102,7 @@ func New(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
 		membersLimit:  cfg.MembersLimit,
-		playlistLimit: cfg.MembersLimit,
+		playlistLimit: cfg.PlaylistLimit,
 		secret:        []byte(cfg.Secret),
 		generator:     randstr.New(letterBytes),
 		roomExp:       cfg.RoomExp,
