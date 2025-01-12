@@ -26,20 +26,9 @@ func (r repo) getLastVideoKey(roomId string) string {
 	return fmt.Sprintf("room:%s:last-video", roomId)
 }
 
-// func (r repo) getPlaylistVersionKey(roomId string) string {
-// 	return "room:" + roomId + ":playlist-version"
-// }
-
-// func (r repo) getLastId(ctx context.Context, roomId string) (int, error) {
-// 	lastIdKey := r.getLastIdKey(roomId)
-// 	lastId, err := r.rc.Get(ctx, lastIdKey).Int()
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	r.rc.Expire(ctx, lastIdKey, r.maxExpireDuration)
-// 	return lastId, nil
-// }
+//	func (r repo) getPlaylistVersionKey(roomId string) string {
+//		return "room:" + roomId + ":playlist-version"
+//	}
 
 func (r repo) incrLastId(ctx context.Context, roomId string) (int, error) {
 	lastIdKey := r.getLastIdKey(roomId)

@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sharetube/server/internal/repository/room"
 )
@@ -17,7 +18,7 @@ const (
 )
 
 func (r repo) getPlayerKey(roomId string) string {
-	return "room:" + roomId + ":player"
+	return fmt.Sprintf("room:%s:player", roomId)
 }
 
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {

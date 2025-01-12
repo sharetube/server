@@ -2,17 +2,18 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
 )
 
 func (r repo) getMemberKey(roomId, memberId string) string {
-	return "room:" + roomId + ":member:" + memberId
+	return fmt.Sprintf("room:%s:member:%s", roomId, memberId)
 }
 
 func (r repo) getMemberListKey(roomId string) string {
-	return "room:" + roomId + ":memberlist"
+	return fmt.Sprintf("room:%s:memberlist", roomId)
 }
 
 const (
