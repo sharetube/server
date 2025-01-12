@@ -53,7 +53,7 @@ func (r repo) IncrPlaylistVersion(ctx context.Context, roomId string) (int, erro
 	}
 
 	if incrCmd.Val() == 0 {
-		return 0, errors.New("playlist version not found")
+		return 0, room.ErrPlaylistVersionNotFound
 	}
 
 	return int(incrCmd.Val()), nil
@@ -171,7 +171,7 @@ func (r repo) ReorderList(ctx context.Context, params *room.ReorderListParams) e
 	// todo: check that all params.VideoIds are in videoIds
 
 	if len(videoIds) != len(params.VideoIds) {
-		return errors.New("invalid video ids")
+		return room.ErrInvalidVideoIds
 	}
 
 	pipe := r.rc.TxPipeline()
@@ -241,7 +241,7 @@ func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistPar
 	}
 
 	if !res {
-		return errors.New("last video id not found")
+		return room.ErrLastVideoIdNotFound
 	}
 
 	res, err = r.rc.ExpireAt(ctx, r.getPlaylistVersionKey(params.RoomId), params.ExpireAt).Result()
@@ -250,7 +250,7 @@ func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistPar
 	}
 
 	if !res {
-		return errors.New("playlist version not found")
+		return room.ErrPlaylistVersionNotFound
 	}
 
 	return nil
