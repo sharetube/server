@@ -148,13 +148,13 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 type RemoveVideoParams struct {
 	SenderId string `json:"sender_id"`
-	VideoId  string `json:"video_id"`
+	VideoId  int    `json:"video_id"`
 	RoomId   string `json:"room_id"`
 }
 
 type RemoveVideoResponse struct {
 	Conns          []*websocket.Conn
-	RemovedVideoId string
+	RemovedVideoId int
 	Playlist       Playlist
 }
 
@@ -201,9 +201,9 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 }
 
 type ReorderPlaylistParams struct {
-	VideoIds []string `json:"video_ids"`
-	SenderId string   `json:"sender_id"`
-	RoomId   string   `json:"room_id"`
+	VideoIds []int  `json:"video_ids"`
+	SenderId string `json:"sender_id"`
+	RoomId   string `json:"room_id"`
 }
 
 type ReorderPlaylistResponse struct {

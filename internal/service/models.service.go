@@ -1,7 +1,7 @@
 package service
 
 type Video struct {
-	Id  string `json:"id"`
+	Id  int    `json:"id"`
 	Url string `json:"url"`
 }
 

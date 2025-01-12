@@ -7,12 +7,12 @@ type Video struct {
 }
 
 type RemoveVideoParams struct {
-	VideoId string
+	VideoId int
 	RoomId  string
 }
 
 type ExpireVideoParams struct {
-	VideoId  string
+	VideoId  int
 	RoomId   string
 	ExpireAt time.Time
 }
@@ -29,7 +29,7 @@ type ExpirePlaylistParams struct {
 
 type AddVideoToListParams struct {
 	RoomId  string
-	VideoId string
+	VideoId int
 	Url     string
 }
 
@@ -40,26 +40,26 @@ type SetVideoParams struct {
 }
 
 type SetLastVideoParams struct {
-	VideoId string
+	VideoId int
 	RoomId  string
 }
 
 type SetCurrentVideoParams struct {
-	VideoId string
+	VideoId int
 	RoomId  string
 }
 
 type RemoveVideoFromListParams struct {
-	VideoId string
+	VideoId int
 	RoomId  string
 }
 
 type ReorderListParams struct {
-	VideoIds []string
+	VideoIds []int
 	RoomId   string
 }
 
 type GetVideoParams struct {
-	VideoId string
+	VideoId int
 	RoomId  string
 }

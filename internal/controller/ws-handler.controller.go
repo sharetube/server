@@ -52,8 +52,8 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Co
 }
 
 type UpdatePlayerVideoInput struct {
-	VideoId   string `json:"video_id"`
-	UpdatedAt int    `json:"updated_at"`
+	VideoId   int `json:"video_id"`
+	UpdatedAt int `json:"updated_at"`
 }
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Conn, input UpdatePlayerVideoInput) error {
@@ -181,7 +181,7 @@ func (c controller) handlePromoteMember(ctx context.Context, _ *websocket.Conn, 
 }
 
 type RemoveVideoInput struct {
-	VideoId string `json:"video_id"`
+	VideoId int `json:"video_id"`
 }
 
 func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, input RemoveVideoInput) error {
@@ -295,7 +295,7 @@ func (c controller) handleUpdateIsMuted(ctx context.Context, conn *websocket.Con
 }
 
 type ReorderPlaylistInput struct {
-	VideoIds []string `json:"video_ids"`
+	VideoIds []int `json:"video_ids"`
 }
 
 func (c controller) handleReorderPlaylist(ctx context.Context, _ *websocket.Conn, input ReorderPlaylistInput) error {

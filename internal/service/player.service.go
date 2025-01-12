@@ -109,7 +109,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoId   string `json:"video_id"`
+	VideoId   int    `json:"video_id"`
 	UpdatedAt int    `json:"updated_at"`
 	SenderId  string `json:"sender_id"`
 	RoomId    string `json:"room_id"`
