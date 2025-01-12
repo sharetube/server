@@ -19,9 +19,3 @@ test:
 .PHONY: build
 build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
-
-.PHONY: clean
-clean:
-	docker stop $(CONTAINER_NAME) || true
-	docker rm $(CONTAINER_NAME) || true
-	docker rmi $(IMAGE_NAME):$(IMAGE_TAG) || true

@@ -35,27 +35,29 @@ type iRoomRepo interface {
 	UpdateMemberColor(ctx context.Context, roomId string, memberId string, color string) error
 	UpdateMemberAvatarUrl(ctx context.Context, roomId string, memberId string, avatarUrl *string) error
 	// video
-	SetVideo(context.Context, *room.SetVideoParams) (string, error)
+	SetVideo(context.Context, *room.SetVideoParams) (int, error)
 	RemoveVideo(context.Context, *room.RemoveVideoParams) error
 	ExpireVideo(context.Context, *room.ExpireVideoParams) error
 	RemoveVideoFromList(context.Context, *room.RemoveVideoFromListParams) error
 	SetLastVideo(context.Context, *room.SetLastVideoParams) error
 	ExpireLastVideo(context.Context, *room.ExpireLastVideoParams) error
+	GetPlaylistVersion(context.Context, string) (int, error)
+	IncrPlaylistVersion(context.Context, string) (int, error)
 	ExpirePlaylist(context.Context, *room.ExpirePlaylistParams) error
-	GetVideoIds(context.Context, string) ([]string, error)
+	GetVideoIds(context.Context, string) ([]int, error)
 	GetVideo(context.Context, *room.GetVideoParams) (room.Video, error)
 	GetVideosLength(context.Context, string) (int, error)
-	GetLastVideoId(context.Context, string) (*string, error)
+	GetLastVideoId(context.Context, string) (*int, error)
 	ReorderList(context.Context, *room.ReorderListParams) error
 	AddVideoToList(context.Context, *room.AddVideoToListParams) error
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
 	IsPlayerExists(context.Context, string) (bool, error)
-	GetPlayerVideoId(context.Context, string) (string, error)
+	GetPlayerVideoId(context.Context, string) (int, error)
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
-	UpdatePlayerVideoId(ctx context.Context, roomId string, videoId string) error
+	UpdatePlayerVideoId(ctx context.Context, roomId string, videoId int) error
 	UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error
 	UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error
 	UpdatePlayerIsEnded(ctx context.Context, roomId string, isEnded bool) error
@@ -93,7 +95,6 @@ type Config struct {
 	RoomExp       time.Duration
 }
 
-// todo: create params struct
 func New(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
 	letterBytes := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
@@ -101,7 +102,7 @@ func New(redisRepo iRoomRepo, connRepo iConnRepo, cfg *Config) *service {
 		roomRepo:      redisRepo,
 		connRepo:      connRepo,
 		membersLimit:  cfg.MembersLimit,
-		playlistLimit: cfg.MembersLimit,
+		playlistLimit: cfg.PlaylistLimit,
 		secret:        []byte(cfg.Secret),
 		generator:     randstr.New(letterBytes),
 		roomExp:       cfg.RoomExp,

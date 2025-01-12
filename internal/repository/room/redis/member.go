@@ -2,18 +2,13 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
+	omitnilpointers "github.com/sharetube/server/pkg/omit-nil-pointers"
+	ptrfrommap "github.com/sharetube/server/pkg/ptr-from-map"
 )
-
-func (r repo) getMemberKey(roomId, memberId string) string {
-	return "room:" + roomId + ":member:" + memberId
-}
-
-func (r repo) getMemberListKey(roomId string) string {
-	return "room:" + roomId + ":memberlist"
-}
 
 const (
 	usernameKey  = "username"
@@ -24,7 +19,15 @@ const (
 	isReadyKey   = "is_ready"
 )
 
-func (r repo) addMemberToList(ctx context.Context, pipe redis.Pipeliner, roomId, memberId string) {
+func (r repo) getMemberKey(roomId, memberId string) string {
+	return fmt.Sprintf("room:%s:member:%s", roomId, memberId)
+}
+
+func (r repo) getMemberListKey(roomId string) string {
+	return fmt.Sprintf("room:%s:memberlist", roomId)
+}
+
+func (r repo) addMemberToList(ctx context.Context, pipe redis.Cmdable, roomId, memberId string) {
 	memberListKey := r.getMemberListKey(roomId)
 
 	r.addWithIncrement(ctx, pipe, memberListKey, memberId)
@@ -35,7 +38,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 	pipe := r.rc.TxPipeline()
 
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	pipe.HSet(ctx, memberKey, r.omitPointers(map[string]any{
+	pipe.HSet(ctx, memberKey, omitnilpointers.OmitNilPointers(map[string]any{
 		usernameKey:  params.Username,
 		avatarUrlKey: params.AvatarUrl,
 		colorKey:     params.Color,
@@ -47,10 +50,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
-	if err := r.executePipe(ctx, pipe); err != nil {
-		return err
-	}
-	return nil
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListParams) error {
@@ -64,11 +64,7 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
-	if err := r.executePipe(ctx, pipe); err != nil {
-		return err
-	}
-
-	return nil
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) removeMember(ctx context.Context, roomId, memberId string) error {
@@ -97,11 +93,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 		return err
 	}
 
-	if err := r.removeMember(ctx, params.RoomId, params.MemberId); err != nil {
-		return err
-	}
-
-	return nil
+	return r.removeMember(ctx, params.RoomId, params.MemberId)
 }
 
 func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
@@ -163,11 +155,10 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 
 	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
-	avatarUrl := memberMap[avatarUrlKey]
 	return room.Member{
 		Username:  memberMap[usernameKey],
 		Color:     memberMap[colorKey],
-		AvatarUrl: &avatarUrl,
+		AvatarUrl: ptrfrommap.PtrFromStringMap(memberMap, avatarUrlKey),
 		IsMuted:   r.fieldToBool(memberMap[isMutedKey]),
 		IsAdmin:   r.fieldToBool(memberMap[isAdminKey]),
 		IsReady:   r.fieldToBool(memberMap[isReadyKey]),
@@ -175,7 +166,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, isAdmin bool) error {
-	//? maybe dont check existence because there is check on service layer that member in current room
+	//? dont check existence because there is check on service layer that member in current room
 	memberKey := r.getMemberKey(roomId, memberId)
 	cmd := r.rc.Exists(ctx, memberKey)
 	if err := cmd.Err(); err != nil {

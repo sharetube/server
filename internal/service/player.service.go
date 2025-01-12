@@ -80,19 +80,12 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, err
-	}
-
-	for i, memberId := range memberIds {
-		if memberId == params.SenderId {
-			memberIds = append(memberIds[:i], memberIds[i+1:]...)
-			break
-		}
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get member ids: %w", err)
 	}
 
 	conns, err := s.getConnsFromMemberIds(ctx, memberIds)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns from member ids: %w", err)
 	}
 
 	return UpdatePlayerStateResponse{
@@ -109,7 +102,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoId   string `json:"video_id"`
+	VideoId   int    `json:"video_id"`
 	UpdatedAt int    `json:"updated_at"`
 	SenderId  string `json:"sender_id"`
 	RoomId    string `json:"room_id"`
@@ -123,16 +116,17 @@ type UpdatePlayerVideoResponse struct {
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+		return UpdatePlayerVideoResponse{}, err
+	}
+
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.VideoId, VideoIdRule...),
 	); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerVideoResponse{}, err
-	}
-
+	// trying to remove new video from playlist
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
@@ -141,22 +135,18 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
 		}
 
+		// if not found, maybe it is last video
 		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
 		if err != nil {
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get last video id: %w", err)
 		}
 
-		if lastVideoId != nil && *lastVideoId == params.VideoId {
-			if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
-				VideoId: params.VideoId,
-				RoomId:  params.RoomId,
-			}); err != nil {
-				return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
-			}
-		} else {
+		// compare last video id with params.VideoId
+		if lastVideoId == nil || *lastVideoId != params.VideoId {
 			return UpdatePlayerVideoResponse{}, errors.New("video is not found")
 		}
 	} else {
+		// if video was in playlist, remove last video
 		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
 		if err != nil {
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get last video id: %w", err)
@@ -177,6 +167,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
+	// updating last video
 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
 		VideoId: player.VideoId,
 		RoomId:  params.RoomId,
@@ -225,9 +216,9 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get playlist with incr version: %w", err)
 	}
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
@@ -243,7 +234,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 
 	members, err := s.mapMembers(ctx, params.RoomId, memberIds)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to map members: %w", err)
 	}
 
 	conns := make([]*websocket.Conn, 0, len(memberIds))
@@ -266,7 +257,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			VideoUrl:     video.Url,
 			UpdatedAt:    params.UpdatedAt,
 		},
-		Playlist: playlist,
+		Playlist: *playlist,
 		Conns:    conns,
 	}, nil
 }

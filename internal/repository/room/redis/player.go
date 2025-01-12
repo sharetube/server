@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sharetube/server/internal/repository/room"
 )
@@ -17,7 +18,7 @@ const (
 )
 
 func (r repo) getPlayerKey(roomId string) string {
-	return "room:" + roomId + ":player"
+	return fmt.Sprintf("room:%s:player", roomId)
 }
 
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {
@@ -62,7 +63,7 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return room.Player{
-		VideoId:         playerMap[videoIdKey],
+		VideoId:         r.fieldToInt(playerMap[videoIdKey]),
 		IsPlaying:       r.fieldToBool(playerMap[isPlayingKey]),
 		WaitingForReady: r.fieldToBool(playerMap[waitingForReadyKey]),
 		IsEnded:         r.fieldToBool(playerMap[isEndedKey]),
@@ -72,11 +73,11 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 	}, nil
 }
 
-func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (string, error) {
+func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (int, error) {
 	playerKey := r.getPlayerKey(roomId)
-	videoId, err := r.rc.HGet(ctx, playerKey, videoIdKey).Result()
+	videoId, err := r.rc.HGet(ctx, playerKey, videoIdKey).Int()
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
@@ -133,7 +134,7 @@ func (r repo) updatePlayerValue(ctx context.Context, roomId string, key string, 
 	return nil
 }
 
-func (r repo) UpdatePlayerVideoId(ctx context.Context, roomId, videoId string) error {
+func (r repo) UpdatePlayerVideoId(ctx context.Context, roomId string, videoId int) error {
 	return r.updatePlayerValue(ctx, roomId, videoIdKey, videoId)
 }
 

@@ -25,7 +25,7 @@ func (s service) getConnsFromMemberIds(_ context.Context, memberIds []string) ([
 	return conns, nil
 }
 
-func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websocket.Conn, error) {
+func (s service) getConns(ctx context.Context, roomId string) ([]*websocket.Conn, error) {
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get member ids: %w", err)
@@ -175,15 +175,19 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		return JoinRoomResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get conns: %w", err)
+	}
+
+	if len(conns) >= s.membersLimit {
+		return JoinRoomResponse{}, errors.New("room is full")
 	}
 
 	jwt := params.JWT
 	member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get member by jwt: %w", err)
 	}
 
 	if member == nil {
@@ -256,7 +260,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get members: %w", err)
 	}
 	return JoinRoomResponse{
 		JWT:          jwt,
@@ -282,12 +286,12 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, roomId)
 	if err != nil {
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return Room{
@@ -301,6 +305,6 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 			UpdatedAt:    player.UpdatedAt,
 		},
 		Members:  members,
-		Playlist: playlist,
+		Playlist: *playlist,
 	}, nil
 }
