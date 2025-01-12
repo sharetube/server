@@ -301,6 +301,6 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 			UpdatedAt:    player.UpdatedAt,
 		},
 		Members:  members,
-		Playlist: playlist,
+		Playlist: *playlist,
 	}, nil
 }

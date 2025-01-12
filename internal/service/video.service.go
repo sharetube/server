@@ -34,24 +34,23 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 	return playlist, nil
 }
 
-// todo: return pointer
-func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, error) {
+func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, error) {
 	videos, err := s.getVideos(ctx, roomId)
 	if err != nil {
-		return Playlist{}, err
+		return nil, err
 	}
 
 	lastVideo, err := s.getLastVideo(ctx, roomId)
 	if err != nil {
-		return Playlist{}, err
+		return nil, err
 	}
 
 	version, err := s.roomRepo.GetPlaylistVersion(ctx, roomId)
 	if err != nil {
-		return Playlist{}, fmt.Errorf("failed to get playlist version: %w", err)
+		return nil, err
 	}
 
-	return Playlist{
+	return &Playlist{
 		Videos:    videos,
 		LastVideo: lastVideo,
 		Version:   version,
