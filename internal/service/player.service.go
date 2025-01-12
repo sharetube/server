@@ -83,13 +83,6 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, err
 	}
 
-	for i, memberId := range memberIds {
-		if memberId == params.SenderId {
-			memberIds = append(memberIds[:i], memberIds[i+1:]...)
-			break
-		}
-	}
-
 	conns, err := s.getConnsFromMemberIds(ctx, memberIds)
 	if err != nil {
 		return UpdatePlayerStateResponse{}, err
