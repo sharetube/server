@@ -90,7 +90,7 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, fmt.Errorf("failed to remove conn: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return RemoveMemberResponse{}, err
 	}
@@ -150,7 +150,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 	member.IsAdmin = updatedMemberIsAdmin
 
 	// todo: refactor by do not use getConnsByRoomId to save conn inside for
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return PromoteMemberResponse{}, err
 	}
@@ -295,7 +295,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 		}, nil
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return DisconnectMemberResponse{}, err
 	}
@@ -364,7 +364,7 @@ func (s service) UpdateProfile(ctx context.Context, params *UpdateProfileParams)
 	}
 
 	// todo: fix double get ids
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return UpdateProfileResponse{}, err
 	}
@@ -438,7 +438,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 	}
 
 	// todo: fix double get ids
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return UpdateIsReadyResponse{}, err
 	}
@@ -573,7 +573,7 @@ func (s service) UpdateIsMuted(ctx context.Context, params *UpdateIsMutedParams)
 		return UpdateIsMutedResponse{}, fmt.Errorf("failed to update member is muted: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return UpdateIsMutedResponse{}, err
 	}

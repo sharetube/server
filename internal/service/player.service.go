@@ -129,10 +129,12 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, err
 	}
 
+	// todo: move upper
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
 
+	// trying to remove new video from playlist
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
@@ -141,22 +143,30 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
 		}
 
+		// if not found, maybe it is last video
 		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
 		if err != nil {
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get last video id: %w", err)
 		}
 
-		if lastVideoId != nil && *lastVideoId == params.VideoId {
-			if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
-				VideoId: params.VideoId,
-				RoomId:  params.RoomId,
-			}); err != nil {
-				return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
-			}
-		} else {
+		// compare last video id with params.VideoId
+		// if lastVideoId != nil && *lastVideoId == params.VideoId {
+		// 	//? redundant
+		// 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
+		// 		VideoId: params.VideoId,
+		// 		RoomId:  params.RoomId,
+		// 	}); err != nil {
+		// 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
+		// 	}
+		// } else {
+		// 	return UpdatePlayerVideoResponse{}, errors.New("video is not found")
+		// }
+
+		if lastVideoId == nil || *lastVideoId != params.VideoId {
 			return UpdatePlayerVideoResponse{}, errors.New("video is not found")
 		}
 	} else {
+		// if video was in playlist, remove last video
 		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
 		if err != nil {
 			return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get last video id: %w", err)
@@ -177,6 +187,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
+	// updating last video
 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
 		VideoId: player.VideoId,
 		RoomId:  params.RoomId,
@@ -225,7 +236,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
@@ -266,7 +277,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			VideoUrl:     video.Url,
 			UpdatedAt:    params.UpdatedAt,
 		},
-		Playlist: playlist,
+		Playlist: *playlist,
 		Conns:    conns,
 	}, nil
 }

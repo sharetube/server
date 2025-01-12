@@ -25,7 +25,7 @@ func (s service) getConnsFromMemberIds(_ context.Context, memberIds []string) ([
 	return conns, nil
 }
 
-func (s service) getConnsByRoomId(ctx context.Context, roomId string) ([]*websocket.Conn, error) {
+func (s service) getConns(ctx context.Context, roomId string) ([]*websocket.Conn, error) {
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, roomId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get member ids: %w", err)
@@ -175,7 +175,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		return JoinRoomResponse{}, err
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return JoinRoomResponse{}, err
 	}

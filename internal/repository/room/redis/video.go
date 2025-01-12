@@ -42,9 +42,21 @@ func (r repo) incrLastId(ctx context.Context, roomId string) (int, error) {
 	return int(lastId), nil
 }
 
-func (r repo) incrPlaylistVersion(ctx context.Context, pipe redis.Cmdable, roomId string) (*redis.IntCmd, *redis.BoolCmd) {
+func (r repo) IncrPlaylistVersion(ctx context.Context, roomId string) (int, error) {
+	pipe := r.rc.TxPipeline()
 	playlistVersionKey := r.getPlaylistVersionKey(roomId)
-	return pipe.Incr(ctx, playlistVersionKey), pipe.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
+	incrCmd := pipe.Incr(ctx, playlistVersionKey)
+	pipe.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
+
+	if err := r.executePipe(ctx, pipe); err != nil {
+		return 0, err
+	}
+
+	if incrCmd.Val() == 0 {
+		return 0, errors.New("playlist version not found")
+	}
+
+	return int(incrCmd.Val()), nil
 }
 
 func (r repo) GetPlaylistVersion(ctx context.Context, roomId string) (int, error) {
@@ -80,8 +92,6 @@ func (r repo) AddVideoToList(ctx context.Context, params *room.AddVideoToListPar
 	playlistKey := r.getPlaylistKey(params.RoomId)
 	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoId)
 	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
-
-	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
 
 	return r.executePipe(ctx, pipe)
 }
@@ -177,8 +187,6 @@ func (r repo) ReorderList(ctx context.Context, params *room.ReorderListParams) e
 
 	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
 
-	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
-
 	return r.executePipe(ctx, pipe)
 }
 
@@ -188,8 +196,6 @@ func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoF
 	playlistKey := r.getPlaylistKey(params.RoomId)
 	remCmd := pipe.ZRem(ctx, playlistKey, params.VideoId)
 	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
-
-	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		return err
@@ -272,8 +278,6 @@ func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams)
 	lastVideoKey := r.getLastVideoKey(params.RoomId)
 	pipe.Set(ctx, lastVideoKey, params.VideoId, r.maxExpireDuration)
 	pipe.Expire(ctx, lastVideoKey, r.maxExpireDuration)
-
-	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
 
 	return r.executePipe(ctx, pipe)
 }

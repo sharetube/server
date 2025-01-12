@@ -34,6 +34,7 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 	return playlist, nil
 }
 
+// todo: return pointer
 func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, error) {
 	videos, err := s.getVideos(ctx, roomId)
 	if err != nil {
@@ -54,6 +55,29 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, erro
 		Videos:    videos,
 		LastVideo: lastVideo,
 		Version:   version,
+	}, nil
+}
+
+func (s service) getPlaylistWithIncrVersion(ctx context.Context, roomId string) (*Playlist, error) {
+	playlistVersion, err := s.roomRepo.IncrPlaylistVersion(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to incr playlist version: %w", err)
+	}
+
+	videos, err := s.getVideos(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	lastVideo, err := s.getLastVideo(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Playlist{
+		Videos:    videos,
+		LastVideo: lastVideo,
+		Version:   playlistVersion,
 	}, nil
 }
 
@@ -132,12 +156,12 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, fmt.Errorf("failed to add video to list: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return AddVideoResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
 		return AddVideoResponse{}, err
 	}
@@ -148,7 +172,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 			Url: params.VideoUrl,
 		},
 		Conns:    conns,
-		Playlist: playlist,
+		Playlist: *playlist,
 	}, nil
 }
 
@@ -189,20 +213,20 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return RemoveVideoResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
 		return RemoveVideoResponse{}, err
 	}
 
 	return RemoveVideoResponse{
 		Conns:          conns,
-		Playlist:       playlist,
 		RemovedVideoId: params.VideoId,
+		Playlist:       *playlist,
 	}, nil
 }
 
@@ -235,18 +259,18 @@ func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistPar
 		return ReorderPlaylistResponse{}, fmt.Errorf("failed to reorder playlist: %w", err)
 	}
 
-	conns, err := s.getConnsByRoomId(ctx, params.RoomId)
+	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return ReorderPlaylistResponse{}, err
 	}
 
-	playlist, err := s.getPlaylist(ctx, params.RoomId)
+	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
 		return ReorderPlaylistResponse{}, err
 	}
 
 	return ReorderPlaylistResponse{
 		Conns:    conns,
-		Playlist: playlist,
+		Playlist: *playlist,
 	}, nil
 }
