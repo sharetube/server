@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"reflect"
 	"strconv"
 
 	"github.com/redis/go-redis/v9"
@@ -25,17 +24,6 @@ func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
 	}
 
 	return nil
-}
-
-func (r repo) omitPointers(fields map[string]interface{}) map[string]interface{} {
-	omitted := make(map[string]interface{})
-	for k, v := range fields {
-		if reflect.ValueOf(v).Kind() != reflect.Ptr {
-			omitted[k] = v
-		}
-	}
-
-	return omitted
 }
 
 func (r repo) fieldToBool(field string) bool {

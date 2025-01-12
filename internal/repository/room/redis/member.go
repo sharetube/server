@@ -6,6 +6,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
+	omitnilpointers "github.com/sharetube/server/pkg/omit-nil-pointers"
+	ptrfrommap "github.com/sharetube/server/pkg/ptr-from-map"
 )
 
 const (
@@ -36,7 +38,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 	pipe := r.rc.TxPipeline()
 
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	pipe.HSet(ctx, memberKey, r.omitPointers(map[string]any{
+	pipe.HSet(ctx, memberKey, omitnilpointers.OmitNilPointers(map[string]any{
 		usernameKey:  params.Username,
 		avatarUrlKey: params.AvatarUrl,
 		colorKey:     params.Color,
@@ -153,11 +155,10 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 
 	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
-	avatarUrl := memberMap[avatarUrlKey]
 	return room.Member{
 		Username:  memberMap[usernameKey],
 		Color:     memberMap[colorKey],
-		AvatarUrl: &avatarUrl,
+		AvatarUrl: ptrfrommap.PtrFromStringMap(memberMap, avatarUrlKey),
 		IsMuted:   r.fieldToBool(memberMap[isMutedKey]),
 		IsAdmin:   r.fieldToBool(memberMap[isAdminKey]),
 		IsReady:   r.fieldToBool(memberMap[isReadyKey]),
@@ -165,7 +166,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 }
 
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, isAdmin bool) error {
-	//? maybe dont check existence because there is check on service layer that member in current room
+	//? dont check existence because there is check on service layer that member in current room
 	memberKey := r.getMemberKey(roomId, memberId)
 	cmd := r.rc.Exists(ctx, memberKey)
 	if err := cmd.Err(); err != nil {
