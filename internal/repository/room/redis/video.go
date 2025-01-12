@@ -26,20 +26,39 @@ func (r repo) getLastVideoKey(roomId string) string {
 	return fmt.Sprintf("room:%s:last-video", roomId)
 }
 
-//	func (r repo) getPlaylistVersionKey(roomId string) string {
-//		return "room:" + roomId + ":playlist-version"
-//	}
+func (r repo) getPlaylistVersionKey(roomId string) string {
+	return fmt.Sprintf("room:%s:playlist-version", roomId)
+}
 
 func (r repo) incrLastId(ctx context.Context, roomId string) (int, error) {
 	lastIdKey := r.getLastIdKey(roomId)
-	lastIdRes, err := r.rc.Incr(ctx, lastIdKey).Result()
+	lastId, err := r.rc.Incr(ctx, lastIdKey).Result()
 	if err != nil {
 		return 0, err
 	}
 
 	r.rc.Expire(ctx, lastIdKey, r.maxExpireDuration)
 
-	return int(lastIdRes), nil
+	return int(lastId), nil
+}
+
+func (r repo) incrPlaylistVersion(ctx context.Context, pipe redis.Cmdable, roomId string) (*redis.IntCmd, *redis.BoolCmd) {
+	playlistVersionKey := r.getPlaylistVersionKey(roomId)
+	return pipe.Incr(ctx, playlistVersionKey), pipe.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
+}
+
+func (r repo) GetPlaylistVersion(ctx context.Context, roomId string) (int, error) {
+	playlistVersionKey := r.getPlaylistVersionKey(roomId)
+	playlistVersion, err := r.rc.Get(ctx, playlistVersionKey).Int()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	r.rc.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
+	return playlistVersion, nil
 }
 
 func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
@@ -62,20 +81,15 @@ func (r repo) AddVideoToList(ctx context.Context, params *room.AddVideoToListPar
 	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoId)
 	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
 
+	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
+
 	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) (int, error) {
 	pipe := r.rc.TxPipeline()
 
-	// playlistVersionKey := r.getPlaylistVersionKey(params.RoomID)
-	// playlistVersion, err := r.rc.Get(ctx, playlistVersionKey).Int()
-	// fmt.Printf("playlistVersion: %d\n", playlistVersion)
-	// if err != nil {
-	// 	fmt.Printf("set video error: %v\n", err)
-	// 	return err
-	// }
-
+	// todo: use pipeline
 	videoId, err := r.incrLastId(ctx, params.RoomId)
 	if err != nil {
 		return 0, err
@@ -113,6 +127,7 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 
 func (r repo) getVideoIds(ctx context.Context, roomId string) ([]int, error) {
 	playlistKey := r.getPlaylistKey(roomId)
+	// todo: try ScanSlice
 	videoIds, err := r.rc.ZRangeByScore(ctx, playlistKey, &redis.ZRangeBy{
 		Min: "-inf",
 		Max: "+inf",
@@ -122,12 +137,11 @@ func (r repo) getVideoIds(ctx context.Context, roomId string) ([]int, error) {
 	}
 
 	r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
+
+	var idInt int
 	videoIdsInt := make([]int, 0, len(videoIds))
 	for _, id := range videoIds {
-		idInt, err := strconv.Atoi(id)
-		if err != nil {
-			return nil, err
-		}
+		idInt, _ = strconv.Atoi(id)
 		videoIdsInt = append(videoIdsInt, idInt)
 	}
 
@@ -163,16 +177,25 @@ func (r repo) ReorderList(ctx context.Context, params *room.ReorderListParams) e
 
 	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
 
+	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
+
 	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoFromListParams) error {
-	res, err := r.rc.ZRem(ctx, r.getPlaylistKey(params.RoomId), params.VideoId).Result()
-	if err != nil {
+	pipe := r.rc.TxPipeline()
+
+	playlistKey := r.getPlaylistKey(params.RoomId)
+	remCmd := pipe.ZRem(ctx, playlistKey, params.VideoId)
+	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
+
+	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
+
+	if err := r.executePipe(ctx, pipe); err != nil {
 		return err
 	}
 
-	if res == 0 {
+	if remCmd.Val() == 0 {
 		return room.ErrVideoNotFound
 	}
 
@@ -212,7 +235,16 @@ func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistPar
 	}
 
 	if !res {
-		return room.ErrPlaylistNotFound
+		return errors.New("last video id not found")
+	}
+
+	res, err = r.rc.ExpireAt(ctx, r.getPlaylistVersionKey(params.RoomId), params.ExpireAt).Result()
+	if err != nil {
+		return err
+	}
+
+	if !res {
+		return errors.New("playlist version not found")
 	}
 
 	return nil
@@ -225,6 +257,7 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*int, error) {
 		if err == redis.Nil {
 			return nil, nil
 		}
+
 		return nil, err
 	}
 
@@ -234,9 +267,15 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*int, error) {
 }
 
 func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams) error {
-	lastVideoKey := r.getLastVideoKey(params.RoomId)
+	pipe := r.rc.TxPipeline()
 
-	return r.rc.Set(ctx, lastVideoKey, params.VideoId, r.maxExpireDuration).Err()
+	lastVideoKey := r.getLastVideoKey(params.RoomId)
+	pipe.Set(ctx, lastVideoKey, params.VideoId, r.maxExpireDuration)
+	pipe.Expire(ctx, lastVideoKey, r.maxExpireDuration)
+
+	r.incrPlaylistVersion(ctx, pipe, params.RoomId)
+
+	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) ExpireLastVideo(ctx context.Context, params *room.ExpireLastVideoParams) error {

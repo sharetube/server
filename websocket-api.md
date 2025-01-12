@@ -211,7 +211,8 @@ null
       "last_video_id": {
         "id": "[string]",
         "url": "[string]"
-      }
+      },
+      "version": "[number]"
     },
     "members": [
       {
@@ -273,7 +274,8 @@ null
     "last_video": {
       "id": "[string]",
       "url": "[string]"
-    }
+    },
+    "version": "[number]"
   },
   "members": [
     {
@@ -311,7 +313,8 @@ null
     "last_video": {
       "id": "[string]",
       "url": "[string]"
-    }
+    },
+    "version": "[number]"
   }
 }
 ```
@@ -335,7 +338,8 @@ null
     "last_video": {
       "id": "[string]",
       "url": "[string]"
-    }
+    },
+    "version": "[number]"
   }
 }
 ```
@@ -358,7 +362,8 @@ null
     "last_video_id": {
       "id": "[string]",
       "url": "[string]"
-    }
+    },
+    "version": "[number]"
   }
 }
 ```

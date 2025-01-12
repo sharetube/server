@@ -39,7 +39,7 @@ func (r repo) omitPointers(fields map[string]interface{}) map[string]interface{}
 }
 
 func (r repo) fieldToBool(field string) bool {
-	return field == "1"
+	return field != "0"
 }
 
 func (r repo) fieldToInt(field string) int {

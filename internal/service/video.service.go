@@ -45,9 +45,15 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (Playlist, erro
 		return Playlist{}, err
 	}
 
+	version, err := s.roomRepo.GetPlaylistVersion(ctx, roomId)
+	if err != nil {
+		return Playlist{}, fmt.Errorf("failed to get playlist version: %w", err)
+	}
+
 	return Playlist{
 		Videos:    videos,
 		LastVideo: lastVideo,
+		Version:   version,
 	}, nil
 }
 

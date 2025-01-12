@@ -8,14 +8,6 @@ import (
 	"github.com/sharetube/server/internal/repository/room"
 )
 
-func (r repo) getMemberKey(roomId, memberId string) string {
-	return fmt.Sprintf("room:%s:member:%s", roomId, memberId)
-}
-
-func (r repo) getMemberListKey(roomId string) string {
-	return fmt.Sprintf("room:%s:memberlist", roomId)
-}
-
 const (
 	usernameKey  = "username"
 	colorKey     = "color"
@@ -24,6 +16,14 @@ const (
 	isAdminKey   = "is_admin"
 	isReadyKey   = "is_ready"
 )
+
+func (r repo) getMemberKey(roomId, memberId string) string {
+	return fmt.Sprintf("room:%s:member:%s", roomId, memberId)
+}
+
+func (r repo) getMemberListKey(roomId string) string {
+	return fmt.Sprintf("room:%s:memberlist", roomId)
+}
 
 func (r repo) addMemberToList(ctx context.Context, pipe redis.Cmdable, roomId, memberId string) {
 	memberListKey := r.getMemberListKey(roomId)
