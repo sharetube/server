@@ -42,12 +42,12 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, err
 
 	lastVideo, err := s.getLastVideo(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get last video: %w", err)
 	}
 
 	version, err := s.roomRepo.GetPlaylistVersion(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get playlist version: %w", err)
 	}
 
 	return &Playlist{
@@ -65,12 +65,12 @@ func (s service) getPlaylistWithIncrVersion(ctx context.Context, roomId string) 
 
 	videos, err := s.getVideos(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get videos: %w", err)
 	}
 
 	lastVideo, err := s.getLastVideo(ctx, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get last video: %w", err)
 	}
 
 	return &Playlist{
@@ -157,12 +157,12 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, err
+		return AddVideoResponse{}, fmt.Errorf("failed to get playlist with incr version: %w", err)
 	}
 
 	return AddVideoResponse{
@@ -214,12 +214,12 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (Re
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, err
+		return RemoveVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, err
+		return RemoveVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return RemoveVideoResponse{
@@ -260,12 +260,12 @@ func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistPar
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return ReorderPlaylistResponse{}, err
+		return ReorderPlaylistResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return ReorderPlaylistResponse{}, err
+		return ReorderPlaylistResponse{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return ReorderPlaylistResponse{

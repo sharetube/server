@@ -80,12 +80,12 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get member ids: %w", err)
 	}
 
 	conns, err := s.getConnsFromMemberIds(ctx, memberIds)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, err
+		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns from member ids: %w", err)
 	}
 
 	return UpdatePlayerStateResponse{
@@ -218,7 +218,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get playlist with incr version: %w", err)
 	}
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
@@ -234,7 +234,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 
 	members, err := s.mapMembers(ctx, params.RoomId, memberIds)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to map members: %w", err)
 	}
 
 	conns := make([]*websocket.Conn, 0, len(memberIds))

@@ -177,13 +177,13 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	jwt := params.JWT
 	member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get member by jwt: %w", err)
 	}
 
 	if member == nil {
@@ -256,7 +256,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("failed to get members: %w", err)
 	}
 	return JoinRoomResponse{
 		JWT:          jwt,
@@ -282,12 +282,12 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, roomId)
 	if err != nil {
-		return Room{}, err
+		return Room{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	return Room{
