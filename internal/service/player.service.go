@@ -123,14 +123,13 @@ type UpdatePlayerVideoResponse struct {
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.VideoId, VideoIdRule...),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
 
-	// todo: move upper
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoId, VideoIdRule...),
+	); err != nil {
 		return UpdatePlayerVideoResponse{}, err
 	}
 
@@ -150,18 +149,6 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		}
 
 		// compare last video id with params.VideoId
-		// if lastVideoId != nil && *lastVideoId == params.VideoId {
-		// 	//? redundant
-		// 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
-		// 		VideoId: params.VideoId,
-		// 		RoomId:  params.RoomId,
-		// 	}); err != nil {
-		// 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
-		// 	}
-		// } else {
-		// 	return UpdatePlayerVideoResponse{}, errors.New("video is not found")
-		// }
-
 		if lastVideoId == nil || *lastVideoId != params.VideoId {
 			return UpdatePlayerVideoResponse{}, errors.New("video is not found")
 		}

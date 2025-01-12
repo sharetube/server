@@ -61,13 +61,13 @@ type RemoveMemberResponse struct {
 }
 
 func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (RemoveMemberResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.RemovedMemberId, MemberIdRule...),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveMemberResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.RemovedMemberId, MemberIdRule...),
+	); err != nil {
 		return RemoveMemberResponse{}, err
 	}
 
@@ -121,13 +121,13 @@ type PromoteMemberResponse struct {
 }
 
 func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams) (PromoteMemberResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.PromotedMemberId, MemberIdRule...),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return PromoteMemberResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.PromotedMemberId, MemberIdRule...),
+	); err != nil {
 		return PromoteMemberResponse{}, err
 	}
 

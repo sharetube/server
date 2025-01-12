@@ -120,13 +120,13 @@ type AddVideoResponse struct {
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.VideoUrl, VideoUrlRule...),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return AddVideoResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoUrl, VideoUrlRule...),
+	); err != nil {
 		return AddVideoResponse{}, err
 	}
 
@@ -188,13 +188,13 @@ type RemoveVideoResponse struct {
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.VideoId, VideoIdRule...),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return RemoveVideoResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoId, VideoIdRule...),
+	); err != nil {
 		return RemoveVideoResponse{}, err
 	}
 
@@ -241,13 +241,13 @@ type ReorderPlaylistResponse struct {
 }
 
 func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (ReorderPlaylistResponse, error) {
-	if err := validation.ValidateStructWithContext(ctx, params,
-		validation.Field(&params.VideoIds, validation.Each(VideoIdRule...)),
-	); err != nil {
+	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return ReorderPlaylistResponse{}, err
 	}
 
-	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
+	if err := validation.ValidateStructWithContext(ctx, params,
+		validation.Field(&params.VideoIds, validation.Each(VideoIdRule...)),
+	); err != nil {
 		return ReorderPlaylistResponse{}, err
 	}
 
