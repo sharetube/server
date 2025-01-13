@@ -94,7 +94,7 @@ null
 
 ```json
 {
-  "video_id": "[string]"
+  "video_id": "[number]"
 }
 ```
 </td>
@@ -107,7 +107,7 @@ null
 ```json
 {
   "video_ids": [
-    "[string]"
+    "[number]"
   ],
 }
 ```
@@ -160,7 +160,7 @@ null
 
 ```json
 {
-  "video_id": "[string]",
+  "video_id": "[number]",
   "updated_at": "[number]"
 }
 ```
@@ -196,7 +196,7 @@ null
     "player": {
       "video_url": "[string]",
       "playback_rate": "[number]",
-      "is_playing": "[boolean]"
+      "is_playing": "[boolean]",
       "is_ended": "[boolean]",
       "current_time": "[number]",
       "updated_at": "[number]"
@@ -204,12 +204,12 @@ null
     "playlist": {
       "videos": [
         {
-          "id": "[string]",
+          "id": "[number]",
           "url": "[string]"
         }
       ],
-      "last_video_id": {
-        "id": "[string]",
+      "last_video": {
+        "id": "[number]",
         "url": "[string]"
       },
       "version": "[number]"
@@ -267,12 +267,12 @@ null
   "playlist": {
     "videos": [
       {
-        "id": "[string]",
+        "id": "[number]",
         "url": "[string]"
       }
     ],
     "last_video": {
-      "id": "[string]",
+      "id": "[number]",
       "url": "[string]"
     },
     "version": "[number]"
@@ -300,18 +300,18 @@ null
 ```json
 {
   "added_video": {
-    "id": "[string]",
+    "id": "[number]",
     "url": "[string]"
   },
   "playlist": {
     "videos": [
       {
-        "id": "[string]",
+        "id": "[number]",
         "url": "[string]"
       }
     ],
     "last_video": {
-      "id": "[string]",
+      "id": "[number]",
       "url": "[string]"
     },
     "version": "[number]"
@@ -327,16 +327,16 @@ null
 
 ```json
 {
-  "removed_video_id": "[string]",
+  "removed_video_id": "[number]",
   "playlist": {
     "videos": [
       {
-        "id": "[string]",
+        "id": "[number]",
         "url": "[string]"
       }
     ],
     "last_video": {
-      "id": "[string]",
+      "id": "[number]",
       "url": "[string]"
     },
     "version": "[number]"
@@ -355,12 +355,12 @@ null
   "playlist": {
     "videos": [
       {
-        "id": "[string]",
+        "id": "[number]",
         "url": "[string]"
       }
     ],
     "last_video_id": {
-      "id": "[string]",
+      "id": "[number]",
       "url": "[string]"
     },
     "version": "[number]"
