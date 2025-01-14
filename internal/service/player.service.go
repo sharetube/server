@@ -42,10 +42,15 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		}
 	}
 
-	isPlaying := params.IsPlaying && !player.WaitingForReady
-	if player.IsPlaying != isPlaying {
-		if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, isPlaying); err != nil {
+	if player.IsPlaying != params.IsPlaying {
+		if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, params.IsPlaying); err != nil {
 			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+		}
+	}
+
+	if player.WaitingForReady {
+		if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, false); err != nil {
+			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
 		}
 	}
 
@@ -218,8 +223,7 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
 	}
 
-	waitingForReady := true
-	if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, waitingForReady); err != nil {
+	if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, true); err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
 	}
 
