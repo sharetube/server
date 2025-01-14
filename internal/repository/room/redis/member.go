@@ -96,6 +96,7 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 	return r.removeMember(ctx, params.RoomId, params.MemberId)
 }
 
+// ? remove
 func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
 	res, err := r.rc.ExpireAt(ctx, r.getMemberKey(params.RoomId, params.MemberId), params.ExpireAt).Result()
 	if err != nil {
@@ -106,6 +107,11 @@ func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams)
 		return room.ErrMemberNotFound
 	}
 
+	return nil
+}
+
+func (r repo) ExpireMembers(ctx context.Context, params *room.ExpireMembersParams) error {
+	r.expireKeysWithPrefix(ctx, r.rc, r.getMemberKey(params.RoomId, "*"), params.ExpireAt)
 	return nil
 }
 

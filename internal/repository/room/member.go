@@ -43,6 +43,11 @@ type ExpireMemberParams struct {
 	ExpireAt time.Time
 }
 
+type ExpireMembersParams struct {
+	RoomId   string
+	ExpireAt time.Time
+}
+
 type RemoveMemberFromListParams struct {
 	MemberId string
 	RoomId   string

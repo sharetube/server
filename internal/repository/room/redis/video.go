@@ -225,32 +225,18 @@ func (r repo) ExpireVideo(ctx context.Context, params *room.ExpireVideoParams) e
 	return nil
 }
 
+// todo: refactor
 func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistParams) error {
-	res, err := r.rc.ExpireAt(ctx, r.getPlaylistKey(params.RoomId), params.ExpireAt).Result()
-	if err != nil {
+	if _, err := r.rc.ExpireAt(ctx, r.getPlaylistKey(params.RoomId), params.ExpireAt).Result(); err != nil {
 		return err
 	}
 
-	if !res {
-		return room.ErrPlaylistNotFound
-	}
-
-	res, err = r.rc.ExpireAt(ctx, r.getLastIdKey(params.RoomId), params.ExpireAt).Result()
-	if err != nil {
+	if _, err := r.rc.ExpireAt(ctx, r.getLastIdKey(params.RoomId), params.ExpireAt).Result(); err != nil {
 		return err
 	}
 
-	if !res {
-		return room.ErrLastVideoIdNotFound
-	}
-
-	res, err = r.rc.ExpireAt(ctx, r.getPlaylistVersionKey(params.RoomId), params.ExpireAt).Result()
-	if err != nil {
+	if _, err := r.rc.ExpireAt(ctx, r.getPlaylistVersionKey(params.RoomId), params.ExpireAt).Result(); err != nil {
 		return err
-	}
-
-	if !res {
-		return room.ErrPlaylistVersionNotFound
 	}
 
 	return nil
