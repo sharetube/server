@@ -71,18 +71,18 @@ func (s service) RemoveMember(ctx context.Context, params *RemoveMemberParams) (
 		return RemoveMemberResponse{}, err
 	}
 
-	if err := s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
-		MemberId: params.RemovedMemberId,
-		RoomId:   params.RoomId,
-	}); err != nil {
-		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
-	}
-
 	if err := s.roomRepo.RemoveMemberFromList(ctx, &room.RemoveMemberFromListParams{
 		MemberId: params.RemovedMemberId,
 		RoomId:   params.RoomId,
 	}); err != nil {
 		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member from list: %w", err)
+	}
+
+	if err := s.roomRepo.RemoveMember(ctx, &room.RemoveMemberParams{
+		MemberId: params.RemovedMemberId,
+		RoomId:   params.RoomId,
+	}); err != nil {
+		return RemoveMemberResponse{}, fmt.Errorf("failed to remove member: %w", err)
 	}
 
 	conn, err := s.connRepo.RemoveByMemberId(params.RemovedMemberId)
@@ -131,6 +131,7 @@ func (s service) PromoteMember(ctx context.Context, params *PromoteMemberParams)
 		return PromoteMemberResponse{}, err
 	}
 
+	//? check that member is in list (maybe he was, but disconnected)
 	member, err := s.roomRepo.GetMember(ctx, &room.GetMemberParams{
 		MemberId: params.PromotedMemberId,
 		RoomId:   params.RoomId,
@@ -215,13 +216,14 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 
 	expireAt := time.Now().Add(s.roomExp)
 
-	if err := s.roomRepo.ExpireMember(ctx, &room.ExpireMemberParams{
-		MemberId: params.MemberId,
-		RoomId:   params.RoomId,
-		ExpireAt: expireAt,
-	}); err != nil {
-		return DisconnectMemberResponse{}, fmt.Errorf("failed to expire member: %w", err)
-	}
+	//?
+	// if err := s.roomRepo.ExpireMember(ctx, &room.ExpireMemberParams{
+	// 	MemberId: params.MemberId,
+	// 	RoomId:   params.RoomId,
+	// 	ExpireAt: expireAt,
+	// }); err != nil {
+	// 	return DisconnectMemberResponse{}, fmt.Errorf("failed to expire member: %w", err)
+	// }
 
 	if _, err := s.connRepo.RemoveByMemberId(params.MemberId); err != nil {
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to remove conn: %w", err)
@@ -263,6 +265,13 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 			}); err != nil {
 				return DisconnectMemberResponse{}, fmt.Errorf("failed to expire video: %w", err)
 			}
+		}
+
+		if err := s.roomRepo.ExpireMembers(ctx, &room.ExpireMembersParams{
+			RoomId:   params.RoomId,
+			ExpireAt: expireAt,
+		}); err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire members: %w", err)
 		}
 
 		if err := s.roomRepo.ExpirePlayer(ctx, &room.ExpirePlayerParams{

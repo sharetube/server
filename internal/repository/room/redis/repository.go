@@ -8,9 +8,10 @@ import (
 )
 
 type repo struct {
-	rc                *redis.Client
-	maxScoreScript    string
-	maxExpireDuration time.Duration
+	rc                         *redis.Client
+	maxScoreScript             string
+	expireKeysWithPrefixScript string
+	maxExpireDuration          time.Duration
 }
 
 func NewRepo(rc *redis.Client, maxExpireDuration time.Duration) *repo {
@@ -24,6 +25,25 @@ func NewRepo(rc *redis.Client, maxExpireDuration time.Duration) *repo {
 			end
 			redis.call('ZADD', KEYS[1], nextScore, ARGV[1])
 			return nextScore
+		`).Val(),
+		expireKeysWithPrefixScript: rc.ScriptLoad(context.Background(), `
+			local pattern = ARGV[1]
+			local timestamp = ARGV[2]
+			local cursor = "0"
+			local count = 0
+
+			repeat
+				local result = redis.call('SCAN', cursor, 'MATCH', pattern)
+				cursor = result[1]
+				local keys = result[2]
+
+				for i, key in ipairs(keys) do
+					redis.call('EXPIREAT', key, timestamp)
+					count = count + 1
+				end
+			until cursor == "0"
+
+			return count
 		`).Val(),
 		maxExpireDuration: maxExpireDuration,
 	}

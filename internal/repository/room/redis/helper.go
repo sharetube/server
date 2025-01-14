@@ -3,12 +3,19 @@ package redis
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
+// todo: handle error
 func (r repo) addWithIncrement(ctx context.Context, c redis.Cmdable, key string, value interface{}) {
 	c.EvalSha(ctx, r.maxScoreScript, []string{key}, value)
+}
+
+// todo: handle error
+func (r repo) expireKeysWithPrefix(ctx context.Context, c redis.Cmdable, pattern string, expireAt time.Time) {
+	c.EvalSha(ctx, r.expireKeysWithPrefixScript, []string{}, pattern, expireAt.Unix())
 }
 
 func (r repo) executePipe(ctx context.Context, pipe redis.Pipeliner) error {
