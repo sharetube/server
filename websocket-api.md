@@ -1,4 +1,4 @@
-# WebSocket API Reference
+ WebSocket API Reference
 
 ## Connection
 Create room: `/api/v1/ws/room/create?username=<required>&color=<required>&avatar-url=<optional>&video-url=<required>`
@@ -205,12 +205,18 @@ null
       "videos": [
         {
           "id": "[number]",
-          "url": "[string]"
+          "url": "[string]",
+          "title": "[string]",
+          "author_name": "[string]",
+          "thumbnail_url": "[string]"
         }
       ],
       "last_video": {
         "id": "[number]",
-        "url": "[string]"
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
       },
       "version": "[number]"
     },
@@ -268,12 +274,18 @@ null
     "videos": [
       {
         "id": "[number]",
-        "url": "[string]"
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
       }
     ],
     "last_video": {
       "id": "[number]",
-      "url": "[string]"
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
     },
     "version": "[number]"
   },
@@ -307,12 +319,18 @@ null
     "videos": [
       {
         "id": "[number]",
-        "url": "[string]"
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
       }
     ],
     "last_video": {
       "id": "[number]",
-      "url": "[string]"
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
     },
     "version": "[number]"
   }
@@ -332,12 +350,18 @@ null
     "videos": [
       {
         "id": "[number]",
-        "url": "[string]"
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
       }
     ],
     "last_video": {
       "id": "[number]",
-      "url": "[string]"
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
     },
     "version": "[number]"
   }
@@ -356,12 +380,18 @@ null
     "videos": [
       {
         "id": "[number]",
-        "url": "[string]"
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
       }
     ],
     "last_video_id": {
       "id": "[number]",
-      "url": "[string]"
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
     },
     "version": "[number]"
   }

@@ -7,6 +7,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
+	"github.com/sharetube/server/pkg/ytvideodata"
 )
 
 func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) {
@@ -26,8 +27,11 @@ func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) 
 		}
 
 		playlist = append(playlist, Video{
-			Id:  videoId,
-			Url: video.Url,
+			Id:           videoId,
+			Url:          video.Url,
+			Title:        video.Title,
+			AuthorName:   video.AuthorName,
+			ThumbnailUrl: video.ThumbnailUrl,
 		})
 	}
 
@@ -102,8 +106,11 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 	}
 
 	return &Video{
-		Id:  *lastVideoId,
-		Url: video.Url,
+		Id:           *lastVideoId,
+		Url:          video.Url,
+		Title:        video.Title,
+		AuthorName:   video.AuthorName,
+		ThumbnailUrl: video.ThumbnailUrl,
 	}, nil
 }
 
@@ -130,6 +137,11 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, err
 	}
 
+	videoData, err := ytvideodata.Get(params.VideoUrl)
+	if err != nil {
+		return AddVideoResponse{}, fmt.Errorf("failed to get video data: %w", err)
+	}
+
 	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomId)
 	if err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to get videos length: %w", err)
@@ -140,8 +152,11 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		RoomId: params.RoomId,
-		Url:    params.VideoUrl,
+		RoomId:       params.RoomId,
+		Url:          params.VideoUrl,
+		Title:        videoData.Title,
+		ThumbnailUrl: videoData.ThumbnailUrl,
+		AuthorName:   videoData.AuthorName,
 	})
 	if err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
@@ -150,7 +165,6 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	if err := s.roomRepo.AddVideoToList(ctx, &room.AddVideoToListParams{
 		RoomId:  params.RoomId,
 		VideoId: videoId,
-		Url:     params.VideoUrl,
 	}); err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to add video to list: %w", err)
 	}
@@ -167,8 +181,11 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 
 	return AddVideoResponse{
 		AddedVideo: Video{
-			Id:  videoId,
-			Url: params.VideoUrl,
+			Id:           videoId,
+			Url:          params.VideoUrl,
+			Title:        videoData.Title,
+			ThumbnailUrl: videoData.ThumbnailUrl,
+			AuthorName:   videoData.AuthorName,
 		},
 		Conns:    conns,
 		Playlist: *playlist,

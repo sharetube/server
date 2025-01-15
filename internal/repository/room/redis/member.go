@@ -48,6 +48,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 	}))
 	pipe.Expire(ctx, memberKey, r.maxExpireDuration)
 
+	// todo: move in separate function
 	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
 
 	return r.executePipe(ctx, pipe)

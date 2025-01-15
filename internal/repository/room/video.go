@@ -3,7 +3,10 @@ package room
 import "time"
 
 type Video struct {
-	Url string
+	Url          string
+	Title        string
+	AuthorName   string
+	ThumbnailUrl string
 }
 
 type RemoveVideoParams struct {
@@ -30,13 +33,14 @@ type ExpirePlaylistParams struct {
 type AddVideoToListParams struct {
 	RoomId  string
 	VideoId int
-	Url     string
 }
 
 type SetVideoParams struct {
-	RoomId string
-	Url    string
-	// Version   int
+	RoomId       string
+	Url          string
+	Title        string
+	AuthorName   string
+	ThumbnailUrl string
 }
 
 type SetLastVideoParams struct {

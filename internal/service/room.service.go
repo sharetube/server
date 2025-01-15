@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
+	"github.com/sharetube/server/pkg/ytvideodata"
 )
 
 func (s service) getConnsFromMemberIds(_ context.Context, memberIds []string) ([]*websocket.Conn, error) {
@@ -57,6 +58,11 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		return nil, err
 	}
 
+	videoData, err := ytvideodata.Get(params.InitialVideoUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get video data: %w", err)
+	}
+
 	roomId := s.generator.GenerateRandomString(8)
 
 	memberId := uuid.NewString()
@@ -80,8 +86,11 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 	}
 
 	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
-		RoomId: roomId,
-		Url:    params.InitialVideoUrl,
+		RoomId:       roomId,
+		Url:          params.InitialVideoUrl,
+		Title:        videoData.Title,
+		ThumbnailUrl: videoData.ThumbnailUrl,
+		AuthorName:   videoData.AuthorName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to set video: %w", err)

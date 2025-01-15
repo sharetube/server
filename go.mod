@@ -13,6 +13,7 @@ require (
 	github.com/skewb1k/goutils v0.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
+	golang.org/x/net v0.23.0
 )
 
 require (

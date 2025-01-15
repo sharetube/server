@@ -8,6 +8,14 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
+	"github.com/skewb1k/goutils/maps"
+)
+
+const (
+	urlKey          = "url"
+	titleKey        = "title"
+	authorNameKey   = "author_name"
+	thumbnailUrlKey = "thumbnail_url"
 )
 
 func (r repo) getVideoKey(roomId string, videoId int) string {
@@ -106,7 +114,13 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) (int, e
 	}
 
 	videoKey := r.getVideoKey(params.RoomId, videoId)
-	pipe.SetNX(ctx, videoKey, params.Url, r.maxExpireDuration)
+
+	pipe.HSet(ctx, videoKey, maps.OmitNilPointers(map[string]any{
+		urlKey:          params.Url,
+		titleKey:        params.Title,
+		authorNameKey:   params.AuthorName,
+		thumbnailUrlKey: params.ThumbnailUrl,
+	}))
 	pipe.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
@@ -119,19 +133,22 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) (int, e
 func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.Video, error) {
 	videoKey := r.getVideoKey(params.RoomId, params.VideoId)
 
-	videoUrl, err := r.rc.Get(ctx, videoKey).Result()
+	videoMap, err := r.rc.HGetAll(ctx, videoKey).Result()
 	if err != nil {
 		return room.Video{}, err
 	}
 
-	if videoUrl == "" {
-		return room.Video{}, room.ErrVideoNotFound
+	if len(videoMap) == 0 {
+		return room.Video{}, room.ErrMemberNotFound
 	}
 
 	r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	return room.Video{
-		Url: videoUrl,
+		Url:          videoMap[urlKey],
+		Title:        videoMap[titleKey],
+		AuthorName:   videoMap[authorNameKey],
+		ThumbnailUrl: videoMap[thumbnailUrlKey],
 	}, nil
 }
 

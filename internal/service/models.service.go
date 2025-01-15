@@ -1,8 +1,11 @@
 package service
 
 type Video struct {
-	Id  int    `json:"id"`
-	Url string `json:"url"`
+	Id           int    `json:"id"`
+	Url          string `json:"url"`
+	Title        string `json:"title"`
+	AuthorName   string `json:"author_name"`
+	ThumbnailUrl string `json:"thumbnail_url"`
 }
 
 type Member struct {
