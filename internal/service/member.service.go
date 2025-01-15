@@ -201,9 +201,10 @@ type DisconnectMemberParams struct {
 }
 
 type DisconnectMemberResponse struct {
-	Conns         []*websocket.Conn
-	Members       []Member
-	IsRoomDeleted bool
+	Conns              []*websocket.Conn
+	Members            []Member
+	PromotedMemberConn *websocket.Conn
+	IsRoomDeleted      bool
 }
 
 func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberParams) (DisconnectMemberResponse, error) {
@@ -307,6 +308,21 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
 		return DisconnectMemberResponse{}, fmt.Errorf("failed to get conns: %w", err)
+	}
+
+	// promote single left member to admin
+	if len(members) == 1 && !members[0].IsAdmin {
+		if err := s.roomRepo.UpdateMemberIsAdmin(ctx, params.RoomId, members[0].Id, true); err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to update member is admin: %w", err)
+		}
+		members[0].IsAdmin = true
+
+		return DisconnectMemberResponse{
+			PromotedMemberConn: conns[0],
+			Conns:              conns,
+			Members:            members,
+			IsRoomDeleted:      false,
+		}, nil
 	}
 
 	return DisconnectMemberResponse{

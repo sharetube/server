@@ -116,6 +116,17 @@ func (c controller) helperDisconn(ctx context.Context, roomId string, memberId s
 	}
 
 	if !disconnectMemberResp.IsRoomDeleted {
+		if disconnectMemberResp.PromotedMemberConn != nil {
+			if err := c.writeToConn(ctx, disconnectMemberResp.PromotedMemberConn, &Output{
+				Type: "IS_ADMIN_UPDATED",
+				Payload: map[string]any{
+					//?
+					"is_admin": true,
+				},
+			}); err != nil {
+				return fmt.Errorf("failed to write to conn: %w", err)
+			}
+		}
 		if err := c.broadcast(ctx, disconnectMemberResp.Conns, &Output{
 			Type: "MEMBER_DISCONNECTED",
 			Payload: map[string]any{
