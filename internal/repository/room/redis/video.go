@@ -34,6 +34,10 @@ func (r repo) getLastVideoKey(roomId string) string {
 	return fmt.Sprintf("room:%s:last-video", roomId)
 }
 
+func (r repo) getCurrentVideoKey(roomId string) string {
+	return fmt.Sprintf("room:%s:current-video", roomId)
+}
+
 func (r repo) getPlaylistVersionKey(roomId string) string {
 	return fmt.Sprintf("room:%s:playlist-version", roomId)
 }
@@ -252,6 +256,10 @@ func (r repo) ExpirePlaylist(ctx context.Context, params *room.ExpirePlaylistPar
 		return err
 	}
 
+	if _, err := r.rc.ExpireAt(ctx, r.getCurrentVideoKey(params.RoomId), params.ExpireAt).Result(); err != nil {
+		return err
+	}
+
 	if _, err := r.rc.ExpireAt(ctx, r.getPlaylistVersionKey(params.RoomId), params.ExpireAt).Result(); err != nil {
 		return err
 	}
@@ -275,6 +283,7 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*int, error) {
 	return &lastVideoId, nil
 }
 
+// todo: rename
 func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams) error {
 	pipe := r.rc.TxPipeline()
 
@@ -295,4 +304,31 @@ func (r repo) ExpireLastVideo(ctx context.Context, params *room.ExpireLastVideoP
 		return room.ErrLastVideoNotFound
 	}
 	return nil
+}
+
+// todo: return not pointer
+func (r repo) GetCurrentVideoId(ctx context.Context, roomId string) (*int, error) {
+	currentVideoKey := r.getCurrentVideoKey(roomId)
+	currentVideoId, err := r.rc.Get(ctx, currentVideoKey).Int()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	r.rc.Expire(ctx, currentVideoKey, r.maxExpireDuration)
+
+	return &currentVideoId, nil
+}
+
+func (r repo) SetCurrentVideoId(ctx context.Context, params *room.SetCurrentVideoParams) error {
+	pipe := r.rc.TxPipeline()
+
+	currentVideoKey := r.getCurrentVideoKey(params.RoomId)
+	pipe.Set(ctx, currentVideoKey, params.VideoId, r.maxExpireDuration)
+	pipe.Expire(ctx, currentVideoKey, r.maxExpireDuration)
+
+	return r.executePipe(ctx, pipe)
 }

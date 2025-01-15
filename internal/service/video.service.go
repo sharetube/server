@@ -49,15 +49,21 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, err
 		return nil, fmt.Errorf("failed to get last video: %w", err)
 	}
 
+	currentVideo, err := s.getCurrentVideo(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current video: %w", err)
+	}
+
 	version, err := s.roomRepo.GetPlaylistVersion(ctx, roomId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get playlist version: %w", err)
 	}
 
 	return &Playlist{
-		Videos:    videos,
-		LastVideo: lastVideo,
-		Version:   version,
+		Videos:       videos,
+		LastVideo:    lastVideo,
+		CurrentVideo: *currentVideo,
+		Version:      version,
 	}, nil
 }
 
@@ -77,10 +83,46 @@ func (s service) getPlaylistWithIncrVersion(ctx context.Context, roomId string) 
 		return nil, fmt.Errorf("failed to get last video: %w", err)
 	}
 
+	currentVideo, err := s.getCurrentVideo(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current video: %w", err)
+	}
+
 	return &Playlist{
-		Videos:    videos,
-		LastVideo: lastVideo,
-		Version:   playlistVersion,
+		Videos:       videos,
+		LastVideo:    lastVideo,
+		CurrentVideo: *currentVideo,
+		Version:      playlistVersion,
+	}, nil
+}
+
+func (s service) getCurrentVideo(ctx context.Context, roomId string) (*Video, error) {
+	currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current video id: %w", err)
+	}
+
+	if currentVideoId == nil {
+		return nil, nil
+	}
+
+	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+		RoomId:  roomId,
+		VideoId: *currentVideoId,
+	})
+	if err != nil {
+		if err == room.ErrVideoNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get video: %w", err)
+	}
+
+	return &Video{
+		Id:           *currentVideoId,
+		Url:          video.Url,
+		Title:        video.Title,
+		AuthorName:   video.AuthorName,
+		ThumbnailUrl: video.ThumbnailUrl,
 	}, nil
 }
 

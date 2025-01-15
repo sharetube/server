@@ -96,8 +96,14 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		return nil, fmt.Errorf("failed to set video: %w", err)
 	}
 
+	if err := s.roomRepo.SetCurrentVideoId(ctx, &room.SetCurrentVideoParams{
+		VideoId: videoId,
+		RoomId:  roomId,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to set current video id: %w", err)
+	}
+
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
-		VideoId:         videoId,
 		IsPlaying:       s.getDefaultPlayerIsPlaying(),
 		IsEnded:         s.getDefaultPlayerIsEnded(),
 		WaitingForReady: s.getDefaultPlayerWaitingForReady(),
@@ -200,8 +206,8 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}
 
 	if member == nil {
-		// check if room exists
-		_, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
+		//? check if room exists
+		_, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 		if err != nil {
 			return JoinRoomResponse{}, errors.New("room not found")
 		}
@@ -285,14 +291,6 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		return Room{}, fmt.Errorf("failed to get player: %w", err)
 	}
 
-	currentVideo, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		VideoId: player.VideoId,
-		RoomId:  roomId,
-	})
-	if err != nil {
-		return Room{}, fmt.Errorf("failed to get current video: %w", err)
-	}
-
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
 		return Room{}, fmt.Errorf("failed to get members: %w", err)
@@ -306,7 +304,6 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 	return Room{
 		Id: roomId,
 		Player: Player{
-			VideoUrl:     currentVideo.Url,
 			IsPlaying:    player.IsPlaying,
 			IsEnded:      player.IsEnded,
 			CurrentTime:  player.CurrentTime,

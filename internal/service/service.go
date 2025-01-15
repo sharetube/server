@@ -51,14 +51,14 @@ type iRoomRepo interface {
 	GetLastVideoId(context.Context, string) (*int, error)
 	ReorderList(context.Context, *room.ReorderListParams) error
 	AddVideoToList(context.Context, *room.AddVideoToListParams) error
+	SetCurrentVideoId(context.Context, *room.SetCurrentVideoParams) error
+	GetCurrentVideoId(context.Context, string) (*int, error)
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
 	IsPlayerExists(context.Context, string) (bool, error)
-	GetPlayerVideoId(context.Context, string) (int, error)
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
-	UpdatePlayerVideoId(ctx context.Context, roomId string, videoId int) error
 	UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error
 	UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error
 	UpdatePlayerIsEnded(ctx context.Context, roomId string, isEnded bool) error

@@ -251,12 +251,12 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 			videoIds = append(videoIds, *lastVideoId)
 		}
 
-		playerVideoId, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
+		playerVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 		if err != nil {
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to get player video id: %w", err)
 		}
 
-		videoIds = append(videoIds, playerVideoId)
+		videoIds = append(videoIds, *playerVideoId)
 
 		for _, videoId := range videoIds {
 			if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{
@@ -519,20 +519,11 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 					return UpdateIsReadyResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
 				}
 
-				video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-					VideoId: player.VideoId,
-					RoomId:  params.RoomId,
-				})
-				if err != nil {
-					return UpdateIsReadyResponse{}, fmt.Errorf("failed to get video: %w", err)
-				}
-
 				return UpdateIsReadyResponse{
 					Conns:         conns,
 					UpdatedMember: updatedMember,
 					Members:       members,
 					Player: &Player{
-						VideoUrl:     video.Url,
 						IsPlaying:    player.IsPlaying,
 						IsEnded:      player.IsEnded,
 						CurrentTime:  player.CurrentTime,

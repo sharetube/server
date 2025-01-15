@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	videoIdKey         = "video_id"
 	isPlayingKey       = "is_playing"
 	waitingForReadyKey = "waiting_for_ready"
 	isEndedKey         = "is_ended"
@@ -26,7 +25,6 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 
 	playerKey := r.getPlayerKey(params.RoomId)
 	pipe.HSet(ctx, playerKey, map[string]any{
-		videoIdKey:         params.VideoId,
 		isPlayingKey:       params.IsPlaying,
 		waitingForReadyKey: params.WaitingForReady,
 		isEndedKey:         params.IsEnded,
@@ -63,7 +61,6 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return room.Player{
-		VideoId:         r.fieldToInt(playerMap[videoIdKey]),
 		IsPlaying:       r.fieldToBool(playerMap[isPlayingKey]),
 		WaitingForReady: r.fieldToBool(playerMap[waitingForReadyKey]),
 		IsEnded:         r.fieldToBool(playerMap[isEndedKey]),
@@ -71,18 +68,6 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 		PlaybackRate:    r.fieldToFload64(playerMap[playbackRateKey]),
 		UpdatedAt:       r.fieldToInt(playerMap[updatedAtKey]),
 	}, nil
-}
-
-func (r repo) GetPlayerVideoId(ctx context.Context, roomId string) (int, error) {
-	playerKey := r.getPlayerKey(roomId)
-	videoId, err := r.rc.HGet(ctx, playerKey, videoIdKey).Int()
-	if err != nil {
-		return 0, err
-	}
-
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
-
-	return videoId, nil
 }
 
 func (r repo) RemovePlayer(ctx context.Context, roomId string) error {
@@ -132,10 +117,6 @@ func (r repo) updatePlayerValue(ctx context.Context, roomId string, key string, 
 	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return nil
-}
-
-func (r repo) UpdatePlayerVideoId(ctx context.Context, roomId string, videoId int) error {
-	return r.updatePlayerValue(ctx, roomId, videoIdKey, videoId)
 }
 
 func (r repo) UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error {

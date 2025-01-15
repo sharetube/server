@@ -25,6 +25,11 @@ type ExpireLastVideoParams struct {
 	ExpireAt time.Time
 }
 
+type ExpireCurrentVideoParams struct {
+	RoomId   string
+	ExpireAt time.Time
+}
+
 type ExpirePlaylistParams struct {
 	RoomId   string
 	ExpireAt time.Time

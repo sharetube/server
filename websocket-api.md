@@ -194,7 +194,6 @@ null
   "room": {
     "id": "[string]",
     "player": {
-      "video_url": "[string]",
       "playback_rate": "[number]",
       "is_playing": "[boolean]",
       "is_ended": "[boolean]",
@@ -211,6 +210,13 @@ null
           "thumbnail_url": "[string]"
         }
       ],
+      "current_video": {
+        "id": "[number]",
+        "url": "[string]",
+        "title": "[string]",
+        "author_name": "[string]",
+        "thumbnail_url": "[string]"
+      },
       "last_video": {
         "id": "[number]",
         "url": "[string]",
@@ -244,7 +250,6 @@ null
 ```json
 {
   "player": {
-    "video_url": "[string]",
     "playback_rate": "[number]",
     "is_playing": "[boolean]",
     "is_ended": "[boolean]",
@@ -263,7 +268,6 @@ null
 ```json
 {
   "player": {
-    "video_url": "[string]",
     "playback_rate": "[number]",
     "is_playing": "[boolean]",
     "is_ended": "[boolean]",
@@ -280,6 +284,13 @@ null
         "thumbnail_url": "[string]"
       }
     ],
+    "current_video": {
+      "id": "[number]",
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
+    },
     "last_video": {
       "id": "[number]",
       "url": "[string]",
@@ -325,6 +336,13 @@ null
         "thumbnail_url": "[string]"
       }
     ],
+    "current_video": {
+      "id": "[number]",
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
+    },
     "last_video": {
       "id": "[number]",
       "url": "[string]",
@@ -356,6 +374,13 @@ null
         "thumbnail_url": "[string]"
       }
     ],
+    "current_video": {
+      "id": "[number]",
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
+    },
     "last_video": {
       "id": "[number]",
       "url": "[string]",
@@ -386,6 +411,13 @@ null
         "thumbnail_url": "[string]"
       }
     ],
+    "current_video": {
+      "id": "[number]",
+      "url": "[string]",
+      "title": "[string]",
+      "author_name": "[string]",
+      "thumbnail_url": "[string]"
+    },
     "last_video_id": {
       "id": "[number]",
       "url": "[string]",

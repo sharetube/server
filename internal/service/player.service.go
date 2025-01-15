@@ -70,19 +70,6 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player updated at: %w", err)
 	}
 
-	videoId, err := s.roomRepo.GetPlayerVideoId(ctx, params.RoomId)
-	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player video url: %w", err)
-	}
-
-	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		VideoId: videoId,
-		RoomId:  params.RoomId,
-	})
-	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get video: %w", err)
-	}
-
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get member ids: %w", err)
@@ -102,7 +89,6 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	return UpdatePlayerStateResponse{
 		Player: Player{
-			VideoUrl:     video.Url,
 			IsPlaying:    params.IsPlaying,
 			IsEnded:      params.IsEnded,
 			CurrentTime:  params.CurrentTime,
@@ -174,29 +160,24 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		}
 	}
 
-	player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+	currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get player: %w", err)
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get current video id: %w", err)
 	}
 
 	// updating last video
 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
-		VideoId: player.VideoId,
+		VideoId: *currentVideoId,
 		RoomId:  params.RoomId,
 	}); err != nil {
 		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
 	}
 
-	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
+	if err := s.roomRepo.SetCurrentVideoId(ctx, &room.SetCurrentVideoParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
-	})
-	if err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to get video:%w", err)
-	}
-
-	if err := s.roomRepo.UpdatePlayerVideoId(ctx, params.RoomId, params.VideoId); err != nil {
-		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update player video id: %w", err)
+	}); err != nil {
+		return UpdatePlayerVideoResponse{}, fmt.Errorf("failed to update current video id: %w", err)
 	}
 
 	if err := s.roomRepo.UpdatePlayerUpdatedAt(ctx, params.RoomId, params.UpdatedAt); err != nil {
@@ -265,7 +246,6 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 			IsPlaying:    isPlaying,
 			IsEnded:      isEnded,
 			PlaybackRate: playbackRate,
-			VideoUrl:     video.Url,
 			UpdatedAt:    params.UpdatedAt,
 		},
 		Playlist: *playlist,

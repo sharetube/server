@@ -10,6 +10,7 @@ var (
 	ErrPlaylistNotFound        = errors.New("playlist not found")
 	ErrVideoNotFound           = errors.New("video not found")
 	ErrLastVideoNotFound       = errors.New("last video not found")
+	ErrCurrentVideoNotFound    = errors.New("current video not found")
 	ErrLastVideoIdNotFound     = errors.New("last video id not found")
 	ErrTokenNotFound           = errors.New("auth token not found")
 	ErrPlaylistVersionNotFound = errors.New("playlist version not found")

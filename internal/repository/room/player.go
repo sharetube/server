@@ -3,7 +3,6 @@ package room
 import "time"
 
 type Player struct {
-	VideoId         int
 	IsPlaying       bool
 	WaitingForReady bool
 	IsEnded         bool
@@ -13,7 +12,6 @@ type Player struct {
 }
 
 type SetPlayerParams struct {
-	VideoId         int
 	IsPlaying       bool
 	WaitingForReady bool
 	IsEnded         bool
