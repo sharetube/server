@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/skewb1k/goutils/maps"
+
 	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
-	omitnilpointers "github.com/sharetube/server/pkg/omit-nil-pointers"
-	ptrfrommap "github.com/sharetube/server/pkg/ptr-from-map"
 )
 
 const (
@@ -38,7 +38,7 @@ func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error
 	pipe := r.rc.TxPipeline()
 
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	pipe.HSet(ctx, memberKey, omitnilpointers.OmitNilPointers(map[string]any{
+	pipe.HSet(ctx, memberKey, maps.OmitNilPointers(map[string]any{
 		usernameKey:  params.Username,
 		avatarUrlKey: params.AvatarUrl,
 		colorKey:     params.Color,
@@ -164,7 +164,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 	return room.Member{
 		Username:  memberMap[usernameKey],
 		Color:     memberMap[colorKey],
-		AvatarUrl: ptrfrommap.PtrFromStringMap(memberMap, avatarUrlKey),
+		AvatarUrl: maps.PtrFromStringMap(memberMap, avatarUrlKey),
 		IsMuted:   r.fieldToBool(memberMap[isMutedKey]),
 		IsAdmin:   r.fieldToBool(memberMap[isAdminKey]),
 		IsReady:   r.fieldToBool(memberMap[isReadyKey]),

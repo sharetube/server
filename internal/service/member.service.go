@@ -9,7 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
-	o "github.com/skewb1k/optional"
+	"github.com/skewb1k/goutils/optional"
 )
 
 var ErrMemberIsAlreadyAdmin = errors.New("member is already admin")
@@ -333,11 +333,11 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 }
 
 type UpdateProfileParams struct {
-	Username  *string         `json:"username"`
-	Color     *string         `json:"color"`
-	AvatarUrl o.Field[string] `json:"avatar_url"`
-	SenderId  string          `json:"sender_id"`
-	RoomId    string          `json:"room_id"`
+	Username  *string                `json:"username"`
+	Color     *string                `json:"color"`
+	AvatarUrl optional.Field[string] `json:"avatar_url"`
+	SenderId  string                 `json:"sender_id"`
+	RoomId    string                 `json:"room_id"`
 }
 
 type UpdateProfileResponse struct {

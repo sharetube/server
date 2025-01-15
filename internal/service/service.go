@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/repository/room"
-	"github.com/sharetube/server/pkg/randstr"
+	"github.com/skewb1k/goutils/randstr"
 )
 
 var (

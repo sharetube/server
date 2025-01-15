@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sharetube/server/internal/service"
-	o "github.com/skewb1k/optional"
+	"github.com/skewb1k/goutils/optional"
 )
 
 type Output struct {
@@ -211,9 +211,9 @@ func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, in
 }
 
 type UpdateProfileInput struct {
-	Username  *string         `json:"username"`
-	Color     *string         `json:"color"`
-	AvatarUrl o.Field[string] `json:"avatar_url"`
+	Username  *string                `json:"username"`
+	Color     *string                `json:"color"`
+	AvatarUrl optional.Field[string] `json:"avatar_url"`
 }
 
 func (c controller) handleUpdateProfile(ctx context.Context, _ *websocket.Conn, input UpdateProfileInput) error {
