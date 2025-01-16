@@ -1,4 +1,4 @@
- WebSocket API Reference
+# WebSocket API Reference
 
 ## Connection
 Create room: `/api/v1/ws/room/create?username=<required>&color=<required>&avatar-url=<optional>&video-url=<required>`
@@ -144,6 +144,7 @@ null
 
 ```json
 {
+  "video_id": "[number]",
   "playback_rate": "[number]",
   "is_playing": "[boolean]",
   "is_ended": "[boolean]",
@@ -249,6 +250,7 @@ null
 
 ```json
 {
+  "current_video_id":"[number]",
   "player": {
     "playback_rate": "[number]",
     "is_playing": "[boolean]",

@@ -20,6 +20,7 @@ func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, input
 }
 
 type UpdatePlayerStateInput struct {
+	VideoId      int     `json:"video_id"`
 	IsPlaying    bool    `json:"is_playing"`
 	IsEnded      bool    `json:"is_ended"`
 	CurrentTime  int     `json:"current_time"`
@@ -27,11 +28,13 @@ type UpdatePlayerStateInput struct {
 	UpdatedAt    int     `json:"updated_at"`
 }
 
-func (c controller) handleUpdatePlayerState(ctx context.Context, _ *websocket.Conn, input UpdatePlayerStateInput) error {
+func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, input UpdatePlayerStateInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &service.UpdatePlayerStateParams{
+		SenderConn:   conn,
+		VideoId:      input.VideoId,
 		IsPlaying:    input.IsPlaying,
 		IsEnded:      input.IsEnded,
 		CurrentTime:  input.CurrentTime,
