@@ -27,15 +27,15 @@ type Playlist struct {
 
 type Player struct {
 	IsPlaying    bool    `json:"is_playing"`
-	IsEnded      bool    `json:"is_ended"`
 	CurrentTime  int     `json:"current_time"`
 	PlaybackRate float64 `json:"playback_rate"`
 	UpdatedAt    int     `json:"updated_at"`
 }
 
 type Room struct {
-	Id       string   `json:"id"`
-	Player   Player   `json:"player"`
-	Members  []Member `json:"members"`
-	Playlist Playlist `json:"playlist"`
+	Id           string   `json:"id"`
+	Player       Player   `json:"player"`
+	IsVideoEnded bool     `json:"is_video_ended"`
+	Members      []Member `json:"members"`
+	Playlist     Playlist `json:"playlist"`
 }

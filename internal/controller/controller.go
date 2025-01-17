@@ -26,6 +26,7 @@ type iRoomService interface {
 	UpdateIsReady(context.Context, *service.UpdateIsReadyParams) (service.UpdateIsReadyResponse, error)
 	UpdateIsMuted(context.Context, *service.UpdateIsMutedParams) (service.UpdateIsMutedResponse, error)
 	ReorderPlaylist(context.Context, *service.ReorderPlaylistParams) (service.ReorderPlaylistResponse, error)
+	EndVideo(context.Context, *service.EndVideoParams) (service.EndVideoResponse, error)
 }
 
 type controller struct {
@@ -44,6 +45,7 @@ func NewController(roomService iRoomService, logger *slog.Logger) *controller {
 		},
 		roomService: roomService,
 		logger:      logger,
+		wsmux:       nil,
 	}
 	c.wsmux = c.getWSRouter()
 

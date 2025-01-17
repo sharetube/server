@@ -10,7 +10,6 @@ import (
 const (
 	isPlayingKey       = "is_playing"
 	waitingForReadyKey = "waiting_for_ready"
-	isEndedKey         = "is_ended"
 	currentTimeKey     = "current_time"
 	playbackRateKey    = "playback_rate"
 	updatedAtKey       = "updated_at"
@@ -20,6 +19,43 @@ func (r repo) getPlayerKey(roomId string) string {
 	return fmt.Sprintf("room:%s:player", roomId)
 }
 
+func (r repo) getIsVideoEndedKey(roomId string) string {
+	return fmt.Sprintf("room:%s:video-ended", roomId)
+}
+
+func (r repo) SetIsVideoEnded(ctx context.Context, params *room.SetIsVideoEndedParams) error {
+	pipe := r.rc.TxPipeline()
+
+	isVideoEndedKey := r.getIsVideoEndedKey(params.RoomId)
+	pipe.Set(ctx, isVideoEndedKey, params.IsVideoEnded, r.maxExpireDuration)
+	pipe.Expire(ctx, isVideoEndedKey, r.maxExpireDuration)
+
+	return r.executePipe(ctx, pipe)
+}
+
+func (r repo) GetIsVideoEnded(ctx context.Context, roomId string) (bool, error) {
+	isVideoEndedKey := r.getIsVideoEndedKey(roomId)
+	res, err := r.rc.Get(ctx, isVideoEndedKey).Bool()
+	if err != nil {
+		return false, err
+	}
+
+	return res, nil
+}
+
+func (r repo) ExpireIsVideoEnded(ctx context.Context, params *room.ExpireIsVideoEndedParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getIsVideoEndedKey(params.RoomId), params.ExpireAt).Result()
+	if err != nil {
+		return err
+	}
+
+	if !res {
+		return room.ErrIsVideoEndedNotFound
+	}
+
+	return nil
+}
+
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {
 	pipe := r.rc.TxPipeline()
 
@@ -27,7 +63,6 @@ func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error
 	pipe.HSet(ctx, playerKey, map[string]any{
 		isPlayingKey:       params.IsPlaying,
 		waitingForReadyKey: params.WaitingForReady,
-		isEndedKey:         params.IsEnded,
 		currentTimeKey:     params.CurrentTime,
 		playbackRateKey:    params.PlaybackRate,
 		updatedAtKey:       params.UpdatedAt,
@@ -63,7 +98,6 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 	return room.Player{
 		IsPlaying:       r.fieldToBool(playerMap[isPlayingKey]),
 		WaitingForReady: r.fieldToBool(playerMap[waitingForReadyKey]),
-		IsEnded:         r.fieldToBool(playerMap[isEndedKey]),
 		CurrentTime:     r.fieldToInt(playerMap[currentTimeKey]),
 		PlaybackRate:    r.fieldToFload64(playerMap[playbackRateKey]),
 		UpdatedAt:       r.fieldToInt(playerMap[updatedAtKey]),
@@ -125,10 +159,6 @@ func (r repo) UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlayin
 
 func (r repo) UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error {
 	return r.updatePlayerValue(ctx, roomId, waitingForReadyKey, waitingForReady)
-}
-
-func (r repo) UpdatePlayerIsEnded(ctx context.Context, roomId string, isEnded bool) error {
-	return r.updatePlayerValue(ctx, roomId, isEndedKey, isEnded)
 }
 
 func (r repo) UpdatePlayerCurrentTime(ctx context.Context, roomId string, currentTime int) error {

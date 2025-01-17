@@ -15,14 +15,13 @@ type Output struct {
 	Payload any    `json:"payload"`
 }
 
-func (c controller) handleAlive(ctx context.Context, conn *websocket.Conn, input EmptyStruct) error {
+func (c controller) handleAlive(_ context.Context, _ *websocket.Conn, _ EmptyInput) error {
 	return nil
 }
 
 type UpdatePlayerStateInput struct {
 	VideoId      int     `json:"video_id"`
 	IsPlaying    bool    `json:"is_playing"`
-	IsEnded      bool    `json:"is_ended"`
 	CurrentTime  int     `json:"current_time"`
 	PlaybackRate float64 `json:"playback_rate"`
 	UpdatedAt    int     `json:"updated_at"`
@@ -36,7 +35,6 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 		SenderConn:   conn,
 		VideoId:      input.VideoId,
 		IsPlaying:    input.IsPlaying,
-		IsEnded:      input.IsEnded,
 		CurrentTime:  input.CurrentTime,
 		PlaybackRate: input.PlaybackRate,
 		UpdatedAt:    input.UpdatedAt,
@@ -122,6 +120,39 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 			addVideoResponse.Members,
 		); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c controller) handleEndVideo(ctx context.Context, _ *websocket.Conn, _ EmptyInput) error {
+	roomId := c.getRoomIdFromCtx(ctx)
+	memberId := c.getMemberIdFromCtx(ctx)
+
+	addVideoResponse, err := c.roomService.EndVideo(ctx, &service.EndVideoParams{
+		SenderId: memberId,
+		RoomId:   roomId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add video: %w", err)
+	}
+
+	if addVideoResponse.Player != nil {
+		if err := c.broadcastPlayerVideoUpdated(ctx,
+			addVideoResponse.Conns,
+			addVideoResponse.Player,
+			addVideoResponse.Playlist,
+			addVideoResponse.Members,
+		); err != nil {
+			return fmt.Errorf("failed to broadcast player updated: %w", err)
+		}
+	} else {
+		if err := c.broadcast(ctx, addVideoResponse.Conns, &Output{
+			Type:    "VIDEO_ENDED",
+			Payload: nil,
+		}); err != nil {
+			return fmt.Errorf("failed to broadcast video ended: %w", err)
 		}
 	}
 

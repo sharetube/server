@@ -525,7 +525,6 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 					Members:       members,
 					Player: &Player{
 						IsPlaying:    player.IsPlaying,
-						IsEnded:      player.IsEnded,
 						CurrentTime:  player.CurrentTime,
 						PlaybackRate: player.PlaybackRate,
 						UpdatedAt:    player.UpdatedAt,

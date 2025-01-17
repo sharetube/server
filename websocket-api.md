@@ -148,10 +148,19 @@ null
   "video_id": "[number]",
   "playback_rate": "[number]",
   "is_playing": "[boolean]",
-  "is_ended": "[boolean]",
   "current_time": "[number]",
   "updated_at": "[number]"
 }
+```
+</td>
+</tr>
+
+<tr>
+<td>END_VIDEO</td>
+<td>
+
+```json
+null
 ```
 </td>
 </tr>
@@ -198,10 +207,10 @@ null
     "player": {
       "playback_rate": "[number]",
       "is_playing": "[boolean]",
-      "is_ended": "[boolean]",
       "current_time": "[number]",
       "updated_at": "[number]"
     },
+    "is_video_ended": "[boolean]",
     "playlist": {
       "videos": [
         {
@@ -255,11 +264,20 @@ null
   "player": {
     "playback_rate": "[number]",
     "is_playing": "[boolean]",
-    "is_ended": "[boolean]",
     "current_time": "[number]",
     "updated_at": "[number]"
   }
 }
+```
+</td>
+</tr>
+
+<tr>
+<td>VIDEO_ENDED</td>
+<td>
+
+```json
+null
 ```
 </td>
 </tr>
@@ -273,7 +291,6 @@ null
   "player": {
     "playback_rate": "[number]",
     "is_playing": "[boolean]",
-    "is_ended": "[boolean]",
     "current_time": "[number]",
     "updated_at": "[number]"
   },

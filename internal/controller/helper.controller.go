@@ -11,9 +11,9 @@ import (
 	"github.com/sharetube/server/internal/service"
 )
 
-type EmptyStruct struct{}
+type EmptyInput struct{}
 
-func (es *EmptyStruct) UnmarshalJSON([]byte) error {
+func (es *EmptyInput) UnmarshalJSON([]byte) error {
 	return nil
 }
 

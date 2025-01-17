@@ -5,7 +5,6 @@ import "time"
 type Player struct {
 	IsPlaying       bool
 	WaitingForReady bool
-	IsEnded         bool
 	CurrentTime     int
 	PlaybackRate    float64
 	UpdatedAt       int
@@ -14,7 +13,6 @@ type Player struct {
 type SetPlayerParams struct {
 	IsPlaying       bool
 	WaitingForReady bool
-	IsEnded         bool
 	CurrentTime     int
 	PlaybackRate    float64
 	UpdatedAt       int
@@ -22,6 +20,16 @@ type SetPlayerParams struct {
 }
 
 type ExpirePlayerParams struct {
+	RoomId   string
+	ExpireAt time.Time
+}
+
+type SetIsVideoEndedParams struct {
+	RoomId       string
+	IsVideoEnded bool
+}
+
+type ExpireIsVideoEndedParams struct {
 	RoomId   string
 	ExpireAt time.Time
 }

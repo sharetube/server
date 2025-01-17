@@ -105,7 +105,6 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 
 	if err := s.roomRepo.SetPlayer(ctx, &room.SetPlayerParams{
 		IsPlaying:       s.getDefaultPlayerIsPlaying(),
-		IsEnded:         s.getDefaultPlayerIsEnded(),
 		WaitingForReady: s.getDefaultPlayerWaitingForReady(),
 		CurrentTime:     s.getDefaultPlayerCurrentTime(),
 		PlaybackRate:    s.getDefaultPlayerPlaybackRate(),
@@ -113,6 +112,13 @@ func (s service) CreateRoom(ctx context.Context, params *CreateRoomParams) (*Cre
 		RoomId:          roomId,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set player: %w", err)
+	}
+
+	if err := s.roomRepo.SetIsVideoEnded(ctx, &room.SetIsVideoEndedParams{
+		IsVideoEnded: false,
+		RoomId:       roomId,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to set is video ended: %w", err)
 	}
 
 	return &CreateRoomResponse{
@@ -301,11 +307,16 @@ func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
 		return Room{}, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
+	isVideoEnded, err := s.roomRepo.GetIsVideoEnded(ctx, roomId)
+	if err != nil {
+		return Room{}, fmt.Errorf("failed to get is video ended: %w", err)
+	}
+
 	return Room{
-		Id: roomId,
+		Id:           roomId,
+		IsVideoEnded: isVideoEnded,
 		Player: Player{
 			IsPlaying:    player.IsPlaying,
-			IsEnded:      player.IsEnded,
 			CurrentTime:  player.CurrentTime,
 			PlaybackRate: player.PlaybackRate,
 			UpdatedAt:    player.UpdatedAt,

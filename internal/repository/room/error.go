@@ -7,6 +7,7 @@ var (
 	ErrMemberListNotFound      = errors.New("memberlist not found")
 	ErrTokenAlreadyExists      = errors.New("auth token already exists")
 	ErrPlayerNotFound          = errors.New("player not found")
+	ErrIsVideoEndedNotFound    = errors.New("is video ended not found")
 	ErrPlaylistNotFound        = errors.New("playlist not found")
 	ErrVideoNotFound           = errors.New("video not found")
 	ErrLastVideoNotFound       = errors.New("last video not found")
