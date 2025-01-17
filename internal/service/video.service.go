@@ -157,15 +157,19 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 }
 
 type AddVideoParams struct {
-	SenderId string `json:"sender_id"`
-	RoomId   string `json:"room_id"`
-	VideoUrl string `json:"video_url"`
+	SenderId  string `json:"sender_id"`
+	RoomId    string `json:"room_id"`
+	VideoUrl  string `json:"video_url"`
+	UpdatedAt int    `json:"updated_at"`
 }
 
+// todo: two optional responses
 type AddVideoResponse struct {
-	AddedVideo Video
+	AddedVideo *Video
 	Conns      []*websocket.Conn
 	Playlist   Playlist
+	Player     *Player
+	Members    []Member
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
@@ -193,6 +197,11 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
+	player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
+	if err != nil {
+		return AddVideoResponse{}, fmt.Errorf("failed to get player: %w", err)
+	}
+
 	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
 		RoomId:       params.RoomId,
 		Url:          params.VideoUrl,
@@ -202,6 +211,109 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	})
 	if err != nil {
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
+	}
+
+	if videosLength == 0 && player.IsEnded {
+		// todo: move duplicated with UpdatePlayerVideo logic to helper
+		lastVideoId, err := s.roomRepo.GetLastVideoId(ctx, params.RoomId)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to get last video id: %w", err)
+		}
+
+		if lastVideoId != nil {
+			if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
+				VideoId: *lastVideoId,
+				RoomId:  params.RoomId,
+			}); err != nil {
+				return AddVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
+			}
+		}
+
+		currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to get current video id: %w", err)
+		}
+
+		if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
+			VideoId: *currentVideoId,
+			RoomId:  params.RoomId,
+		}); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to set last video: %w", err)
+		}
+
+		if err := s.roomRepo.SetCurrentVideoId(ctx, &room.SetCurrentVideoParams{
+			VideoId: videoId,
+			RoomId:  params.RoomId,
+		}); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update current video id: %w", err)
+		}
+
+		if err := s.roomRepo.UpdatePlayerUpdatedAt(ctx, params.RoomId, params.UpdatedAt); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player updated at: %w", err)
+		}
+
+		isPlaying := s.getDefaultPlayerIsPlaying()
+		if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, isPlaying); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+		}
+
+		isEnded := s.getDefaultPlayerIsEnded()
+		if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, isEnded); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
+		}
+
+		currentTime := s.getDefaultPlayerCurrentTime()
+		if err := s.roomRepo.UpdatePlayerCurrentTime(ctx, params.RoomId, currentTime); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player current time: %w", err)
+		}
+
+		playbackRate := s.getDefaultPlayerPlaybackRate()
+		if err := s.roomRepo.UpdatePlayerPlaybackRate(ctx, params.RoomId, playbackRate); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
+		}
+
+		if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, true); err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
+		}
+
+		memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to get member ids: %w", err)
+		}
+
+		for _, memberId := range memberIds {
+			if err := s.roomRepo.UpdateMemberIsReady(ctx, params.RoomId, memberId, false); err != nil {
+				return AddVideoResponse{}, fmt.Errorf("failed to update member is ready: %w", err)
+			}
+		}
+
+		members, err := s.mapMembers(ctx, params.RoomId, memberIds)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to map members: %w", err)
+		}
+
+		conns, err := s.getConns(ctx, params.RoomId)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		}
+
+		playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
+		if err != nil {
+			return AddVideoResponse{}, fmt.Errorf("failed to get playlist with incr version: %w", err)
+		}
+
+		return AddVideoResponse{
+			Conns:    conns,
+			Playlist: *playlist,
+			Player: &Player{
+				CurrentTime:  currentTime,
+				IsPlaying:    isPlaying,
+				IsEnded:      isEnded,
+				PlaybackRate: playbackRate,
+				UpdatedAt:    params.UpdatedAt,
+			},
+			Members: members,
+		}, nil
 	}
 
 	if err := s.roomRepo.AddVideoToList(ctx, &room.AddVideoToListParams{
@@ -222,7 +334,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	}
 
 	return AddVideoResponse{
-		AddedVideo: Video{
+		AddedVideo: &Video{
 			Id:           videoId,
 			Url:          params.VideoUrl,
 			Title:        videoData.Title,

@@ -106,6 +106,17 @@ func (c controller) broadcastPlayerStateUpdated(ctx context.Context, conns []*we
 	})
 }
 
+func (c controller) broadcastPlayerVideoUpdated(ctx context.Context, conns []*websocket.Conn, player *service.Player, playlist *service.Playlist, members []service.Member) error {
+	return c.broadcast(ctx, conns, &Output{
+		Type: "PLAYER_VIDEO_UPDATED",
+		Payload: map[string]any{
+			"player":   player,
+			"playlist": playlist,
+			"members":  members,
+		},
+	})
+}
+
 func (c controller) helperDisconn(ctx context.Context, roomId string, memberId string) error {
 	disconnectMemberResp, err := c.roomService.DisconnectMember(ctx, &service.DisconnectMemberParams{
 		MemberId: memberId,

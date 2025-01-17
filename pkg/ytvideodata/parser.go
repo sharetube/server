@@ -14,6 +14,7 @@ func getFromPage(videoId string) (*VideoData, error) {
 	}
 	defer resp.Body.Close()
 
+	// todo: do not use html.Parse, parse html manually
 	doc, err := html.Parse(resp.Body)
 	if err != nil {
 		return nil, err

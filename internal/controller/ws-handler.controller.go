@@ -73,14 +73,12 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 		return fmt.Errorf("failed to update player video: %w", err)
 	}
 
-	if err := c.broadcast(ctx, updatePlayerVideoResp.Conns, &Output{
-		Type: "PLAYER_VIDEO_UPDATED",
-		Payload: map[string]any{
-			"player":   updatePlayerVideoResp.Player,
-			"playlist": updatePlayerVideoResp.Playlist,
-			"members":  updatePlayerVideoResp.Members,
-		},
-	}); err != nil {
+	if err := c.broadcastPlayerVideoUpdated(ctx,
+		updatePlayerVideoResp.Conns,
+		&updatePlayerVideoResp.Player,
+		&updatePlayerVideoResp.Playlist,
+		updatePlayerVideoResp.Members,
+	); err != nil {
 		return fmt.Errorf("failed to broadcast player updated: %w", err)
 	}
 
@@ -88,7 +86,8 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 }
 
 type AddVideoInput struct {
-	VideoUrl string `json:"video_url"`
+	VideoUrl  string `json:"video_url"`
+	UpdatedAt int    `json:"updated_at"`
 }
 
 func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input AddVideoInput) error {
@@ -96,22 +95,34 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &service.AddVideoParams{
-		SenderId: memberId,
-		RoomId:   roomId,
-		VideoUrl: input.VideoUrl,
+		SenderId:  memberId,
+		RoomId:    roomId,
+		VideoUrl:  input.VideoUrl,
+		UpdatedAt: input.UpdatedAt,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add video: %w", err)
 	}
 
-	if err := c.broadcast(ctx, addVideoResponse.Conns, &Output{
-		Type: "VIDEO_ADDED",
-		Payload: map[string]any{
-			"added_video": addVideoResponse.AddedVideo,
-			"playlist":    addVideoResponse.Playlist,
-		},
-	}); err != nil {
-		return fmt.Errorf("failed to broadcast video added: %w", err)
+	if addVideoResponse.AddedVideo != nil {
+		if err := c.broadcast(ctx, addVideoResponse.Conns, &Output{
+			Type: "VIDEO_ADDED",
+			Payload: map[string]any{
+				"added_video": addVideoResponse.AddedVideo,
+				"playlist":    addVideoResponse.Playlist,
+			},
+		}); err != nil {
+			return fmt.Errorf("failed to broadcast video added: %w", err)
+		}
+	} else {
+		if err := c.broadcastPlayerVideoUpdated(ctx,
+			addVideoResponse.Conns,
+			addVideoResponse.Player,
+			&addVideoResponse.Playlist,
+			addVideoResponse.Members,
+		); err != nil {
+			return fmt.Errorf("failed to broadcast player updated: %w", err)
+		}
 	}
 
 	return nil

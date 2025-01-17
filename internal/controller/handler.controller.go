@@ -79,7 +79,7 @@ func (c controller) createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "room created", "room_id", createRoomResponse.RoomId, "duration", time.Since(start).Microseconds())
+	c.logger.InfoContext(r.Context(), "room created", "room_id", createRoomResponse.RoomId, "processing_time_us", time.Since(start).Microseconds())
 
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, createRoomResponse.RoomId)
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", createRoomResponse.RoomId))
@@ -177,7 +177,7 @@ func (c controller) joinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "room joined", "room_id", roomId, "duration", time.Since(start).Microseconds())
+	c.logger.InfoContext(r.Context(), "room joined", "room_id", roomId, "processing_time_us", time.Since(start).Microseconds())
 
 	ctx := context.WithValue(r.Context(), roomIdCtxKey, roomId)
 	ctx = ctxlogger.AppendCtx(ctx, slog.String("room_id", roomId))

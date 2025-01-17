@@ -82,7 +82,8 @@ null
 
 ```json
 {
-  "video_url": "[string]"
+  "video_url": "[string]",
+  "updated_at": "[number]"
 }
 ```
 </td>
