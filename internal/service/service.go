@@ -59,9 +59,9 @@ type iRoomRepo interface {
 	IsPlayerExists(context.Context, string) (bool, error)
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
-	SetIsVideoEnded(context.Context, *room.SetIsVideoEndedParams) error
-	GetIsVideoEnded(context.Context, string) (bool, error)
-	ExpireIsVideoEnded(context.Context, *room.ExpireIsVideoEndedParams) error
+	SetVideoEnded(context.Context, *room.SetVideoEndedParams) error
+	GetVideoEnded(context.Context, string) (bool, error)
+	ExpireVideoEnded(context.Context, *room.ExpireVideoEndedParams) error
 	UpdatePlayerIsPlaying(ctx context.Context, roomId string, isPlaying bool) error
 	UpdatePlayerWaitingForReady(ctx context.Context, roomId string, waitingForReady bool) error
 	UpdatePlayerCurrentTime(ctx context.Context, roomId string, currentTime int) error

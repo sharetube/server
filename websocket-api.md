@@ -210,7 +210,7 @@ null
       "current_time": "[number]",
       "updated_at": "[number]"
     },
-    "is_video_ended": "[boolean]",
+    "video_ended": "[boolean]",
     "playlist": {
       "videos": [
         {

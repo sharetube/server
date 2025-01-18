@@ -195,9 +195,9 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, ErrPlaylistLimitReached
 	}
 
-	isVideoEnded, err := s.roomRepo.GetIsVideoEnded(ctx, params.RoomId)
+	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get is video ended: %w", err)
+		return AddVideoResponse{}, fmt.Errorf("failed to get video ended: %w", err)
 	}
 
 	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
@@ -211,7 +211,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
 	}
 
-	if videosLength == 0 && isVideoEnded {
+	if videosLength == 0 && videoEnded {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videoId, params.UpdatedAt)
 		if err != nil {
 			return AddVideoResponse{}, fmt.Errorf("failed to update player video: %w", err)
@@ -272,12 +272,12 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (EndVideo
 		return EndVideoResponse{}, err
 	}
 
-	isVideoEnded, err := s.roomRepo.GetIsVideoEnded(ctx, params.RoomId)
+	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
 	if err != nil {
-		return EndVideoResponse{}, fmt.Errorf("failed to get is video ended: %w", err)
+		return EndVideoResponse{}, fmt.Errorf("failed to get video ended: %w", err)
 	}
 
-	if isVideoEnded {
+	if videoEnded {
 		return EndVideoResponse{}, errors.New("ended already set")
 	}
 
@@ -300,11 +300,11 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (EndVideo
 		}, nil
 	}
 
-	if err := s.roomRepo.SetIsVideoEnded(ctx, &room.SetIsVideoEndedParams{
-		RoomId:       params.RoomId,
-		IsVideoEnded: true,
+	if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
+		RoomId:     params.RoomId,
+		VideoEnded: true,
 	}); err != nil {
-		return EndVideoResponse{}, fmt.Errorf("failed to set is video ended: %w", err)
+		return EndVideoResponse{}, fmt.Errorf("failed to set video ended: %w", err)
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)

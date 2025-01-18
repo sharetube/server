@@ -282,6 +282,13 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire player: %w", err)
 		}
 
+		if err := s.roomRepo.ExpireVideoEnded(ctx, &room.ExpireVideoEndedParams{
+			RoomId:   params.RoomId,
+			ExpireAt: expireAt,
+		}); err != nil {
+			return DisconnectMemberResponse{}, fmt.Errorf("failed to expire video ended: %w", err)
+		}
+
 		if err := s.roomRepo.ExpireLastVideo(ctx, &room.ExpireLastVideoParams{
 			RoomId:   params.RoomId,
 			ExpireAt: expireAt,

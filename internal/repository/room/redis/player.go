@@ -19,23 +19,23 @@ func (r repo) getPlayerKey(roomId string) string {
 	return fmt.Sprintf("room:%s:player", roomId)
 }
 
-func (r repo) getIsVideoEndedKey(roomId string) string {
+func (r repo) getVideoEndedKey(roomId string) string {
 	return fmt.Sprintf("room:%s:video-ended", roomId)
 }
 
-func (r repo) SetIsVideoEnded(ctx context.Context, params *room.SetIsVideoEndedParams) error {
+func (r repo) SetVideoEnded(ctx context.Context, params *room.SetVideoEndedParams) error {
 	pipe := r.rc.TxPipeline()
 
-	isVideoEndedKey := r.getIsVideoEndedKey(params.RoomId)
-	pipe.Set(ctx, isVideoEndedKey, params.IsVideoEnded, r.maxExpireDuration)
-	pipe.Expire(ctx, isVideoEndedKey, r.maxExpireDuration)
+	videoEndedKey := r.getVideoEndedKey(params.RoomId)
+	pipe.Set(ctx, videoEndedKey, params.VideoEnded, r.maxExpireDuration)
+	pipe.Expire(ctx, videoEndedKey, r.maxExpireDuration)
 
 	return r.executePipe(ctx, pipe)
 }
 
-func (r repo) GetIsVideoEnded(ctx context.Context, roomId string) (bool, error) {
-	isVideoEndedKey := r.getIsVideoEndedKey(roomId)
-	res, err := r.rc.Get(ctx, isVideoEndedKey).Bool()
+func (r repo) GetVideoEnded(ctx context.Context, roomId string) (bool, error) {
+	videoEndedKey := r.getVideoEndedKey(roomId)
+	res, err := r.rc.Get(ctx, videoEndedKey).Bool()
 	if err != nil {
 		return false, err
 	}
@@ -43,14 +43,14 @@ func (r repo) GetIsVideoEnded(ctx context.Context, roomId string) (bool, error) 
 	return res, nil
 }
 
-func (r repo) ExpireIsVideoEnded(ctx context.Context, params *room.ExpireIsVideoEndedParams) error {
-	res, err := r.rc.ExpireAt(ctx, r.getIsVideoEndedKey(params.RoomId), params.ExpireAt).Result()
+func (r repo) ExpireVideoEnded(ctx context.Context, params *room.ExpireVideoEndedParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getVideoEndedKey(params.RoomId), params.ExpireAt).Result()
 	if err != nil {
 		return err
 	}
 
 	if !res {
-		return room.ErrIsVideoEndedNotFound
+		return room.ErrVideoEndedNotFound
 	}
 
 	return nil

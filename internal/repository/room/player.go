@@ -24,12 +24,12 @@ type ExpirePlayerParams struct {
 	ExpireAt time.Time
 }
 
-type SetIsVideoEndedParams struct {
-	RoomId       string
-	IsVideoEnded bool
+type SetVideoEndedParams struct {
+	RoomId     string
+	VideoEnded bool
 }
 
-type ExpireIsVideoEndedParams struct {
+type ExpireVideoEndedParams struct {
 	RoomId   string
 	ExpireAt time.Time
 }

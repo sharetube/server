@@ -283,7 +283,6 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*int, error) {
 	return &lastVideoId, nil
 }
 
-// todo: rename
 func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams) error {
 	pipe := r.rc.TxPipeline()
 

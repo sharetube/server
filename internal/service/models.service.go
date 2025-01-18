@@ -33,9 +33,9 @@ type Player struct {
 }
 
 type Room struct {
-	Id           string   `json:"id"`
-	Player       Player   `json:"player"`
-	IsVideoEnded bool     `json:"is_video_ended"`
-	Members      []Member `json:"members"`
-	Playlist     Playlist `json:"playlist"`
+	Id         string   `json:"id"`
+	Player     Player   `json:"player"`
+	VideoEnded bool     `json:"video_ended"`
+	Members    []Member `json:"members"`
+	Playlist   Playlist `json:"playlist"`
 }

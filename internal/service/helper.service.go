@@ -91,11 +91,11 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 		}
 	}
 
-	if err := s.roomRepo.SetIsVideoEnded(ctx, &room.SetIsVideoEndedParams{
-		RoomId:       roomId,
-		IsVideoEnded: false,
+	if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
+		RoomId:     roomId,
+		VideoEnded: false,
 	}); err != nil {
-		return nil, fmt.Errorf("failed to set is video ended: %w", err)
+		return nil, fmt.Errorf("failed to set video ended: %w", err)
 	}
 
 	// updating last video
