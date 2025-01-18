@@ -36,7 +36,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get current video id: %w", err)
 	}
 
-	if currentVideoId != nil && *currentVideoId != params.VideoId {
+	if currentVideoId != params.VideoId {
 		return UpdatePlayerStateResponse{}, errors.New("video id is not equal")
 	}
 

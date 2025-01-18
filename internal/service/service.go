@@ -52,7 +52,7 @@ type iRoomRepo interface {
 	ReorderList(context.Context, *room.ReorderListParams) error
 	AddVideoToList(context.Context, *room.AddVideoToListParams) error
 	SetCurrentVideoId(context.Context, *room.SetCurrentVideoParams) error
-	GetCurrentVideoId(context.Context, string) (*int, error)
+	GetCurrentVideoId(context.Context, string) (int, error)
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)

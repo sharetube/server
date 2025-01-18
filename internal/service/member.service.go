@@ -256,7 +256,7 @@ func (s service) DisconnectMember(ctx context.Context, params *DisconnectMemberP
 			return DisconnectMemberResponse{}, fmt.Errorf("failed to get player video id: %w", err)
 		}
 
-		videoIds = append(videoIds, *playerVideoId)
+		videoIds = append(videoIds, playerVideoId)
 
 		for _, videoId := range videoIds {
 			if err := s.roomRepo.ExpireVideo(ctx, &room.ExpireVideoParams{

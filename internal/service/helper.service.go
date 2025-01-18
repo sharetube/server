@@ -59,7 +59,7 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 		return nil, fmt.Errorf("failed to get current video id: %w", err)
 	}
 
-	if *currentVideoId == videoId {
+	if currentVideoId == videoId {
 		return nil, errors.New("video is already playing")
 	}
 
@@ -76,19 +76,18 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 		return nil, fmt.Errorf("failed to get last video id: %w", err)
 	}
 
-	if lastVideoId != nil && *lastVideoId == videoId {
+	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
+		VideoId: videoId,
+		RoomId:  roomId,
+	}); err != nil && err != room.ErrVideoNotFound {
+		return nil, fmt.Errorf("failed to remove video from list: %w", err)
+	}
+	if lastVideoId != nil && *lastVideoId != videoId {
 		if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 			VideoId: *lastVideoId,
 			RoomId:  roomId,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to remove video: %w", err)
-		}
-	} else {
-		if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
-			VideoId: videoId,
-			RoomId:  roomId,
-		}); err != nil && err != room.ErrVideoNotFound {
-			return nil, fmt.Errorf("failed to remove video from list: %w", err)
 		}
 	}
 
@@ -101,7 +100,7 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 
 	// updating last video
 	if err := s.roomRepo.SetLastVideo(ctx, &room.SetLastVideoParams{
-		VideoId: *currentVideoId,
+		VideoId: currentVideoId,
 		RoomId:  roomId,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to set last video: %w", err)
@@ -148,7 +147,7 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 	}
 
 	lastVideo, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
-		VideoId: *currentVideoId,
+		VideoId: currentVideoId,
 		RoomId:  roomId,
 	})
 	if err != nil {
@@ -192,7 +191,7 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 		Playlist: Playlist{
 			Videos: videos,
 			LastVideo: &Video{
-				Id:           *currentVideoId,
+				Id:           currentVideoId,
 				Url:          lastVideo.Url,
 				Title:        lastVideo.Title,
 				AuthorName:   lastVideo.AuthorName,

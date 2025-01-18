@@ -104,13 +104,9 @@ func (s service) getCurrentVideo(ctx context.Context, roomId string) (*Video, er
 		return nil, fmt.Errorf("failed to get current video id: %w", err)
 	}
 
-	if currentVideoId == nil {
-		return nil, nil
-	}
-
 	video, err := s.roomRepo.GetVideo(ctx, &room.GetVideoParams{
 		RoomId:  roomId,
-		VideoId: *currentVideoId,
+		VideoId: currentVideoId,
 	})
 	if err != nil {
 		if err == room.ErrVideoNotFound {
@@ -120,7 +116,7 @@ func (s service) getCurrentVideo(ctx context.Context, roomId string) (*Video, er
 	}
 
 	return &Video{
-		Id:           *currentVideoId,
+		Id:           currentVideoId,
 		Url:          video.Url,
 		Title:        video.Title,
 		AuthorName:   video.AuthorName,
@@ -218,6 +214,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	if videosLength == 0 && isVideoEnded {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videoId, params.UpdatedAt)
 		if err != nil {
+			// todo: wrap
 			return AddVideoResponse{}, err
 		}
 

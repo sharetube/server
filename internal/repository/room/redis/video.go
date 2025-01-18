@@ -143,7 +143,7 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 	}
 
 	if len(videoMap) == 0 {
-		return room.Video{}, room.ErrMemberNotFound
+		return room.Video{}, room.ErrVideoNotFound
 	}
 
 	r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
@@ -306,21 +306,20 @@ func (r repo) ExpireLastVideo(ctx context.Context, params *room.ExpireLastVideoP
 	return nil
 }
 
-// todo: return not pointer
-func (r repo) GetCurrentVideoId(ctx context.Context, roomId string) (*int, error) {
+func (r repo) GetCurrentVideoId(ctx context.Context, roomId string) (int, error) {
 	currentVideoKey := r.getCurrentVideoKey(roomId)
 	currentVideoId, err := r.rc.Get(ctx, currentVideoKey).Int()
-	if err != nil {
-		if err == redis.Nil {
-			return nil, nil
-		}
+	if err != nil && err != redis.Nil {
+		return 0, err
+	}
 
-		return nil, err
+	if err == redis.Nil {
+		return 0, room.ErrCurrentVideoNotFound
 	}
 
 	r.rc.Expire(ctx, currentVideoKey, r.maxExpireDuration)
 
-	return &currentVideoId, nil
+	return currentVideoId, nil
 }
 
 func (r repo) SetCurrentVideoId(ctx context.Context, params *room.SetCurrentVideoParams) error {
