@@ -214,8 +214,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 	if videosLength == 0 && isVideoEnded {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videoId, params.UpdatedAt)
 		if err != nil {
-			// todo: wrap
-			return AddVideoResponse{}, err
+			return AddVideoResponse{}, fmt.Errorf("failed to update player video: %w", err)
 		}
 
 		return AddVideoResponse{
@@ -290,7 +289,7 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (EndVideo
 	if len(videos) > 0 {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videos[0].Id, int(time.Now().UnixMicro()))
 		if err != nil {
-			return EndVideoResponse{}, err
+			return EndVideoResponse{}, fmt.Errorf("failed to update player video: %w", err)
 		}
 
 		return EndVideoResponse{
