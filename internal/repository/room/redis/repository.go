@@ -11,7 +11,7 @@ type repo struct {
 	rc                         *redis.Client
 	maxScoreScript             string
 	expireKeysWithPrefixScript string
-	maxExpireDuration          time.Duration
+	// maxExpireDuration          time.Duration
 }
 
 func NewRepo(rc *redis.Client, maxExpireDuration time.Duration) *repo {
@@ -45,6 +45,6 @@ func NewRepo(rc *redis.Client, maxExpireDuration time.Duration) *repo {
 
 			return count
 		`).Val(),
-		maxExpireDuration: maxExpireDuration,
+		// maxExpireDuration: maxExpireDuration,
 	}
 }

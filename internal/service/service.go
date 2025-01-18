@@ -22,7 +22,6 @@ type iRoomRepo interface {
 	SetMember(context.Context, *room.SetMemberParams) error
 	AddMemberToList(context.Context, *room.AddMemberToListParams) error
 	RemoveMember(context.Context, *room.RemoveMemberParams) error
-	ExpireMember(context.Context, *room.ExpireMemberParams) error
 	ExpireMembers(context.Context, *room.ExpireMembersParams) error
 	RemoveMemberFromList(context.Context, *room.RemoveMemberFromListParams) error
 	GetMember(context.Context, *room.GetMemberParams) (room.Member, error)

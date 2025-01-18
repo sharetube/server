@@ -49,26 +49,20 @@ func (r repo) incrLastId(ctx context.Context, roomId string) (int, error) {
 		return 0, err
 	}
 
-	r.rc.Expire(ctx, lastIdKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, lastIdKey, r.maxExpireDuration)
 
 	return int(lastId), nil
 }
 
 func (r repo) IncrPlaylistVersion(ctx context.Context, roomId string) (int, error) {
-	pipe := r.rc.TxPipeline()
 	playlistVersionKey := r.getPlaylistVersionKey(roomId)
-	incrCmd := pipe.Incr(ctx, playlistVersionKey)
-	pipe.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
-
-	if err := r.executePipe(ctx, pipe); err != nil {
+	playlistVersion, err := r.rc.Incr(ctx, playlistVersionKey).Result()
+	if err != nil {
 		return 0, err
 	}
+	// pipe.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
 
-	if incrCmd.Val() == 0 {
-		return 0, room.ErrPlaylistVersionNotFound
-	}
-
-	return int(incrCmd.Val()), nil
+	return int(playlistVersion), nil
 }
 
 func (r repo) GetPlaylistVersion(ctx context.Context, roomId string) (int, error) {
@@ -81,7 +75,7 @@ func (r repo) GetPlaylistVersion(ctx context.Context, roomId string) (int, error
 		return 0, err
 	}
 
-	r.rc.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playlistVersionKey, r.maxExpireDuration)
 	return playlistVersion, nil
 }
 
@@ -92,20 +86,19 @@ func (r repo) GetVideosLength(ctx context.Context, roomId string) (int, error) {
 		return 0, err
 	}
 
-	r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
 
 	videosLength := int(cmd.Val())
 	return videosLength, nil
 }
 
 func (r repo) AddVideoToList(ctx context.Context, params *room.AddVideoToListParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 
 	playlistKey := r.getPlaylistKey(params.RoomId)
-	r.addWithIncrement(ctx, pipe, playlistKey, params.VideoId)
-	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
-
-	return r.executePipe(ctx, pipe)
+	return r.addWithIncrement(ctx, r.rc, playlistKey, params.VideoId).Err()
 }
 
 func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) (int, error) {
@@ -125,7 +118,7 @@ func (r repo) SetVideo(ctx context.Context, params *room.SetVideoParams) (int, e
 		authorNameKey:   params.AuthorName,
 		thumbnailUrlKey: params.ThumbnailUrl,
 	}))
-	pipe.Expire(ctx, videoKey, r.maxExpireDuration)
+	// pipe.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	if err := r.executePipe(ctx, pipe); err != nil {
 		return 0, err
@@ -146,7 +139,7 @@ func (r repo) GetVideo(ctx context.Context, params *room.GetVideoParams) (room.V
 		return room.Video{}, room.ErrVideoNotFound
 	}
 
-	r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, videoKey, r.maxExpireDuration)
 
 	return room.Video{
 		Url:          videoMap[urlKey],
@@ -167,7 +160,7 @@ func (r repo) getVideoIds(ctx context.Context, roomId string) ([]int, error) {
 		return nil, err
 	}
 
-	r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playlistKey, r.maxExpireDuration)
 
 	var idInt int
 	videoIdsInt := make([]int, 0, len(videoIds))
@@ -206,23 +199,22 @@ func (r repo) ReorderList(ctx context.Context, params *room.ReorderListParams) e
 		}
 	}
 
-	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
+	// pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
 
 	return r.executePipe(ctx, pipe)
 }
 
 func (r repo) RemoveVideoFromList(ctx context.Context, params *room.RemoveVideoFromListParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
 
 	playlistKey := r.getPlaylistKey(params.RoomId)
-	remCmd := pipe.ZRem(ctx, playlistKey, params.VideoId)
-	pipe.Expire(ctx, playlistKey, r.maxExpireDuration)
-
-	if err := r.executePipe(ctx, pipe); err != nil {
+	res, err := r.rc.ZRem(ctx, playlistKey, params.VideoId).Result()
+	if err != nil {
 		return err
 	}
 
-	if remCmd.Val() == 0 {
+	if res == 0 {
 		return room.ErrVideoNotFound
 	}
 
@@ -278,19 +270,18 @@ func (r repo) GetLastVideoId(ctx context.Context, roomId string) (*int, error) {
 		return nil, err
 	}
 
-	r.rc.Expire(ctx, lastVideoKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, lastVideoKey, r.maxExpireDuration)
 
 	return &lastVideoId, nil
 }
 
 func (r repo) SetLastVideo(ctx context.Context, params *room.SetLastVideoParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, lastVideoKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 
 	lastVideoKey := r.getLastVideoKey(params.RoomId)
-	pipe.Set(ctx, lastVideoKey, params.VideoId, r.maxExpireDuration)
-	pipe.Expire(ctx, lastVideoKey, r.maxExpireDuration)
-
-	return r.executePipe(ctx, pipe)
+	return r.rc.Set(ctx, lastVideoKey, params.VideoId, 0).Err()
 }
 
 func (r repo) ExpireLastVideo(ctx context.Context, params *room.ExpireLastVideoParams) error {
@@ -316,17 +307,16 @@ func (r repo) GetCurrentVideoId(ctx context.Context, roomId string) (int, error)
 		return 0, room.ErrCurrentVideoNotFound
 	}
 
-	r.rc.Expire(ctx, currentVideoKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, currentVideoKey, r.maxExpireDuration)
 
 	return currentVideoId, nil
 }
 
 func (r repo) SetCurrentVideoId(ctx context.Context, params *room.SetCurrentVideoParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, currentVideoKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 
 	currentVideoKey := r.getCurrentVideoKey(params.RoomId)
-	pipe.Set(ctx, currentVideoKey, params.VideoId, r.maxExpireDuration)
-	pipe.Expire(ctx, currentVideoKey, r.maxExpireDuration)
-
-	return r.executePipe(ctx, pipe)
+	return r.rc.Set(ctx, currentVideoKey, params.VideoId, 0).Err()
 }

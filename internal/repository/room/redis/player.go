@@ -24,13 +24,11 @@ func (r repo) getVideoEndedKey(roomId string) string {
 }
 
 func (r repo) SetVideoEnded(ctx context.Context, params *room.SetVideoEndedParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, videoEndedKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 
-	videoEndedKey := r.getVideoEndedKey(params.RoomId)
-	pipe.Set(ctx, videoEndedKey, params.VideoEnded, r.maxExpireDuration)
-	pipe.Expire(ctx, videoEndedKey, r.maxExpireDuration)
-
-	return r.executePipe(ctx, pipe)
+	return r.rc.Set(ctx, r.getVideoEndedKey(params.RoomId), params.VideoEnded, 0).Err()
 }
 
 func (r repo) GetVideoEnded(ctx context.Context, roomId string) (bool, error) {
@@ -57,19 +55,18 @@ func (r repo) ExpireVideoEnded(ctx context.Context, params *room.ExpireVideoEnde
 }
 
 func (r repo) SetPlayer(ctx context.Context, params *room.SetPlayerParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// pipe.Expire(ctx, playerKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 
 	playerKey := r.getPlayerKey(params.RoomId)
-	pipe.HSet(ctx, playerKey, map[string]any{
+	return r.rc.HSet(ctx, playerKey, map[string]any{
 		isPlayingKey:       params.IsPlaying,
 		waitingForReadyKey: params.WaitingForReady,
 		currentTimeKey:     params.CurrentTime,
 		playbackRateKey:    params.PlaybackRate,
 		updatedAtKey:       params.UpdatedAt,
-	})
-	pipe.Expire(ctx, playerKey, r.maxExpireDuration)
-
-	return r.executePipe(ctx, pipe)
+	}).Err()
 }
 
 func (r repo) IsPlayerExists(ctx context.Context, roomId string) (bool, error) {
@@ -79,7 +76,7 @@ func (r repo) IsPlayerExists(ctx context.Context, roomId string) (bool, error) {
 		return false, err
 	}
 
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	exists := res > 0
 
@@ -93,7 +90,7 @@ func (r repo) GetPlayer(ctx context.Context, roomId string) (room.Player, error)
 		return room.Player{}, err
 	}
 
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return room.Player{
 		IsPlaying:       r.fieldToBool(playerMap[isPlayingKey]),
@@ -115,7 +112,7 @@ func (r repo) RemovePlayer(ctx context.Context, roomId string) error {
 		return room.ErrPlayerNotFound
 	}
 
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -148,7 +145,7 @@ func (r repo) updatePlayerValue(ctx context.Context, roomId string, key string, 
 		return err
 	}
 
-	r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, playerKey, r.maxExpireDuration)
 
 	return nil
 }

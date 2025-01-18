@@ -3,7 +3,6 @@ package redisclient
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,9 +17,10 @@ func NewRedisClient(cfg *Config) (*redis.Client, error) {
 	r := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Password: cfg.Password,
+		DB:       0,
 	})
 
-	if err := r.Set(context.Background(), "key", "value", time.Second).Err(); err != nil {
+	if err := r.Ping(context.Background()).Err(); err != nil {
 		return nil, err
 	}
 

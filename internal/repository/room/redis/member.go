@@ -28,34 +28,28 @@ func (r repo) getMemberListKey(roomId string) string {
 }
 
 func (r repo) addMemberToList(ctx context.Context, pipe redis.Cmdable, roomId, memberId string) {
-	memberListKey := r.getMemberListKey(roomId)
-
-	r.addWithIncrement(ctx, pipe, memberListKey, memberId)
-	pipe.Expire(ctx, memberListKey, r.maxExpireDuration)
+	// pipe.Expire(ctx, memberListKey, r.maxExpireDuration)
 }
 
 func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
 
 	memberKey := r.getMemberKey(params.RoomId, params.MemberId)
-	pipe.HSet(ctx, memberKey, maps.OmitNilPointers(map[string]any{
+	return r.rc.HSet(ctx, memberKey, maps.OmitNilPointers(map[string]any{
 		usernameKey:  params.Username,
 		avatarUrlKey: params.AvatarUrl,
 		colorKey:     params.Color,
 		isMutedKey:   params.IsMuted,
 		isAdminKey:   params.IsAdmin,
 		isReadyKey:   params.IsReady,
-	}))
-	pipe.Expire(ctx, memberKey, r.maxExpireDuration)
-
-	// todo: move in separate function
-	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
-
-	return r.executePipe(ctx, pipe)
+	})).Err()
+	// pipe.Expire(ctx, memberKey, r.maxExpireDuration)
+	// return r.executePipe(ctx, pipe)
 }
 
 func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListParams) error {
-	pipe := r.rc.TxPipeline()
+	// pipe := r.rc.TxPipeline()
+	// return r.executePipe(ctx, pipe)
 
 	exists := r.rc.Exists(ctx, r.getMemberKey(params.RoomId, params.MemberId)).Val()
 
@@ -63,9 +57,7 @@ func (r repo) AddMemberToList(ctx context.Context, params *room.AddMemberToListP
 		return room.ErrMemberNotFound
 	}
 
-	r.addMemberToList(ctx, pipe, params.RoomId, params.MemberId)
-
-	return r.executePipe(ctx, pipe)
+	return r.addWithIncrement(ctx, r.rc, r.getMemberListKey(params.RoomId), params.MemberId).Err()
 }
 
 func (r repo) removeMember(ctx context.Context, roomId, memberId string) error {
@@ -97,20 +89,6 @@ func (r repo) RemoveMember(ctx context.Context, params *room.RemoveMemberParams)
 	return r.removeMember(ctx, params.RoomId, params.MemberId)
 }
 
-// ? remove
-func (r repo) ExpireMember(ctx context.Context, params *room.ExpireMemberParams) error {
-	res, err := r.rc.ExpireAt(ctx, r.getMemberKey(params.RoomId, params.MemberId), params.ExpireAt).Result()
-	if err != nil {
-		return err
-	}
-
-	if !res {
-		return room.ErrMemberNotFound
-	}
-
-	return nil
-}
-
 func (r repo) ExpireMembers(ctx context.Context, params *room.ExpireMembersParams) error {
 	r.expireKeysWithPrefix(ctx, r.rc, r.getMemberKey(params.RoomId, "*"), params.ExpireAt)
 	return nil
@@ -122,7 +100,7 @@ func (r repo) GetMemberIsMuted(ctx context.Context, roomId, memberId string) (bo
 	if err != nil {
 		return false, err
 	}
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return isAdmin, nil
 }
@@ -133,7 +111,7 @@ func (r repo) GetMemberIsAdmin(ctx context.Context, roomId, memberId string) (bo
 	if err != nil {
 		return false, err
 	}
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return isAdmin, nil
 }
@@ -144,7 +122,7 @@ func (r repo) GetMemberIds(ctx context.Context, roomId string) ([]string, error)
 	if err != nil {
 		return nil, err
 	}
-	r.rc.Expire(ctx, memberListKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberListKey, r.maxExpireDuration)
 
 	return memberIds, nil
 }
@@ -160,7 +138,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 		return room.Member{}, room.ErrMemberNotFound
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return room.Member{
 		Username:  memberMap[usernameKey],
@@ -175,6 +153,7 @@ func (r repo) GetMember(ctx context.Context, params *room.GetMemberParams) (room
 func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, isAdmin bool) error {
 	//? dont check existence because there is check on service layer that member in current room
 	memberKey := r.getMemberKey(roomId, memberId)
+	// todo: refacotr with result
 	cmd := r.rc.Exists(ctx, memberKey)
 	if err := cmd.Err(); err != nil {
 		return err
@@ -188,7 +167,7 @@ func (r repo) UpdateMemberIsAdmin(ctx context.Context, roomId, memberId string, 
 		return err
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -208,7 +187,7 @@ func (r repo) UpdateMemberIsReady(ctx context.Context, roomId, memberId string, 
 		return err
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -228,7 +207,7 @@ func (r repo) UpdateMemberIsMuted(ctx context.Context, roomId, memberId string, 
 		return err
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -248,7 +227,7 @@ func (r repo) UpdateMemberColor(ctx context.Context, roomId, memberId, color str
 		return err
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -274,7 +253,7 @@ func (r repo) UpdateMemberAvatarUrl(ctx context.Context, roomId, memberId string
 		}
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
@@ -294,7 +273,7 @@ func (r repo) UpdateMemberUsername(ctx context.Context, roomId, memberId, userna
 		return err
 	}
 
-	r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
+	// r.rc.Expire(ctx, memberKey, r.maxExpireDuration)
 
 	return nil
 }
