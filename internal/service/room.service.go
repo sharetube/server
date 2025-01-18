@@ -218,13 +218,6 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		return JoinRoomResponse{}, fmt.Errorf("failed to get member by jwt: %w", err)
 	}
 
-	if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
-		RoomId:   params.RoomId,
-		MemberId: member.Id,
-	}); err != nil {
-		return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
-	}
-
 	if member == nil {
 		//? check if room exists
 		_, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
@@ -248,6 +241,13 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			return JoinRoomResponse{}, fmt.Errorf("failed to set member: %w", err)
 		}
 
+		if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
+			RoomId:   params.RoomId,
+			MemberId: memberId,
+		}); err != nil {
+			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
+		}
+
 		member = &Member{
 			Id:        memberId,
 			Username:  params.Username,
@@ -264,6 +264,13 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 		}
 	} else {
 		// member found, updating
+		if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
+			RoomId:   params.RoomId,
+			MemberId: member.Id,
+		}); err != nil {
+			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
+		}
+
 		if member.Username != params.Username {
 			if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, member.Id, params.Username); err != nil {
 				return JoinRoomResponse{}, fmt.Errorf("failed to update member username: %w", err)
