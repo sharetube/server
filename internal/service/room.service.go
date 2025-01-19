@@ -193,36 +193,36 @@ type JoinRoomResponse struct {
 	Conns        []*websocket.Conn
 }
 
-func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoomResponse, error) {
+func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (*JoinRoomResponse, error) {
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.Username, UsernameRule...),
 		validation.Field(&params.Color, ColorRule...),
 		validation.Field(&params.AvatarUrl, AvatarUrlRule...),
 		validation.Field(&params.RoomId, RoomIdRule...),
 	); err != nil {
-		return JoinRoomResponse{}, err
+		return nil, err
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	if len(conns) >= s.membersLimit {
-		return JoinRoomResponse{}, errors.New("room is full")
+		return nil, errors.New("room is full")
 	}
 
 	jwt := params.JWT
 	member, err := s.getMemberByJWT(ctx, params.RoomId, params.JWT)
 	if err != nil {
-		return JoinRoomResponse{}, fmt.Errorf("failed to get member by jwt: %w", err)
+		return nil, fmt.Errorf("failed to get member by jwt: %w", err)
 	}
 
 	if member == nil {
 		//? check if room exists
 		_, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 		if err != nil {
-			return JoinRoomResponse{}, errors.New("room not found")
+			return nil, errors.New("room not found")
 		}
 
 		// member not found, creating new one
@@ -238,14 +238,14 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			RoomId:    params.RoomId,
 		}
 		if err := s.roomRepo.SetMember(ctx, &setMemberParams); err != nil {
-			return JoinRoomResponse{}, fmt.Errorf("failed to set member: %w", err)
+			return nil, fmt.Errorf("failed to set member: %w", err)
 		}
 
 		if err := s.roomRepo.AddMemberToList(ctx, &room.AddMemberToListParams{
 			RoomId:   params.RoomId,
 			MemberId: memberId,
 		}); err != nil {
-			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
+			return nil, fmt.Errorf("failed to add member to list: %w", err)
 		}
 
 		member = &Member{
@@ -260,7 +260,7 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 		jwt, err = s.generateJWT(member.Id)
 		if err != nil {
-			return JoinRoomResponse{}, fmt.Errorf("failed to generate jwt: %w", err)
+			return nil, fmt.Errorf("failed to generate jwt: %w", err)
 		}
 	} else {
 		// member found, updating
@@ -268,26 +268,26 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 			RoomId:   params.RoomId,
 			MemberId: member.Id,
 		}); err != nil {
-			return JoinRoomResponse{}, fmt.Errorf("failed to add member to list: %w", err)
+			return nil, fmt.Errorf("failed to add member to list: %w", err)
 		}
 
 		if member.Username != params.Username {
 			if err := s.roomRepo.UpdateMemberUsername(ctx, params.RoomId, member.Id, params.Username); err != nil {
-				return JoinRoomResponse{}, fmt.Errorf("failed to update member username: %w", err)
+				return nil, fmt.Errorf("failed to update member username: %w", err)
 			}
 			member.Username = params.Username
 		}
 
 		if member.Color != params.Color {
 			if err := s.roomRepo.UpdateMemberColor(ctx, params.RoomId, member.Id, params.Color); err != nil {
-				return JoinRoomResponse{}, fmt.Errorf("failed to update member color: %w", err)
+				return nil, fmt.Errorf("failed to update member color: %w", err)
 			}
 			member.Color = params.Color
 		}
 
 		if member.AvatarUrl != params.AvatarUrl {
 			if err := s.roomRepo.UpdateMemberAvatarUrl(ctx, params.RoomId, member.Id, params.AvatarUrl); err != nil {
-				return JoinRoomResponse{}, fmt.Errorf("failed to update member avatar URL: %w", err)
+				return nil, fmt.Errorf("failed to update member avatar URL: %w", err)
 			}
 			member.AvatarUrl = params.AvatarUrl
 		}
@@ -295,9 +295,9 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 
 	members, err := s.getMembers(ctx, params.RoomId)
 	if err != nil {
-		return JoinRoomResponse{}, fmt.Errorf("failed to get members: %w", err)
+		return nil, fmt.Errorf("failed to get members: %w", err)
 	}
-	return JoinRoomResponse{
+	return &JoinRoomResponse{
 		JWT:          jwt,
 		Conns:        conns,
 		Members:      members,
@@ -305,28 +305,28 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (JoinRoom
 	}, nil
 }
 
-func (s service) GetRoom(ctx context.Context, roomId string) (Room, error) {
+func (s service) GetRoom(ctx context.Context, roomId string) (*Room, error) {
 	player, err := s.roomRepo.GetPlayer(ctx, roomId)
 	if err != nil {
-		return Room{}, fmt.Errorf("failed to get player: %w", err)
+		return nil, fmt.Errorf("failed to get player: %w", err)
 	}
 
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
-		return Room{}, fmt.Errorf("failed to get members: %w", err)
+		return nil, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	playlist, err := s.getPlaylist(ctx, roomId)
 	if err != nil {
-		return Room{}, fmt.Errorf("failed to get playlist: %w", err)
+		return nil, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
 	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, roomId)
 	if err != nil {
-		return Room{}, fmt.Errorf("failed to get video ended: %w", err)
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
 	}
 
-	return Room{
+	return &Room{
 		Id:         roomId,
 		VideoEnded: videoEnded,
 		Player: Player{

@@ -170,34 +170,34 @@ type AddVideoResponse struct {
 	Members    []Member
 }
 
-func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideoResponse, error) {
+func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return AddVideoResponse{}, err
+		return nil, err
 	}
 
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.VideoUrl, VideoUrlRule...),
 	); err != nil {
-		return AddVideoResponse{}, err
+		return nil, err
 	}
 
 	videoData, err := ytvideodata.Get(params.VideoUrl)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get video data: %w", err)
+		return nil, fmt.Errorf("failed to get video data: %w", err)
 	}
 
 	videosLength, err := s.roomRepo.GetVideosLength(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get videos length: %w", err)
+		return nil, fmt.Errorf("failed to get videos length: %w", err)
 	}
 
 	if videosLength >= s.playlistLimit {
-		return AddVideoResponse{}, ErrPlaylistLimitReached
+		return nil, ErrPlaylistLimitReached
 	}
 
 	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get video ended: %w", err)
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
 	}
 
 	videoId, err := s.roomRepo.SetVideo(ctx, &room.SetVideoParams{
@@ -208,16 +208,16 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		AuthorName:   videoData.AuthorName,
 	})
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to set video: %w", err)
+		return nil, fmt.Errorf("failed to set video: %w", err)
 	}
 
 	if videosLength == 0 && videoEnded {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videoId, params.UpdatedAt)
 		if err != nil {
-			return AddVideoResponse{}, fmt.Errorf("failed to update player video: %w", err)
+			return nil, fmt.Errorf("failed to update player video: %w", err)
 		}
 
-		return AddVideoResponse{
+		return &AddVideoResponse{
 			Conns:    updatePlayerVideoRes.Conns,
 			Playlist: updatePlayerVideoRes.Playlist,
 			Player:   &updatePlayerVideoRes.Player,
@@ -229,20 +229,20 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (AddVideo
 		RoomId:  params.RoomId,
 		VideoId: videoId,
 	}); err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to add video to list: %w", err)
+		return nil, fmt.Errorf("failed to add video to list: %w", err)
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return AddVideoResponse{}, fmt.Errorf("failed to get playlist with incr version: %w", err)
+		return nil, fmt.Errorf("failed to get playlist with incr version: %w", err)
 	}
 
-	return AddVideoResponse{
+	return &AddVideoResponse{
 		AddedVideo: &Video{
 			Id:           videoId,
 			Url:          params.VideoUrl,
@@ -267,32 +267,32 @@ type EndVideoResponse struct {
 	Members  []Member
 }
 
-func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (EndVideoResponse, error) {
+func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return EndVideoResponse{}, err
+		return nil, err
 	}
 
 	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
 	if err != nil {
-		return EndVideoResponse{}, fmt.Errorf("failed to get video ended: %w", err)
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
 	}
 
 	if videoEnded {
-		return EndVideoResponse{}, errors.New("ended already set")
+		return nil, errors.New("ended already set")
 	}
 
 	videos, err := s.getVideos(ctx, params.RoomId)
 	if err != nil {
-		return EndVideoResponse{}, err
+		return nil, err
 	}
 
 	if len(videos) > 0 {
 		updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, videos[0].Id, int(time.Now().UnixMicro()))
 		if err != nil {
-			return EndVideoResponse{}, fmt.Errorf("failed to update player video: %w", err)
+			return nil, fmt.Errorf("failed to update player video: %w", err)
 		}
 
-		return EndVideoResponse{
+		return &EndVideoResponse{
 			Conns:    updatePlayerVideoRes.Conns,
 			Playlist: &updatePlayerVideoRes.Playlist,
 			Player:   &updatePlayerVideoRes.Player,
@@ -304,15 +304,15 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (EndVideo
 		RoomId:     params.RoomId,
 		VideoEnded: true,
 	}); err != nil {
-		return EndVideoResponse{}, fmt.Errorf("failed to set video ended: %w", err)
+		return nil, fmt.Errorf("failed to set video ended: %w", err)
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return EndVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
-	return EndVideoResponse{
+	return &EndVideoResponse{
 		Conns: conns,
 	}, nil
 }
@@ -329,42 +329,42 @@ type RemoveVideoResponse struct {
 	Playlist       Playlist
 }
 
-func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (RemoveVideoResponse, error) {
+func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*RemoveVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return RemoveVideoResponse{}, err
+		return nil, err
 	}
 
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.VideoId, VideoIdRule...),
 	); err != nil {
-		return RemoveVideoResponse{}, err
+		return nil, err
 	}
 
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
 	}); err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video from list: %w", err)
+		return nil, fmt.Errorf("failed to remove video from list: %w", err)
 	}
 
 	if err := s.roomRepo.RemoveVideo(ctx, &room.RemoveVideoParams{
 		VideoId: params.VideoId,
 		RoomId:  params.RoomId,
 	}); err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to remove video: %w", err)
+		return nil, fmt.Errorf("failed to remove video: %w", err)
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return RemoveVideoResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+		return nil, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
-	return RemoveVideoResponse{
+	return &RemoveVideoResponse{
 		Conns:          conns,
 		RemovedVideoId: params.VideoId,
 		Playlist:       *playlist,
@@ -382,35 +382,35 @@ type ReorderPlaylistResponse struct {
 	Playlist Playlist
 }
 
-func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (ReorderPlaylistResponse, error) {
+func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (*ReorderPlaylistResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return ReorderPlaylistResponse{}, err
+		return nil, err
 	}
 
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.VideoIds, validation.Each(VideoIdRule...)),
 	); err != nil {
-		return ReorderPlaylistResponse{}, err
+		return nil, err
 	}
 
 	if err := s.roomRepo.ReorderList(ctx, &room.ReorderListParams{
 		VideoIds: params.VideoIds,
 		RoomId:   params.RoomId,
 	}); err != nil {
-		return ReorderPlaylistResponse{}, fmt.Errorf("failed to reorder playlist: %w", err)
+		return nil, fmt.Errorf("failed to reorder playlist: %w", err)
 	}
 
 	conns, err := s.getConns(ctx, params.RoomId)
 	if err != nil {
-		return ReorderPlaylistResponse{}, fmt.Errorf("failed to get conns: %w", err)
+		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
 	playlist, err := s.getPlaylistWithIncrVersion(ctx, params.RoomId)
 	if err != nil {
-		return ReorderPlaylistResponse{}, fmt.Errorf("failed to get playlist: %w", err)
+		return nil, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
-	return ReorderPlaylistResponse{
+	return &ReorderPlaylistResponse{
 		Conns:    conns,
 		Playlist: *playlist,
 	}, nil

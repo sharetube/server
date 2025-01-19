@@ -6,7 +6,6 @@ import (
 
 	"github.com/skewb1k/goutils/maps"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
 )
 
@@ -25,10 +24,6 @@ func (r repo) getMemberKey(roomId, memberId string) string {
 
 func (r repo) getMemberListKey(roomId string) string {
 	return fmt.Sprintf("room:%s:memberlist", roomId)
-}
-
-func (r repo) addMemberToList(ctx context.Context, pipe redis.Cmdable, roomId, memberId string) {
-	// pipe.Expire(ctx, memberListKey, r.maxExpireDuration)
 }
 
 func (r repo) SetMember(ctx context.Context, params *room.SetMemberParams) error {

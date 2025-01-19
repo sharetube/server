@@ -25,46 +25,46 @@ type UpdatePlayerStateResponse struct {
 	Conns  []*websocket.Conn
 }
 
-func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (UpdatePlayerStateResponse, error) {
+func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (*UpdatePlayerStateResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerStateResponse{}, err
+		return nil, err
 	}
 	//? add validation
 
 	currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get current video id: %w", err)
+		return nil, fmt.Errorf("failed to get current video id: %w", err)
 	}
 
 	if currentVideoId != params.VideoId {
-		return UpdatePlayerStateResponse{}, errors.New("video id is not equal")
+		return nil, errors.New("video id is not equal")
 	}
 
 	updated := false
 	player, err := s.roomRepo.GetPlayer(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get player: %w", err)
+		return nil, fmt.Errorf("failed to get player: %w", err)
 	}
 
 	// todo: wrap in transaction
 	if player.CurrentTime != params.CurrentTime {
 		updated = true
 		if err := s.roomRepo.UpdatePlayerCurrentTime(ctx, params.RoomId, params.CurrentTime); err != nil {
-			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player current time: %w", err)
+			return nil, fmt.Errorf("failed to update player current time: %w", err)
 		}
 	}
 
 	if player.IsPlaying != params.IsPlaying {
 		updated = true
 		if err := s.roomRepo.UpdatePlayerIsPlaying(ctx, params.RoomId, params.IsPlaying); err != nil {
-			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is playing: %w", err)
+			return nil, fmt.Errorf("failed to update player is playing: %w", err)
 		}
 	}
 
 	if player.PlaybackRate != params.PlaybackRate {
 		updated = true
 		if err := s.roomRepo.UpdatePlayerPlaybackRate(ctx, params.RoomId, params.PlaybackRate); err != nil {
-			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player playback rate: %w", err)
+			return nil, fmt.Errorf("failed to update player playback rate: %w", err)
 		}
 	}
 
@@ -76,7 +76,7 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	// }
 
 	if !updated {
-		return UpdatePlayerStateResponse{
+		return &UpdatePlayerStateResponse{
 			Player: Player{
 				IsPlaying:    player.IsPlaying,
 				CurrentTime:  player.CurrentTime,
@@ -88,18 +88,18 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	}
 
 	if err := s.roomRepo.UpdatePlayerUpdatedAt(ctx, params.RoomId, params.UpdatedAt); err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player updated at: %w", err)
+		return nil, fmt.Errorf("failed to update player updated at: %w", err)
 	}
 
 	if player.WaitingForReady {
 		if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, false); err != nil {
-			return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player waiting for ready: %w", err)
+			return nil, fmt.Errorf("failed to update player waiting for ready: %w", err)
 		}
 	}
 
 	memberIds, err := s.roomRepo.GetMemberIds(ctx, params.RoomId)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get member ids: %w", err)
+		return nil, fmt.Errorf("failed to get member ids: %w", err)
 	}
 
 	for i, memberId := range memberIds {
@@ -111,10 +111,10 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 
 	conns, err := s.getConnsFromMemberIds(ctx, memberIds)
 	if err != nil {
-		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to get conns from member ids: %w", err)
+		return nil, fmt.Errorf("failed to get conns from member ids: %w", err)
 	}
 
-	return UpdatePlayerStateResponse{
+	return &UpdatePlayerStateResponse{
 		Player: Player{
 			IsPlaying:    params.IsPlaying,
 			CurrentTime:  params.CurrentTime,
@@ -139,23 +139,23 @@ type UpdatePlayerVideoResponse struct {
 	Playlist Playlist
 }
 
-func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (UpdatePlayerVideoResponse, error) {
+func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (*UpdatePlayerVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return nil, err
 	}
 
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.VideoId, VideoIdRule...),
 	); err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return nil, err
 	}
 
 	updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, params.VideoId, params.UpdatedAt)
 	if err != nil {
-		return UpdatePlayerVideoResponse{}, err
+		return nil, err
 	}
 
-	return UpdatePlayerVideoResponse{
+	return &UpdatePlayerVideoResponse{
 		Members:  updatePlayerVideoRes.Members,
 		Player:   updatePlayerVideoRes.Player,
 		Playlist: updatePlayerVideoRes.Playlist,
