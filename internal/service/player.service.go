@@ -7,6 +7,7 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 type UpdatePlayerStateParams struct {
@@ -68,12 +69,19 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		}
 	}
 
-	// if player.IsEnded != params.IsEnded {
-	// 	updated = true
-	// 	if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, params.IsEnded); err != nil {
-	// 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
-	// 	}
-	// }
+	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
+	}
+
+	if videoEnded {
+		if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
+			RoomId:     params.RoomId,
+			VideoEnded: videoEnded,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update video ended: %w", err)
+		}
+	}
 
 	if !updated {
 		return &UpdatePlayerStateResponse{
