@@ -2,8 +2,10 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sharetube/server/internal/repository/room"
 )
 
@@ -21,6 +23,33 @@ func (r repo) getPlayerKey(roomId string) string {
 
 func (r repo) getVideoEndedKey(roomId string) string {
 	return fmt.Sprintf("room:%s:video-ended", roomId)
+}
+
+func (r repo) getPlayerVersionKey(roomId string) string {
+	return fmt.Sprintf("room:%s:player-version", roomId)
+}
+
+func (r repo) IncrPlayerVersion(ctx context.Context, roomId string) (int, error) {
+	playerVersionKey := r.getPlayerVersionKey(roomId)
+	playerVersion, err := r.rc.Incr(ctx, playerVersionKey).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	return int(playerVersion), nil
+}
+
+func (r repo) GetPlayerVersion(ctx context.Context, roomId string) (int, error) {
+	playerVersionKey := r.getPlayerVersionKey(roomId)
+	playerVersion, err := r.rc.Get(ctx, playerVersionKey).Int()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	return playerVersion, nil
 }
 
 func (r repo) SetVideoEnded(ctx context.Context, params *room.SetVideoEndedParams) error {

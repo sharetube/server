@@ -12,6 +12,11 @@ import (
 	"github.com/sharetube/server/pkg/ytvideodata"
 )
 
+var (
+	ErrPlayerVersionMismatch   = errors.New("player version mismatch")
+	ErrPlaylistVersionMismatch = errors.New("playlist version mismatch")
+)
+
 func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) {
 	videosIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
 	if err != nil {
@@ -66,6 +71,34 @@ func (s service) getPlaylist(ctx context.Context, roomId string) (*Playlist, err
 		LastVideo:    lastVideo,
 		CurrentVideo: *currentVideo,
 		Version:      version,
+	}, nil
+}
+
+func (s service) getPlayer(ctx context.Context, roomId string) (*Player, error) {
+	player, err := s.roomRepo.GetPlayer(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player: %w", err)
+	}
+
+	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
+	}
+
+	playerVersion, err := s.roomRepo.GetPlayerVersion(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player version: %w", err)
+	}
+
+	return &Player{
+		State: PlayerState{
+			CurrentTime:  player.CurrentTime,
+			IsPlaying:    player.IsPlaying,
+			PlaybackRate: player.PlaybackRate,
+			UpdatedAt:    player.UpdatedAt,
+		},
+		IsEnded: videoEnded,
+		Version: playerVersion,
 	}, nil
 }
 
@@ -155,10 +188,12 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 }
 
 type AddVideoParams struct {
-	SenderId  string `json:"sender_id"`
-	RoomId    string `json:"room_id"`
-	VideoUrl  string `json:"video_url"`
-	UpdatedAt int    `json:"updated_at"`
+	SenderId        string `json:"sender_id"`
+	RoomId          string `json:"room_id"`
+	VideoUrl        string `json:"video_url"`
+	UpdatedAt       int    `json:"updated_at"`
+	PlaylistVersion int    `json:"playlist_version"`
+	PlayerVersion   int    `json:"player_version"`
 }
 
 // todo: two optional responses
@@ -179,6 +214,24 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 		validation.Field(&params.VideoUrl, VideoUrlRule...),
 	); err != nil {
 		return nil, err
+	}
+
+	playerVersion, err := s.roomRepo.GetPlayerVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player version: %w", err)
+	}
+
+	if params.PlayerVersion != playerVersion {
+		return nil, ErrPlayerVersionMismatch
+	}
+
+	playlistVersion, err := s.roomRepo.GetPlaylistVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get playlist version: %w", err)
+	}
+
+	if params.PlaylistVersion != playlistVersion {
+		return nil, ErrPlaylistVersionMismatch
 	}
 
 	videoData, err := ytvideodata.Get(params.VideoUrl)
@@ -256,8 +309,9 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 }
 
 type EndVideoParams struct {
-	SenderId string `json:"sender_id"`
-	RoomId   string `json:"room_id"`
+	SenderId      string `json:"sender_id"`
+	RoomId        string `json:"room_id"`
+	PlayerVersion int    `json:"player_version"`
 }
 
 type EndVideoResponse struct {
@@ -270,6 +324,15 @@ type EndVideoResponse struct {
 func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVideoResponse, error) {
 	if err := s.checkIfMemberAdmin(ctx, params.RoomId, params.SenderId); err != nil {
 		return nil, err
+	}
+
+	playerVersion, err := s.roomRepo.GetPlayerVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player version: %w", err)
+	}
+
+	if playerVersion != params.PlayerVersion {
+		return nil, errors.New("player version is not equal")
 	}
 
 	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
@@ -312,15 +375,22 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVide
 		return nil, fmt.Errorf("failed to get conns: %w", err)
 	}
 
+	player, err := s.getPlayer(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player: %w", err)
+	}
+
 	return &EndVideoResponse{
-		Conns: conns,
+		Player: player,
+		Conns:  conns,
 	}, nil
 }
 
 type RemoveVideoParams struct {
-	SenderId string `json:"sender_id"`
-	VideoId  int    `json:"video_id"`
-	RoomId   string `json:"room_id"`
+	SenderId        string `json:"sender_id"`
+	VideoId         int    `json:"video_id"`
+	RoomId          string `json:"room_id"`
+	PlaylistVersion int    `json:"playlist_version"`
 }
 
 type RemoveVideoResponse struct {
@@ -338,6 +408,15 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*R
 		validation.Field(&params.VideoId, VideoIdRule...),
 	); err != nil {
 		return nil, err
+	}
+
+	playlistVersion, err := s.roomRepo.GetPlaylistVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get playlist version: %w", err)
+	}
+
+	if params.PlaylistVersion != playlistVersion {
+		return nil, ErrPlaylistVersionMismatch
 	}
 
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
@@ -372,9 +451,10 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*R
 }
 
 type ReorderPlaylistParams struct {
-	VideoIds []int  `json:"video_ids"`
-	SenderId string `json:"sender_id"`
-	RoomId   string `json:"room_id"`
+	VideoIds        []int  `json:"video_ids"`
+	SenderId        string `json:"sender_id"`
+	RoomId          string `json:"room_id"`
+	PlaylistVersion int    `json:"playlist_version"`
 }
 
 type ReorderPlaylistResponse struct {
@@ -391,6 +471,15 @@ func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistPar
 		validation.Field(&params.VideoIds, validation.Each(VideoIdRule...)),
 	); err != nil {
 		return nil, err
+	}
+
+	playlistVersion, err := s.roomRepo.GetPlaylistVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get playlist version: %w", err)
+	}
+
+	if params.PlaylistVersion != playlistVersion {
+		return nil, ErrPlaylistVersionMismatch
 	}
 
 	if err := s.roomRepo.ReorderList(ctx, &room.ReorderListParams{

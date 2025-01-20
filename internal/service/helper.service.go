@@ -180,12 +180,26 @@ func (s service) updatePlayerVideo(ctx context.Context, roomId string, videoId i
 		conns = append(conns, conn)
 	}
 
+	playerVersion, err := s.roomRepo.IncrPlayerVersion(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to incr player version: %w", err)
+	}
+
+	isEnded, err := s.roomRepo.GetVideoEnded(ctx, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get video ended: %w", err)
+	}
+
 	return &updatePlayerVideoResponse{
 		Player: Player{
-			CurrentTime:  currentTime,
-			IsPlaying:    isPlaying,
-			PlaybackRate: playbackRate,
-			UpdatedAt:    updatedAt,
+			State: PlayerState{
+				CurrentTime:  currentTime,
+				IsPlaying:    isPlaying,
+				PlaybackRate: playbackRate,
+				UpdatedAt:    updatedAt,
+			},
+			IsEnded: isEnded,
+			Version: playerVersion,
 		},
 		Members: members,
 		Playlist: Playlist{

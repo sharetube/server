@@ -83,7 +83,9 @@ null
 ```json
 {
   "video_url": "[string]",
-  "updated_at": "[number]"
+  "updated_at": "[number]",
+  "playlist_version":"[number]",
+  "player_version":"[number]"
 }
 ```
 </td>
@@ -95,7 +97,8 @@ null
 
 ```json
 {
-  "video_id": "[number]"
+  "video_id": "[number]",
+  "playlist_version":"[number]"
 }
 ```
 </td>
@@ -110,6 +113,7 @@ null
   "video_ids": [
     "[number]"
   ],
+  "playlist_version":"[number]"
 }
 ```
 </td>
@@ -146,10 +150,11 @@ null
 ```json
 {
   "video_id": "[number]",
+  "player_version":"[number]",
   "playback_rate": "[number]",
   "is_playing": "[boolean]",
   "current_time": "[number]",
-  "updated_at": "[number]"
+  "updated_at": "[number]",
 }
 ```
 </td>
@@ -160,7 +165,9 @@ null
 <td>
 
 ```json
-null
+{
+  "player_version":"[number]"
+}
 ```
 </td>
 </tr>
@@ -172,7 +179,9 @@ null
 ```json
 {
   "video_id": "[number]",
-  "updated_at": "[number]"
+  "updated_at": "[number]",
+  "playlist_version":"[number]",
+  "player_version":"[number]"
 }
 ```
 </td>
@@ -205,12 +214,15 @@ null
   "room": {
     "id": "[string]",
     "player": {
-      "playback_rate": "[number]",
-      "is_playing": "[boolean]",
-      "current_time": "[number]",
-      "updated_at": "[number]"
+      "state":{
+        "playback_rate": "[number]",
+        "is_playing": "[boolean]",
+        "current_time": "[number]",
+        "updated_at": "[number]",
+      },
+      "is_ended":"[boolean]",
+      "version": "[number]"
     },
-    "video_ended": "[boolean]",
     "playlist": {
       "videos": [
         {
@@ -262,22 +274,16 @@ null
 {
   "current_video_id":"[number]",
   "player": {
-    "playback_rate": "[number]",
-    "is_playing": "[boolean]",
-    "current_time": "[number]",
-    "updated_at": "[number]"
+    "state":{
+      "playback_rate": "[number]",
+      "is_playing": "[boolean]",
+      "current_time": "[number]",
+      "updated_at": "[number]",
+    },
+    "is_ended":"[boolean]",
+    "version": "[number]"
   }
 }
-```
-</td>
-</tr>
-
-<tr>
-<td>VIDEO_ENDED</td>
-<td>
-
-```json
-null
 ```
 </td>
 </tr>
@@ -289,10 +295,14 @@ null
 ```json
 {
   "player": {
-    "playback_rate": "[number]",
-    "is_playing": "[boolean]",
-    "current_time": "[number]",
-    "updated_at": "[number]"
+    "state":{
+      "playback_rate": "[number]",
+      "is_playing": "[boolean]",
+      "current_time": "[number]",
+      "updated_at": "[number]",
+    },
+    "is_ended":"[boolean]",
+    "version": "[number]"
   },
   "playlist": {
     "videos": [

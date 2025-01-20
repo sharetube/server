@@ -55,6 +55,8 @@ type iRoomRepo interface {
 	// player
 	SetPlayer(context.Context, *room.SetPlayerParams) error
 	GetPlayer(context.Context, string) (room.Player, error)
+	GetPlayerVersion(context.Context, string) (int, error)
+	IncrPlayerVersion(context.Context, string) (int, error)
 	IsPlayerExists(context.Context, string) (bool, error)
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
