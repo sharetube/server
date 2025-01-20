@@ -518,6 +518,7 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 				player.IsPlaying = neededIsReady
 				player.UpdatedAt = int(time.Now().UnixMicro())
 
+				// todo: check isEnded
 				if err := s.roomRepo.UpdatePlayerWaitingForReady(ctx, params.RoomId, !player.WaitingForReady); err != nil {
 					return nil, fmt.Errorf("failed to update player waiting for ready: %w", err)
 				}
@@ -526,15 +527,29 @@ func (s service) UpdateIsReady(ctx context.Context, params *UpdateIsReadyParams)
 					return nil, fmt.Errorf("failed to update player is playing: %w", err)
 				}
 
+				playerVersion, err := s.roomRepo.IncrPlayerVersion(ctx, params.RoomId)
+				if err != nil {
+					return nil, fmt.Errorf("failed to incr player version: %w", err)
+				}
+
+				isEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get video ended: %w", err)
+				}
+
 				return &UpdateIsReadyResponse{
 					Conns:         conns,
 					UpdatedMember: updatedMember,
 					Members:       members,
 					Player: &Player{
-						IsPlaying:    player.IsPlaying,
-						CurrentTime:  player.CurrentTime,
-						PlaybackRate: player.PlaybackRate,
-						UpdatedAt:    player.UpdatedAt,
+						State: PlayerState{
+							CurrentTime:  player.CurrentTime,
+							IsPlaying:    player.IsPlaying,
+							PlaybackRate: player.PlaybackRate,
+							UpdatedAt:    player.UpdatedAt,
+						},
+						IsEnded: isEnded,
+						Version: playerVersion,
 					},
 				}, nil
 			}

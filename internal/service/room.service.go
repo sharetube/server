@@ -306,11 +306,6 @@ func (s service) JoinRoom(ctx context.Context, params *JoinRoomParams) (*JoinRoo
 }
 
 func (s service) GetRoom(ctx context.Context, roomId string) (*Room, error) {
-	player, err := s.roomRepo.GetPlayer(ctx, roomId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get player: %w", err)
-	}
-
 	members, err := s.getMembers(ctx, roomId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get members: %w", err)
@@ -321,20 +316,14 @@ func (s service) GetRoom(ctx context.Context, roomId string) (*Room, error) {
 		return nil, fmt.Errorf("failed to get playlist: %w", err)
 	}
 
-	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, roomId)
+	player, err := s.getPlayer(ctx, roomId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get video ended: %w", err)
+		return nil, fmt.Errorf("failed to get player: %w", err)
 	}
 
 	return &Room{
-		Id:         roomId,
-		VideoEnded: videoEnded,
-		Player: Player{
-			IsPlaying:    player.IsPlaying,
-			CurrentTime:  player.CurrentTime,
-			PlaybackRate: player.PlaybackRate,
-			UpdatedAt:    player.UpdatedAt,
-		},
+		Id:       roomId,
+		Player:   *player,
 		Members:  members,
 		Playlist: *playlist,
 	}, nil

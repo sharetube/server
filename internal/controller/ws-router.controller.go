@@ -23,7 +23,6 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	// video
 	wsrouter.Handle(mux, "ALIVE", c.handleAlive)
 	wsrouter.Handle(mux, "ADD_VIDEO", c.handleAddVideo)
-	wsrouter.Handle(mux, "END_VIDEO", c.handleEndVideo)
 	wsrouter.Handle(mux, "REMOVE_VIDEO", c.handleRemoveVideo)
 	wsrouter.Handle(mux, "REORDER_PLAYLIST", c.handleReorderPlaylist)
 
@@ -34,6 +33,7 @@ func (c controller) getWSRouter() *wsrouter.WSRouter {
 	// player
 	wsrouter.Handle(mux, "UPDATE_PLAYER_STATE", c.handleUpdatePlayerState)
 	wsrouter.Handle(mux, "UPDATE_PLAYER_VIDEO", c.handleUpdatePlayerVideo)
+	wsrouter.Handle(mux, "END_VIDEO", c.handleEndVideo)
 
 	// profile
 	wsrouter.Handle(mux, "UPDATE_PROFILE", c.handleUpdateProfile)

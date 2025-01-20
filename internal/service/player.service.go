@@ -7,17 +7,19 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gorilla/websocket"
+	"github.com/sharetube/server/internal/repository/room"
 )
 
 type UpdatePlayerStateParams struct {
-	VideoId      int             `json:"video_id"`
-	IsPlaying    bool            `json:"is_playing"`
-	CurrentTime  int             `json:"current_time"`
-	PlaybackRate float64         `json:"playback_rate"`
-	UpdatedAt    int             `json:"updated_at"`
-	SenderId     string          `json:"sender_id"`
-	SenderConn   *websocket.Conn `json:"sender_conn"`
-	RoomId       string          `json:"room_id"`
+	VideoId       int             `json:"video_id"`
+	IsPlaying     bool            `json:"is_playing"`
+	CurrentTime   int             `json:"current_time"`
+	PlaybackRate  float64         `json:"playback_rate"`
+	UpdatedAt     int             `json:"updated_at"`
+	PlayerVersion int             `json:"player_version"`
+	SenderId      string          `json:"sender_id"`
+	SenderConn    *websocket.Conn `json:"sender_conn"`
+	RoomId        string          `json:"room_id"`
 }
 
 type UpdatePlayerStateResponse struct {
@@ -30,6 +32,15 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return nil, err
 	}
 	//? add validation
+
+	playerVersion, err := s.roomRepo.GetPlayerVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player version: %w", err)
+	}
+
+	if playerVersion != params.PlayerVersion {
+		return nil, ErrPlayerVersionMismatch
+	}
 
 	currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
 	if err != nil {
@@ -68,20 +79,24 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		}
 	}
 
-	// if player.IsEnded != params.IsEnded {
-	// 	updated = true
-	// 	if err := s.roomRepo.UpdatePlayerIsEnded(ctx, params.RoomId, params.IsEnded); err != nil {
-	// 		return UpdatePlayerStateResponse{}, fmt.Errorf("failed to update player is ended: %w", err)
-	// 	}
-	// }
+	if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
+		RoomId:     params.RoomId,
+		VideoEnded: false,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to set video ended: %w", err)
+	}
 
 	if !updated {
 		return &UpdatePlayerStateResponse{
 			Player: Player{
-				IsPlaying:    player.IsPlaying,
-				CurrentTime:  player.CurrentTime,
-				PlaybackRate: player.PlaybackRate,
-				UpdatedAt:    player.UpdatedAt,
+				State: PlayerState{
+					IsPlaying:    player.IsPlaying,
+					CurrentTime:  player.CurrentTime,
+					PlaybackRate: player.PlaybackRate,
+					UpdatedAt:    player.UpdatedAt,
+				},
+				IsEnded: false,
+				Version: playerVersion,
 			},
 			Conns: []*websocket.Conn{params.SenderConn},
 		}, nil
@@ -114,22 +129,33 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		return nil, fmt.Errorf("failed to get conns from member ids: %w", err)
 	}
 
+	playerVersion, err = s.roomRepo.IncrPlayerVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to incr player version: %w", err)
+	}
+
 	return &UpdatePlayerStateResponse{
 		Player: Player{
-			IsPlaying:    params.IsPlaying,
-			CurrentTime:  params.CurrentTime,
-			PlaybackRate: params.PlaybackRate,
-			UpdatedAt:    params.UpdatedAt,
+			State: PlayerState{
+				IsPlaying:    params.IsPlaying,
+				CurrentTime:  params.CurrentTime,
+				PlaybackRate: params.PlaybackRate,
+				UpdatedAt:    params.UpdatedAt,
+			},
+			IsEnded: false,
+			Version: playerVersion,
 		},
 		Conns: conns,
 	}, nil
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoId   int    `json:"video_id"`
-	UpdatedAt int    `json:"updated_at"`
-	SenderId  string `json:"sender_id"`
-	RoomId    string `json:"room_id"`
+	VideoId         int    `json:"video_id"`
+	UpdatedAt       int    `json:"updated_at"`
+	SenderId        string `json:"sender_id"`
+	RoomId          string `json:"room_id"`
+	PlayerVersion   int    `json:"player_version"`
+	PlaylistVersion int    `json:"playlist_version"`
 }
 
 type UpdatePlayerVideoResponse struct {
@@ -148,6 +174,15 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 		validation.Field(&params.VideoId, VideoIdRule...),
 	); err != nil {
 		return nil, err
+	}
+
+	playerVersion, err := s.roomRepo.GetPlayerVersion(ctx, params.RoomId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player version: %w", err)
+	}
+
+	if playerVersion != params.PlayerVersion {
+		return nil, errors.New("player version is not equal")
 	}
 
 	updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, params.VideoId, params.UpdatedAt)

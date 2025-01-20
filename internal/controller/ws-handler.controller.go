@@ -20,11 +20,12 @@ func (c controller) handleAlive(_ context.Context, _ *websocket.Conn, _ EmptyInp
 }
 
 type UpdatePlayerStateInput struct {
-	VideoId      int     `json:"video_id"`
-	IsPlaying    bool    `json:"is_playing"`
-	CurrentTime  int     `json:"current_time"`
-	PlaybackRate float64 `json:"playback_rate"`
-	UpdatedAt    int     `json:"updated_at"`
+	VideoId       int     `json:"video_id"`
+	IsPlaying     bool    `json:"is_playing"`
+	CurrentTime   int     `json:"current_time"`
+	PlaybackRate  float64 `json:"playback_rate"`
+	UpdatedAt     int     `json:"updated_at"`
+	PlayerVersion int     `json:"player_version"`
 }
 
 func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket.Conn, input UpdatePlayerStateInput) error {
@@ -32,14 +33,15 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	updatePlayerStateResp, err := c.roomService.UpdatePlayerState(ctx, &service.UpdatePlayerStateParams{
-		SenderConn:   conn,
-		VideoId:      input.VideoId,
-		IsPlaying:    input.IsPlaying,
-		CurrentTime:  input.CurrentTime,
-		PlaybackRate: input.PlaybackRate,
-		UpdatedAt:    input.UpdatedAt,
-		SenderId:     memberId,
-		RoomId:       roomId,
+		SenderConn:    conn,
+		VideoId:       input.VideoId,
+		IsPlaying:     input.IsPlaying,
+		CurrentTime:   input.CurrentTime,
+		PlaybackRate:  input.PlaybackRate,
+		UpdatedAt:     input.UpdatedAt,
+		PlayerVersion: input.PlayerVersion,
+		SenderId:      memberId,
+		RoomId:        roomId,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update player state: %w", err)
@@ -53,8 +55,10 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 }
 
 type UpdatePlayerVideoInput struct {
-	VideoId   int `json:"video_id"`
-	UpdatedAt int `json:"updated_at"`
+	VideoId         int `json:"video_id"`
+	UpdatedAt       int `json:"updated_at"`
+	PlayerVersion   int `json:"player_version"`
+	PlaylistVersion int `json:"playlist_version"`
 }
 
 func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Conn, input UpdatePlayerVideoInput) error {
@@ -62,10 +66,12 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &service.UpdatePlayerVideoParams{
-		VideoId:   input.VideoId,
-		UpdatedAt: input.UpdatedAt,
-		SenderId:  memberId,
-		RoomId:    roomId,
+		PlaylistVersion: input.PlaylistVersion,
+		PlayerVersion:   input.PlayerVersion,
+		VideoId:         input.VideoId,
+		UpdatedAt:       input.UpdatedAt,
+		SenderId:        memberId,
+		RoomId:          roomId,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update player video: %w", err)
@@ -84,8 +90,10 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 }
 
 type AddVideoInput struct {
-	VideoUrl  string `json:"video_url"`
-	UpdatedAt int    `json:"updated_at"`
+	VideoUrl        string `json:"video_url"`
+	UpdatedAt       int    `json:"updated_at"`
+	PlaylsitVersion int    `json:"playlist_version"`
+	PlayerVersion   int    `json:"player_version"`
 }
 
 func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input AddVideoInput) error {
@@ -93,10 +101,12 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	addVideoResponse, err := c.roomService.AddVideo(ctx, &service.AddVideoParams{
-		SenderId:  memberId,
-		RoomId:    roomId,
-		VideoUrl:  input.VideoUrl,
-		UpdatedAt: input.UpdatedAt,
+		PlaylistVersion: input.PlaylsitVersion,
+		PlayerVersion:   input.PlayerVersion,
+		SenderId:        memberId,
+		RoomId:          roomId,
+		VideoUrl:        input.VideoUrl,
+		UpdatedAt:       input.UpdatedAt,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add video: %w", err)
@@ -126,33 +136,35 @@ func (c controller) handleAddVideo(ctx context.Context, _ *websocket.Conn, input
 	return nil
 }
 
-func (c controller) handleEndVideo(ctx context.Context, _ *websocket.Conn, _ EmptyInput) error {
+type EndVideoInput struct {
+	PlayerVersion int `json:"player_version"`
+}
+
+func (c controller) handleEndVideo(ctx context.Context, _ *websocket.Conn, input EndVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
-	addVideoResponse, err := c.roomService.EndVideo(ctx, &service.EndVideoParams{
-		SenderId: memberId,
-		RoomId:   roomId,
+	endVideoResponse, err := c.roomService.EndVideo(ctx, &service.EndVideoParams{
+		PlayerVersion: input.PlayerVersion,
+		SenderId:      memberId,
+		RoomId:        roomId,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add video: %w", err)
+		return fmt.Errorf("failed to end video: %w", err)
 	}
 
-	if addVideoResponse.Player != nil {
+	if endVideoResponse.Playlist != nil {
 		if err := c.broadcastPlayerVideoUpdated(ctx,
-			addVideoResponse.Conns,
-			addVideoResponse.Player,
-			addVideoResponse.Playlist,
-			addVideoResponse.Members,
+			endVideoResponse.Conns,
+			endVideoResponse.Player,
+			endVideoResponse.Playlist,
+			endVideoResponse.Members,
 		); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
 		}
 	} else {
-		if err := c.broadcast(ctx, addVideoResponse.Conns, &Output{
-			Type:    "VIDEO_ENDED",
-			Payload: nil,
-		}); err != nil {
-			return fmt.Errorf("failed to broadcast video ended: %w", err)
+		if err := c.broadcastPlayerStateUpdated(ctx, endVideoResponse.Conns, endVideoResponse.Player); err != nil {
+			return fmt.Errorf("failed to broadcast player state updated: %w", err)
 		}
 	}
 
@@ -226,7 +238,8 @@ func (c controller) handlePromoteMember(ctx context.Context, _ *websocket.Conn, 
 }
 
 type RemoveVideoInput struct {
-	VideoId int `json:"video_id"`
+	VideoId         int `json:"video_id"`
+	PlaylistVersion int `json:"playlist_version"`
 }
 
 func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, input RemoveVideoInput) error {
@@ -234,9 +247,10 @@ func (c controller) handleRemoveVideo(ctx context.Context, _ *websocket.Conn, in
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	removeVideoResponse, err := c.roomService.RemoveVideo(ctx, &service.RemoveVideoParams{
-		VideoId:  input.VideoId,
-		SenderId: memberId,
-		RoomId:   roomId,
+		PlaylistVersion: input.PlaylistVersion,
+		VideoId:         input.VideoId,
+		SenderId:        memberId,
+		RoomId:          roomId,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to remove video: %w", err)
@@ -340,7 +354,8 @@ func (c controller) handleUpdateIsMuted(ctx context.Context, conn *websocket.Con
 }
 
 type ReorderPlaylistInput struct {
-	VideoIds []int `json:"video_ids"`
+	VideoIds        []int `json:"video_ids"`
+	PlaylistVersion int   `json:"playlist_version"`
 }
 
 func (c controller) handleReorderPlaylist(ctx context.Context, _ *websocket.Conn, input ReorderPlaylistInput) error {
@@ -348,9 +363,10 @@ func (c controller) handleReorderPlaylist(ctx context.Context, _ *websocket.Conn
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	removeVideoResponse, err := c.roomService.ReorderPlaylist(ctx, &service.ReorderPlaylistParams{
-		VideoIds: input.VideoIds,
-		SenderId: memberId,
-		RoomId:   roomId,
+		PlaylistVersion: input.PlaylistVersion,
+		VideoIds:        input.VideoIds,
+		SenderId:        memberId,
+		RoomId:          roomId,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to reorder playlist: %w", err)
