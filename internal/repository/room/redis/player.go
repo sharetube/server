@@ -52,6 +52,19 @@ func (r repo) GetPlayerVersion(ctx context.Context, roomId string) (int, error) 
 	return playerVersion, nil
 }
 
+func (r repo) ExpirePlayerVersion(ctx context.Context, params *room.ExpirePlayerVersionParams) error {
+	res, err := r.rc.ExpireAt(ctx, r.getPlayerVersionKey(params.RoomId), params.ExpireAt).Result()
+	if err != nil {
+		return err
+	}
+
+	if !res {
+		return room.ErrPlayerVersionNotFound
+	}
+
+	return nil
+}
+
 func (r repo) SetVideoEnded(ctx context.Context, params *room.SetVideoEndedParams) error {
 	// pipe := r.rc.TxPipeline()
 	// pipe.Expire(ctx, videoEndedKey, r.maxExpireDuration)

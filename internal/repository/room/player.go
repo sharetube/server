@@ -33,3 +33,8 @@ type ExpireVideoEndedParams struct {
 	RoomId   string
 	ExpireAt time.Time
 }
+
+type ExpirePlayerVersionParams struct {
+	RoomId   string
+	ExpireAt time.Time
+}

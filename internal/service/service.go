@@ -58,6 +58,7 @@ type iRoomRepo interface {
 	GetPlayerVersion(context.Context, string) (int, error)
 	IncrPlayerVersion(context.Context, string) (int, error)
 	IsPlayerExists(context.Context, string) (bool, error)
+	ExpirePlayerVersion(context.Context, *room.ExpirePlayerVersionParams) error
 	RemovePlayer(context.Context, string) error
 	ExpirePlayer(context.Context, *room.ExpirePlayerParams) error
 	SetVideoEnded(context.Context, *room.SetVideoEndedParams) error
