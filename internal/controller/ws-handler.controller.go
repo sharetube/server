@@ -50,16 +50,6 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 
 	switch {
 	case updatePlayerStateResp.PlayerVersionMismatchResponse != nil:
-		if err := c.writeToConn(ctx, conn, &Output{
-			Type: "PLAYER_STATE_UPDATED",
-			Payload: map[string]any{
-				"rid":    input.Rid,
-				"player": updatePlayerStateResp.PlayerVersionMismatchResponse.Player,
-			},
-		}); err != nil {
-			return fmt.Errorf("failed to write to sender conn: %w", err)
-		}
-
 		if err := c.broadcast(ctx, updatePlayerStateResp.Conns, &Output{
 			Type: "PLAYER_STATE_UPDATED",
 			Payload: map[string]any{
@@ -69,6 +59,16 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 			return fmt.Errorf("failed to broadcast player state updated: %w", err)
 		}
 	case updatePlayerStateResp.PlayerStateUpdatedResponse != nil:
+		if err := c.writeToConn(ctx, conn, &Output{
+			Type: "PLAYER_STATE_UPDATED",
+			Payload: map[string]any{
+				"rid":    input.Rid,
+				"player": updatePlayerStateResp.PlayerStateUpdatedResponse.Player,
+			},
+		}); err != nil {
+			return fmt.Errorf("failed to write to sender conn: %w", err)
+		}
+
 		if err := c.broadcastPlayerStateUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.PlayerStateUpdatedResponse.Player); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
 		}
