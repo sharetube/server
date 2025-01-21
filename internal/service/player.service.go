@@ -172,19 +172,19 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 }
 
 type UpdatePlayerVideoParams struct {
-	VideoId         int    `json:"video_id"`
-	UpdatedAt       int    `json:"updated_at"`
-	SenderId        string `json:"sender_id"`
-	RoomId          string `json:"room_id"`
-	PlayerVersion   int    `json:"player_version"`
-	PlaylistVersion int    `json:"playlist_version"`
+	VideoId         int             `json:"video_id"`
+	UpdatedAt       int             `json:"updated_at"`
+	SenderId        string          `json:"sender_id"`
+	SenderConn      *websocket.Conn `json:"-"`
+	RoomId          string          `json:"room_id"`
+	PlayerVersion   int             `json:"player_version"`
+	PlaylistVersion int             `json:"playlist_version"`
 }
 
 type UpdatePlayerVideoResponse struct {
-	Player   Player
-	Members  []Member
-	Conns    []*websocket.Conn
-	Playlist Playlist
+	Conns                         []*websocket.Conn
+	PlayerVideoUpdatedResponse    *PlayerVideoUpdatedResponse
+	PlayerVersionMismatchResponse *PlayerVersionMismatchResponse
 }
 
 func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVideoParams) (*UpdatePlayerVideoResponse, error) {
@@ -204,7 +204,18 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	}
 
 	if playerVersion != params.PlayerVersion {
-		return nil, errors.New("player version is not equal")
+		player, err := s.getPlayer(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get player: %w", err)
+		}
+
+		return &UpdatePlayerVideoResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlayerVersionMismatchResponse: &PlayerVersionMismatchResponse{
+				Player: *player,
+			},
+			PlayerVideoUpdatedResponse: nil,
+		}, nil
 	}
 
 	updatePlayerVideoRes, err := s.updatePlayerVideo(ctx, params.RoomId, params.VideoId, params.UpdatedAt)
@@ -213,9 +224,12 @@ func (s service) UpdatePlayerVideo(ctx context.Context, params *UpdatePlayerVide
 	}
 
 	return &UpdatePlayerVideoResponse{
-		Members:  updatePlayerVideoRes.Members,
-		Player:   updatePlayerVideoRes.Player,
-		Playlist: updatePlayerVideoRes.Playlist,
-		Conns:    updatePlayerVideoRes.Conns,
+		Conns: updatePlayerVideoRes.Conns,
+		PlayerVideoUpdatedResponse: &PlayerVideoUpdatedResponse{
+			Playlist: updatePlayerVideoRes.Playlist,
+			Player:   updatePlayerVideoRes.Player,
+			Members:  updatePlayerVideoRes.Members,
+		},
+		PlayerVersionMismatchResponse: nil,
 	}, nil
 }

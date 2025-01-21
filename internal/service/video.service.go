@@ -205,7 +205,7 @@ type VideoAddedResponse struct {
 	Playlist   Playlist
 }
 
-type PlayerUpdatedResponse struct {
+type PlayerVideoUpdatedResponse struct {
 	Playlist Playlist
 	Player   Player
 	Members  []Member
@@ -213,7 +213,7 @@ type PlayerUpdatedResponse struct {
 
 type AddVideoResponse struct {
 	Conns                           []*websocket.Conn
-	PlayerUpdatedResponse           *PlayerUpdatedResponse
+	PlayerVideoUpdatedResponse      *PlayerVideoUpdatedResponse
 	VideoAddedResponse              *VideoAddedResponse
 	PlayerVersionMismatchResponse   *PlayerVersionMismatchResponse
 	PlaylistVersionMismatchResponse *PlaylistVersionMismatchResponse
@@ -246,7 +246,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 			PlayerVersionMismatchResponse: &PlayerVersionMismatchResponse{
 				Player: *player,
 			},
-			PlayerUpdatedResponse:           nil,
+			PlayerVideoUpdatedResponse:      nil,
 			VideoAddedResponse:              nil,
 			PlaylistVersionMismatchResponse: nil,
 		}, nil
@@ -268,7 +268,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 			PlaylistVersionMismatchResponse: &PlaylistVersionMismatchResponse{
 				Playlist: *playlist,
 			},
-			PlayerUpdatedResponse:         nil,
+			PlayerVideoUpdatedResponse:    nil,
 			VideoAddedResponse:            nil,
 			PlayerVersionMismatchResponse: nil,
 		}, nil
@@ -312,7 +312,7 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 
 		return &AddVideoResponse{
 			Conns: updatePlayerVideoRes.Conns,
-			PlayerUpdatedResponse: &PlayerUpdatedResponse{
+			PlayerVideoUpdatedResponse: &PlayerVideoUpdatedResponse{
 				Playlist: updatePlayerVideoRes.Playlist,
 				Player:   updatePlayerVideoRes.Player,
 				Members:  updatePlayerVideoRes.Members,
@@ -352,23 +352,24 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 				AuthorName:   videoData.AuthorName,
 			},
 		},
-		PlayerUpdatedResponse:           nil,
+		PlayerVideoUpdatedResponse:      nil,
 		PlayerVersionMismatchResponse:   nil,
 		PlaylistVersionMismatchResponse: nil,
 	}, nil
 }
 
 type EndVideoParams struct {
-	SenderId      string `json:"sender_id"`
-	RoomId        string `json:"room_id"`
-	PlayerVersion int    `json:"player_version"`
+	SenderConn    *websocket.Conn `json:"-"`
+	SenderId      string          `json:"sender_id"`
+	RoomId        string          `json:"room_id"`
+	PlayerVersion int             `json:"player_version"`
 }
 
 type EndVideoResponse struct {
-	Conns    []*websocket.Conn
-	Playlist *Playlist
-	Player   *Player
-	Members  []Member
+	Conns                         []*websocket.Conn
+	PlayerVersionMismatchResponse *PlayerVersionMismatchResponse
+	PlayerVideoUpdatedResponse    *PlayerVideoUpdatedResponse
+	PlayerStateUpdatedResponse    *PlayerStateUpdatedResponse
 }
 
 func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVideoResponse, error) {
@@ -382,7 +383,19 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVide
 	}
 
 	if playerVersion != params.PlayerVersion {
-		return nil, errors.New("player version is not equal")
+		player, err := s.getPlayer(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get player: %w", err)
+		}
+
+		return &EndVideoResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlayerVersionMismatchResponse: &PlayerVersionMismatchResponse{
+				Player: *player,
+			},
+			PlayerVideoUpdatedResponse: nil,
+			PlayerStateUpdatedResponse: nil,
+		}, nil
 	}
 
 	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
@@ -406,10 +419,14 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVide
 		}
 
 		return &EndVideoResponse{
-			Conns:    updatePlayerVideoRes.Conns,
-			Playlist: &updatePlayerVideoRes.Playlist,
-			Player:   &updatePlayerVideoRes.Player,
-			Members:  updatePlayerVideoRes.Members,
+			Conns: updatePlayerVideoRes.Conns,
+			PlayerVideoUpdatedResponse: &PlayerVideoUpdatedResponse{
+				Playlist: updatePlayerVideoRes.Playlist,
+				Player:   updatePlayerVideoRes.Player,
+				Members:  updatePlayerVideoRes.Members,
+			},
+			PlayerVersionMismatchResponse: nil,
+			PlayerStateUpdatedResponse:    nil,
 		}, nil
 	}
 
@@ -431,8 +448,12 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVide
 	}
 
 	return &EndVideoResponse{
-		Player: player,
-		Conns:  conns,
+		PlayerStateUpdatedResponse: &PlayerStateUpdatedResponse{
+			Player: *player,
+		},
+		Conns:                         conns,
+		PlayerVersionMismatchResponse: nil,
+		PlayerVideoUpdatedResponse:    nil,
 	}, nil
 }
 

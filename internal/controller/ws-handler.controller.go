@@ -51,7 +51,13 @@ func (c controller) handleUpdatePlayerState(ctx context.Context, conn *websocket
 
 	switch {
 	case updatePlayerStateResp.PlayerVersionMismatchResponse != nil:
-		if err := c.broadcastPlayerStateUpdated(ctx, updatePlayerStateResp.Conns, &updatePlayerStateResp.PlayerVersionMismatchResponse.Player); err != nil {
+		if err := c.broadcast(ctx, updatePlayerStateResp.Conns, &Output{
+			Type: "PLAYER_STATE_UPDATED",
+			Payload: map[string]any{
+				"rid":    input.Rid,
+				"player": updatePlayerStateResp.PlayerVersionMismatchResponse.Player,
+			},
+		}); err != nil {
 			return fmt.Errorf("failed to broadcast player state updated: %w", err)
 		}
 	case updatePlayerStateResp.PlayerStateUpdatedResponse != nil:
@@ -70,11 +76,12 @@ type UpdatePlayerVideoInput struct {
 	PlaylistVersion int `json:"playlist_version"`
 }
 
-func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Conn, input UpdatePlayerVideoInput) error {
+func (c controller) handleUpdatePlayerVideo(ctx context.Context, conn *websocket.Conn, input UpdatePlayerVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	updatePlayerVideoResp, err := c.roomService.UpdatePlayerVideo(ctx, &service.UpdatePlayerVideoParams{
+		SenderConn:      conn,
 		PlaylistVersion: input.PlaylistVersion,
 		PlayerVersion:   input.PlayerVersion,
 		VideoId:         input.VideoId,
@@ -86,13 +93,20 @@ func (c controller) handleUpdatePlayerVideo(ctx context.Context, _ *websocket.Co
 		return fmt.Errorf("failed to update player video: %w", err)
 	}
 
-	if err := c.broadcastPlayerVideoUpdated(ctx,
-		updatePlayerVideoResp.Conns,
-		&updatePlayerVideoResp.Player,
-		&updatePlayerVideoResp.Playlist,
-		updatePlayerVideoResp.Members,
-	); err != nil {
-		return fmt.Errorf("failed to broadcast player updated: %w", err)
+	switch {
+	case updatePlayerVideoResp.PlayerVersionMismatchResponse != nil:
+		if err := c.broadcastPlayerStateUpdated(ctx, updatePlayerVideoResp.Conns, &updatePlayerVideoResp.PlayerVersionMismatchResponse.Player); err != nil {
+			return fmt.Errorf("failed to broadcast player state updated: %w", err)
+		}
+	case updatePlayerVideoResp.PlayerVideoUpdatedResponse != nil:
+		if err := c.broadcastPlayerVideoUpdated(ctx,
+			updatePlayerVideoResp.Conns,
+			&updatePlayerVideoResp.PlayerVideoUpdatedResponse.Player,
+			&updatePlayerVideoResp.PlayerVideoUpdatedResponse.Playlist,
+			updatePlayerVideoResp.PlayerVideoUpdatedResponse.Members,
+		); err != nil {
+			return fmt.Errorf("failed to broadcast player updated: %w", err)
+		}
 	}
 
 	return nil
@@ -130,7 +144,7 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, in
 		}
 
 	case addVideoResponse.PlayerVersionMismatchResponse != nil:
-		if err := c.broadcastPlayerStateUpdated(ctx, addVideoResponse.Conns, &addVideoResponse.PlayerUpdatedResponse.Player); err != nil {
+		if err := c.broadcastPlayerStateUpdated(ctx, addVideoResponse.Conns, &addVideoResponse.PlayerVideoUpdatedResponse.Player); err != nil {
 			return fmt.Errorf("failed to broadcast player state updated: %w", err)
 		}
 
@@ -145,12 +159,12 @@ func (c controller) handleAddVideo(ctx context.Context, conn *websocket.Conn, in
 			return fmt.Errorf("failed to broadcast video added: %w", err)
 		}
 
-	case addVideoResponse.PlayerUpdatedResponse != nil:
+	case addVideoResponse.PlayerVideoUpdatedResponse != nil:
 		if err := c.broadcastPlayerVideoUpdated(ctx,
 			addVideoResponse.Conns,
-			&addVideoResponse.PlayerUpdatedResponse.Player,
-			&addVideoResponse.PlayerUpdatedResponse.Playlist,
-			addVideoResponse.PlayerUpdatedResponse.Members,
+			&addVideoResponse.PlayerVideoUpdatedResponse.Player,
+			&addVideoResponse.PlayerVideoUpdatedResponse.Playlist,
+			addVideoResponse.PlayerVideoUpdatedResponse.Members,
 		); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
 		}
@@ -163,11 +177,12 @@ type EndVideoInput struct {
 	PlayerVersion int `json:"player_version"`
 }
 
-func (c controller) handleEndVideo(ctx context.Context, _ *websocket.Conn, input EndVideoInput) error {
+func (c controller) handleEndVideo(ctx context.Context, conn *websocket.Conn, input EndVideoInput) error {
 	roomId := c.getRoomIdFromCtx(ctx)
 	memberId := c.getMemberIdFromCtx(ctx)
 
 	endVideoResponse, err := c.roomService.EndVideo(ctx, &service.EndVideoParams{
+		SenderConn:    conn,
 		PlayerVersion: input.PlayerVersion,
 		SenderId:      memberId,
 		RoomId:        roomId,
@@ -176,18 +191,23 @@ func (c controller) handleEndVideo(ctx context.Context, _ *websocket.Conn, input
 		return fmt.Errorf("failed to end video: %w", err)
 	}
 
-	if endVideoResponse.Playlist != nil {
+	switch {
+	case endVideoResponse.PlayerVersionMismatchResponse != nil:
+		if err := c.broadcastPlayerStateUpdated(ctx, endVideoResponse.Conns, &endVideoResponse.PlayerVersionMismatchResponse.Player); err != nil {
+			return fmt.Errorf("failed to broadcast player state updated: %w", err)
+		}
+	case endVideoResponse.PlayerStateUpdatedResponse != nil:
+		if err := c.broadcastPlayerStateUpdated(ctx, endVideoResponse.Conns, &endVideoResponse.PlayerStateUpdatedResponse.Player); err != nil {
+			return fmt.Errorf("failed to broadcast player state updated: %w", err)
+		}
+	case endVideoResponse.PlayerVideoUpdatedResponse != nil:
 		if err := c.broadcastPlayerVideoUpdated(ctx,
 			endVideoResponse.Conns,
-			endVideoResponse.Player,
-			endVideoResponse.Playlist,
-			endVideoResponse.Members,
+			&endVideoResponse.PlayerVideoUpdatedResponse.Player,
+			&endVideoResponse.PlayerVideoUpdatedResponse.Playlist,
+			endVideoResponse.PlayerVideoUpdatedResponse.Members,
 		); err != nil {
 			return fmt.Errorf("failed to broadcast player updated: %w", err)
-		}
-	} else {
-		if err := c.broadcastPlayerStateUpdated(ctx, endVideoResponse.Conns, endVideoResponse.Player); err != nil {
-			return fmt.Errorf("failed to broadcast player state updated: %w", err)
 		}
 	}
 
