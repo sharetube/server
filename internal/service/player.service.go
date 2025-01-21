@@ -22,9 +22,14 @@ type UpdatePlayerStateParams struct {
 	RoomId        string          `json:"room_id"`
 }
 
-type UpdatePlayerStateResponse struct {
+type PlayerStateUpdatedResponse struct {
 	Player Player
-	Conns  []*websocket.Conn
+}
+
+type UpdatePlayerStateResponse struct {
+	Conns                         []*websocket.Conn
+	PlayerStateUpdatedResponse    *PlayerStateUpdatedResponse
+	PlayerVersionMismatchResponse *PlayerVersionMismatchResponse
 }
 
 func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStateParams) (*UpdatePlayerStateResponse, error) {
@@ -39,7 +44,18 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	}
 
 	if playerVersion != params.PlayerVersion {
-		return nil, ErrPlayerVersionMismatch
+		player, err := s.getPlayer(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get player: %w", err)
+		}
+
+		return &UpdatePlayerStateResponse{
+			PlayerVersionMismatchResponse: &PlayerVersionMismatchResponse{
+				Player: *player,
+			},
+			Conns:                      []*websocket.Conn{params.SenderConn},
+			PlayerStateUpdatedResponse: nil,
+		}, nil
 	}
 
 	currentVideoId, err := s.roomRepo.GetCurrentVideoId(ctx, params.RoomId)
@@ -79,33 +95,29 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 		}
 	}
 
-	videoEnded, err := s.roomRepo.GetVideoEnded(ctx, params.RoomId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get video ended: %w", err)
-	}
-
-	if videoEnded {
-		if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
-			RoomId:     params.RoomId,
-			VideoEnded: videoEnded,
-		}); err != nil {
-			return nil, fmt.Errorf("failed to update video ended: %w", err)
-		}
+	if err := s.roomRepo.SetVideoEnded(ctx, &room.SetVideoEndedParams{
+		RoomId:     params.RoomId,
+		VideoEnded: false,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update video ended: %w", err)
 	}
 
 	if !updated {
 		return &UpdatePlayerStateResponse{
-			Player: Player{
-				State: PlayerState{
-					IsPlaying:    player.IsPlaying,
-					CurrentTime:  player.CurrentTime,
-					PlaybackRate: player.PlaybackRate,
-					UpdatedAt:    player.UpdatedAt,
+			PlayerStateUpdatedResponse: &PlayerStateUpdatedResponse{
+				Player: Player{
+					State: PlayerState{
+						IsPlaying:    player.IsPlaying,
+						CurrentTime:  player.CurrentTime,
+						PlaybackRate: player.PlaybackRate,
+						UpdatedAt:    player.UpdatedAt,
+					},
+					IsEnded: false,
+					Version: playerVersion,
 				},
-				IsEnded: false,
-				Version: playerVersion,
 			},
-			Conns: []*websocket.Conn{params.SenderConn},
+			Conns:                         []*websocket.Conn{params.SenderConn},
+			PlayerVersionMismatchResponse: nil,
 		}, nil
 	}
 
@@ -142,17 +154,20 @@ func (s service) UpdatePlayerState(ctx context.Context, params *UpdatePlayerStat
 	}
 
 	return &UpdatePlayerStateResponse{
-		Player: Player{
-			State: PlayerState{
-				IsPlaying:    params.IsPlaying,
-				CurrentTime:  params.CurrentTime,
-				PlaybackRate: params.PlaybackRate,
-				UpdatedAt:    params.UpdatedAt,
+		PlayerStateUpdatedResponse: &PlayerStateUpdatedResponse{
+			Player: Player{
+				State: PlayerState{
+					IsPlaying:    params.IsPlaying,
+					CurrentTime:  params.CurrentTime,
+					PlaybackRate: params.PlaybackRate,
+					UpdatedAt:    params.UpdatedAt,
+				},
+				IsEnded: false,
+				Version: playerVersion,
 			},
-			IsEnded: false,
-			Version: playerVersion,
 		},
-		Conns: conns,
+		Conns:                         conns,
+		PlayerVersionMismatchResponse: nil,
 	}, nil
 }
 

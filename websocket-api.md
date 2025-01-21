@@ -149,6 +149,7 @@ null
 
 ```json
 {
+  "rid": "[number]",
   "video_id": "[number]",
   "player_version":"[number]",
   "playback_rate": "[number]",
@@ -272,6 +273,7 @@ null
 
 ```json
 {
+  "rid": "[number] | undefined",
   "current_video_id":"[number]",
   "player": {
     "state":{

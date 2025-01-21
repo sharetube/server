@@ -12,11 +12,6 @@ import (
 	"github.com/sharetube/server/pkg/ytvideodata"
 )
 
-var (
-	ErrPlayerVersionMismatch   = errors.New("player version mismatch")
-	ErrPlaylistVersionMismatch = errors.New("playlist version mismatch")
-)
-
 func (s service) getVideos(ctx context.Context, roomId string) ([]Video, error) {
 	videosIds, err := s.roomRepo.GetVideoIds(ctx, roomId)
 	if err != nil {
@@ -188,21 +183,40 @@ func (s service) getLastVideo(ctx context.Context, roomId string) (*Video, error
 }
 
 type AddVideoParams struct {
-	SenderId        string `json:"sender_id"`
-	RoomId          string `json:"room_id"`
-	VideoUrl        string `json:"video_url"`
-	UpdatedAt       int    `json:"updated_at"`
-	PlaylistVersion int    `json:"playlist_version"`
-	PlayerVersion   int    `json:"player_version"`
+	SenderConn      *websocket.Conn `json:"-"`
+	SenderId        string          `json:"sender_id"`
+	RoomId          string          `json:"room_id"`
+	VideoUrl        string          `json:"video_url"`
+	UpdatedAt       int             `json:"updated_at"`
+	PlaylistVersion int             `json:"playlist_version"`
+	PlayerVersion   int             `json:"player_version"`
 }
 
-// todo: two optional responses
-type AddVideoResponse struct {
-	AddedVideo *Video
-	Conns      []*websocket.Conn
+type PlayerVersionMismatchResponse struct {
+	Player Player
+}
+
+type PlaylistVersionMismatchResponse struct {
+	Playlist Playlist
+}
+
+type VideoAddedResponse struct {
+	AddedVideo Video
 	Playlist   Playlist
-	Player     *Player
-	Members    []Member
+}
+
+type PlayerUpdatedResponse struct {
+	Playlist Playlist
+	Player   Player
+	Members  []Member
+}
+
+type AddVideoResponse struct {
+	Conns                           []*websocket.Conn
+	PlayerUpdatedResponse           *PlayerUpdatedResponse
+	VideoAddedResponse              *VideoAddedResponse
+	PlayerVersionMismatchResponse   *PlayerVersionMismatchResponse
+	PlaylistVersionMismatchResponse *PlaylistVersionMismatchResponse
 }
 
 func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVideoResponse, error) {
@@ -222,7 +236,20 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 	}
 
 	if params.PlayerVersion != playerVersion {
-		return nil, ErrPlayerVersionMismatch
+		player, err := s.getPlayer(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get player: %w", err)
+		}
+
+		return &AddVideoResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlayerVersionMismatchResponse: &PlayerVersionMismatchResponse{
+				Player: *player,
+			},
+			PlayerUpdatedResponse:           nil,
+			VideoAddedResponse:              nil,
+			PlaylistVersionMismatchResponse: nil,
+		}, nil
 	}
 
 	playlistVersion, err := s.roomRepo.GetPlaylistVersion(ctx, params.RoomId)
@@ -231,7 +258,20 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 	}
 
 	if params.PlaylistVersion != playlistVersion {
-		return nil, ErrPlaylistVersionMismatch
+		playlist, err := s.getPlaylist(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get playlist: %w", err)
+		}
+
+		return &AddVideoResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlaylistVersionMismatchResponse: &PlaylistVersionMismatchResponse{
+				Playlist: *playlist,
+			},
+			PlayerUpdatedResponse:         nil,
+			VideoAddedResponse:            nil,
+			PlayerVersionMismatchResponse: nil,
+		}, nil
 	}
 
 	videoData, err := ytvideodata.Get(params.VideoUrl)
@@ -271,10 +311,15 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 		}
 
 		return &AddVideoResponse{
-			Conns:    updatePlayerVideoRes.Conns,
-			Playlist: updatePlayerVideoRes.Playlist,
-			Player:   &updatePlayerVideoRes.Player,
-			Members:  updatePlayerVideoRes.Members,
+			Conns: updatePlayerVideoRes.Conns,
+			PlayerUpdatedResponse: &PlayerUpdatedResponse{
+				Playlist: updatePlayerVideoRes.Playlist,
+				Player:   updatePlayerVideoRes.Player,
+				Members:  updatePlayerVideoRes.Members,
+			},
+			VideoAddedResponse:              nil,
+			PlayerVersionMismatchResponse:   nil,
+			PlaylistVersionMismatchResponse: nil,
 		}, nil
 	}
 
@@ -296,15 +341,20 @@ func (s service) AddVideo(ctx context.Context, params *AddVideoParams) (*AddVide
 	}
 
 	return &AddVideoResponse{
-		AddedVideo: &Video{
-			Id:           videoId,
-			Url:          params.VideoUrl,
-			Title:        videoData.Title,
-			ThumbnailUrl: videoData.ThumbnailUrl,
-			AuthorName:   videoData.AuthorName,
+		Conns: conns,
+		VideoAddedResponse: &VideoAddedResponse{
+			Playlist: *playlist,
+			AddedVideo: Video{
+				Id:           videoId,
+				Url:          params.VideoUrl,
+				Title:        videoData.Title,
+				ThumbnailUrl: videoData.ThumbnailUrl,
+				AuthorName:   videoData.AuthorName,
+			},
 		},
-		Conns:    conns,
-		Playlist: *playlist,
+		PlayerUpdatedResponse:           nil,
+		PlayerVersionMismatchResponse:   nil,
+		PlaylistVersionMismatchResponse: nil,
 	}, nil
 }
 
@@ -387,16 +437,22 @@ func (s service) EndVideo(ctx context.Context, params *EndVideoParams) (*EndVide
 }
 
 type RemoveVideoParams struct {
-	SenderId        string `json:"sender_id"`
-	VideoId         int    `json:"video_id"`
-	RoomId          string `json:"room_id"`
-	PlaylistVersion int    `json:"playlist_version"`
+	SenderId        string          `json:"sender_id"`
+	SenderConn      *websocket.Conn `json:"-"`
+	VideoId         int             `json:"video_id"`
+	RoomId          string          `json:"room_id"`
+	PlaylistVersion int             `json:"playlist_version"`
+}
+
+type VideoRemovedResponse struct {
+	RemovedVideoId int
+	Playlist       Playlist
 }
 
 type RemoveVideoResponse struct {
-	Conns          []*websocket.Conn
-	RemovedVideoId int
-	Playlist       Playlist
+	Conns                           []*websocket.Conn
+	VideoRemovedResponse            *VideoRemovedResponse
+	PlaylistVersionMismatchResponse *PlaylistVersionMismatchResponse
 }
 
 func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*RemoveVideoResponse, error) {
@@ -416,7 +472,18 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*R
 	}
 
 	if params.PlaylistVersion != playlistVersion {
-		return nil, ErrPlaylistVersionMismatch
+		playlist, err := s.getPlaylist(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get playlist: %w", err)
+		}
+
+		return &RemoveVideoResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlaylistVersionMismatchResponse: &PlaylistVersionMismatchResponse{
+				Playlist: *playlist,
+			},
+			VideoRemovedResponse: nil,
+		}, nil
 	}
 
 	if err := s.roomRepo.RemoveVideoFromList(ctx, &room.RemoveVideoFromListParams{
@@ -444,22 +511,31 @@ func (s service) RemoveVideo(ctx context.Context, params *RemoveVideoParams) (*R
 	}
 
 	return &RemoveVideoResponse{
-		Conns:          conns,
-		RemovedVideoId: params.VideoId,
-		Playlist:       *playlist,
+		Conns: conns,
+		VideoRemovedResponse: &VideoRemovedResponse{
+			RemovedVideoId: params.VideoId,
+			Playlist:       *playlist,
+		},
+		PlaylistVersionMismatchResponse: nil,
 	}, nil
 }
 
 type ReorderPlaylistParams struct {
-	VideoIds        []int  `json:"video_ids"`
-	SenderId        string `json:"sender_id"`
-	RoomId          string `json:"room_id"`
-	PlaylistVersion int    `json:"playlist_version"`
+	VideoIds        []int           `json:"video_ids"`
+	SenderId        string          `json:"sender_id"`
+	SenderConn      *websocket.Conn `json:"-"`
+	RoomId          string          `json:"room_id"`
+	PlaylistVersion int             `json:"playlist_version"`
+}
+
+type PlaylistReorderedResponse struct {
+	Playlist Playlist
 }
 
 type ReorderPlaylistResponse struct {
-	Conns    []*websocket.Conn
-	Playlist Playlist
+	Conns                           []*websocket.Conn
+	PlaylistReorderedResponse       *PlaylistReorderedResponse
+	PlaylistVersionMismatchResponse *PlaylistVersionMismatchResponse
 }
 
 func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistParams) (*ReorderPlaylistResponse, error) {
@@ -479,7 +555,18 @@ func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistPar
 	}
 
 	if params.PlaylistVersion != playlistVersion {
-		return nil, ErrPlaylistVersionMismatch
+		playlist, err := s.getPlaylist(ctx, params.RoomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get playlist: %w", err)
+		}
+
+		return &ReorderPlaylistResponse{
+			Conns: []*websocket.Conn{params.SenderConn},
+			PlaylistVersionMismatchResponse: &PlaylistVersionMismatchResponse{
+				Playlist: *playlist,
+			},
+			PlaylistReorderedResponse: nil,
+		}, nil
 	}
 
 	if err := s.roomRepo.ReorderList(ctx, &room.ReorderListParams{
@@ -500,7 +587,10 @@ func (s service) ReorderPlaylist(ctx context.Context, params *ReorderPlaylistPar
 	}
 
 	return &ReorderPlaylistResponse{
-		Conns:    conns,
-		Playlist: *playlist,
+		Conns: conns,
+		PlaylistReorderedResponse: &PlaylistReorderedResponse{
+			Playlist: *playlist,
+		},
+		PlaylistVersionMismatchResponse: nil,
 	}, nil
 }
